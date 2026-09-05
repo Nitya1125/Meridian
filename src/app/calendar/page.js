@@ -546,7 +546,7 @@ export default function CalendarPage() {
             }}
           />
 
-          {/* ── Top Header Navigation & View Switcher Bar ── */}
+          {/* ── Top Header Navigation & View Switcher Bar (Differentiated by AIM) ── */}
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200/80 shadow-2xs mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -554,37 +554,45 @@ export default function CalendarPage() {
                   Schedule & <em className="italic font-serif font-normal text-stone-900">Sprint Timelines</em>
                 </h1>
 
-                {/* View Switcher Capsule (Card | Block | Table) */}
-                <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl sm:ml-2">
+                {/* View Switcher Capsule (Differentiated by AIM: Week Horizon | Day Focus | Agenda Ledger) */}
+                <div className="flex items-center gap-1 bg-stone-100/90 p-1 rounded-2xl sm:ml-2 border border-stone-200/60">
                   <button
                     onClick={() => setViewMode('card')}
-                    className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       viewMode === 'card'
                         ? 'bg-[#111318] text-white shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                     }`}
+                    title="Main Aim: Multi-day capacity planning & balancing commitments with deep work"
                   >
-                    Card
+                    <CalendarIcon size={12} className={viewMode === 'card' ? 'text-lime-400' : 'text-stone-400'} />
+                    <span>Week Horizon</span>
                   </button>
+
                   <button
                     onClick={() => setViewMode('block')}
-                    className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       viewMode === 'block'
                         ? 'bg-[#111318] text-white shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                     }`}
+                    title="Main Aim: Hour-by-hour operational timeline & today's immediate execution checklist"
                   >
-                    Block
+                    <ClockIcon size={12} className={viewMode === 'block' ? 'text-lime-400' : 'text-stone-400'} />
+                    <span>Day Focus</span>
                   </button>
+
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                       viewMode === 'table'
                         ? 'bg-[#111318] text-white shadow-xs'
-                        : 'text-stone-600 hover:text-stone-900'
+                        : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/60'
                     }`}
+                    title="Main Aim: Filterable cross-functional ledger, search by lead, and meeting audit directory"
                   >
-                    Table
+                    <FilterIcon size={12} className={viewMode === 'table' ? 'text-lime-400' : 'text-stone-400'} />
+                    <span>Agenda Ledger</span>
                   </button>
                 </div>
               </div>
@@ -604,6 +612,31 @@ export default function CalendarPage() {
                   <span>Share</span>
                 </button>
               </div>
+            </div>
+
+            {/* Dynamic Aim Descriptor Banner */}
+            <div className="py-2.5 px-3.5 mt-3 rounded-2xl bg-stone-50 border border-stone-200/60 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-stone-700">
+                <span className="w-1.5 h-1.5 rounded-full bg-lime-500 shrink-0"></span>
+                {viewMode === 'card' && (
+                  <span>
+                    <strong className="text-stone-900 font-semibold font-mono">Aim: 5-Day Capacity Horizon</strong> — Multi-day commitment balance, reviews &amp; protected deep work time.
+                  </span>
+                )}
+                {viewMode === 'block' && (
+                  <span>
+                    <strong className="text-stone-900 font-semibold font-mono">Aim: Daily Time-Blocking Engine</strong> — Hour-by-hour schedule timeline for May 18 paired with immediate execution checklist.
+                  </span>
+                )}
+                {viewMode === 'table' && (
+                  <span>
+                    <strong className="text-stone-900 font-semibold font-mono">Aim: Cross-Functional Operations Ledger</strong> — Search, filter, and audit all cross-functional sessions and leads.
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] font-mono text-stone-400 hidden md:inline">
+                {viewMode === 'card' ? 'Planning Mode' : viewMode === 'block' ? 'Execution Mode' : 'Audit Mode'}
+              </span>
             </div>
 
             {/* Search Bar for all views */}
@@ -1417,15 +1450,15 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {/* VIEW MODE 3: TABLE VIEW */}
+              {/* VIEW MODE 3: AGENDA LEDGER (AIM: TEAM OPERATIONS & DIRECTORY) */}
               {viewMode === 'table' && (
                 <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-2xs">
                   <div className="flex items-center justify-between pb-4 mb-4 border-b border-stone-100">
                     <div>
                       <h2 className="text-base font-bold text-stone-900 font-serif">
-                        All Scheduled Events & Meetings Agenda
+                        Cross-Functional Agenda &amp; Operations Ledger
                       </h2>
-                      <p className="text-xs text-stone-400">Structured data view with direct meeting join shortcuts</p>
+                      <p className="text-xs text-stone-400">Searchable, filterable audit of all cross-functional sessions, leads, and direct meeting links</p>
                     </div>
 
                     <span className="text-xs font-bold text-stone-400 font-mono">
@@ -1549,23 +1582,30 @@ export default function CalendarPage() {
                   </div>
                 </div>
 
-                {/* Urgent Tasks Heading */}
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl sm:text-2xl font-normal text-white tracking-tight font-serif">
-                    Urgent <em className="italic font-serif font-normal text-lime-400">Tasks</em> ({activeUrgentTasks.length})
-                  </h2>
+                {/* Active Deliverables Heading (Differentiated by AIM: Output Backlog vs. Left Calendar) */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl sm:text-2xl font-normal text-white tracking-tight font-serif">
+                      Active <em className="italic font-serif font-normal text-lime-400">Deliverables</em> ({activeUrgentTasks.length})
+                    </h2>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono text-lime-400">Active</span>
-                    <button
-                      type="button"
-                      onClick={() => setNewUrgentModalOpen(true)}
-                      className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
-                      title="Add urgent task"
-                    >
-                      +
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold text-lime-400 bg-lime-950/80 border border-lime-500/30 px-2 py-0.5 rounded-full">
+                        Output Backlog
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setNewUrgentModalOpen(true)}
+                        className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                        title="Add urgent deliverable"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
+                  <p className="text-[11px] text-stone-400 font-mono mt-1">
+                    Ship during open focus blocks · Output backlog &amp; velocity
+                  </p>
                 </div>
 
                 {/* Dark Urgent Task Cards */}

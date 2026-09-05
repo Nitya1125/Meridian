@@ -460,6 +460,8 @@ export const WorkflowIcon = (p) => (
   </I>
 );
 
+
+
 export const ShieldLockIcon = (p) => (
   <I {...p}>
     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -468,18 +470,13 @@ export const ShieldLockIcon = (p) => (
   </I>
 );
 
+// ── Streamline Core Pop Style Icon Suite & Organization Suite ──
+
 export const BuildingIcon = (p) => (
   <I {...p}>
     <rect x="4" y="2" width="16" height="20" rx="2" />
     <path d="M9 22v-4h6v4" />
     <path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" />
-  </I>
-);
-
-export const CopyIcon = (p) => (
-  <I {...p}>
-    <rect x="9" y="9" width="13" height="13" rx="2" />
-    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
   </I>
 );
 
@@ -491,4 +488,153 @@ export const UserPlusIcon = (p) => (
     <line x1="16" y1="11" x2="22" y2="11" />
   </I>
 );
-
+
+export const ThumbsUpIcon = (p) => (
+  <I {...p}>
+    <path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3z" />
+    <path d="M7 10l5-8a2 2 0 0 1 2 2v4h6a2 2 0 0 1 2 2v2a3.5 3.5 0 0 1-.5 1.8l-2.5 5.5A2.5 2.5 0 0 1 17 21H7" />
+  </I>
+);
+
+export const HeartIcon = (p) => (
+  <I {...p}>
+    <path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572" />
+  </I>
+);
+
+export const FlameIcon = (p) => (
+  <I {...p}>
+    <path d="M12 2c-.5 2.5-3 4.5-3 7.5a6 6 0 0 0 10.2 4.2A8 8 0 0 0 19 8c-2 2-3 2-3 2a4 4 0 0 1-4-8z" />
+    <path d="M12 14a2 2 0 0 0-2 2c0 1.5 1.5 2.5 2 3.5.5-1 2-2 2-3.5a2 2 0 0 0-2-2z" />
+  </I>
+);
+
+export const BulbIcon = (p) => (
+  <I {...p}>
+    <path d="M9 18h6" />
+    <path d="M10 22h4" />
+    <path d="M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z" />
+    <line x1="12" y1="6" x2="12" y2="10" />
+    <line x1="10" y1="8" x2="14" y2="8" />
+  </I>
+);
+
+export const ClapIcon = (p) => (
+  <I {...p}>
+    <path d="M7.5 11.5l2-2a2.12 2.12 0 0 1 3 3L10 15" />
+    <path d="M11 7.5l2-2a2.12 2.12 0 0 1 3 3L13.5 11" />
+    <path d="M14.5 3.5l2-2a2.12 2.12 0 0 1 3 3L17 7" />
+    <path d="M18 10l-6 6a4.24 4.24 0 0 1-6-6l6-6" />
+    <path d="M2 18l3-3" />
+    <path d="M6 22l3-3" />
+  </I>
+);
+
+export const PartyIcon = (p) => (
+  <I {...p}>
+    <path d="M4 20l5-15 11 11z" />
+    <path d="M15 4l1 3" />
+    <path d="M20 9l-3 1" />
+    <circle cx="18" cy="4" r="1" fill="currentColor" />
+    <circle cx="14" cy="9" r="0.75" fill="currentColor" />
+    <circle cx="21" cy="14" r="0.75" fill="currentColor" />
+  </I>
+);
+
+export const EyeIcon = (p) => (
+  <I {...p}>
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </I>
+);
+
+export const CopyIcon = (p) => (
+  <I {...p}>
+    <rect x="9" y="9" width="13" height="13" rx="2.5" />
+    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+  </I>
+);
+
+export const MicrophoneIcon = (p) => (
+  <I {...p}>
+    <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <line x1="12" y1="19" x2="12" y2="22" />
+    <line x1="8" y1="22" x2="16" y2="22" />
+  </I>
+);
+
+export const PlayIcon = (p) => (
+  <I {...p}>
+    <polygon points="6 3 20 12 6 21 6 3" fill="currentColor" stroke="none" />
+  </I>
+);
+
+export const PauseIcon = (p) => (
+  <I {...p}>
+    <rect x="6" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none" />
+    <rect x="14" y="4" width="4" height="16" rx="1" fill="currentColor" stroke="none" />
+  </I>
+);
+
+export const TimerIcon = (p) => (
+  <I {...p}>
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9v4l2.5 2" />
+    <path d="M10 2h4" />
+  </I>
+);
+
+export const CoffeeIcon = (p) => (
+  <I {...p}>
+    <path d="M18 8h1a4 4 0 0 1 0 8h-1" />
+    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z" />
+    <line x1="6" y1="1" x2="6" y2="4" />
+    <line x1="10" y1="1" x2="10" y2="4" />
+    <line x1="14" y1="1" x2="14" y2="4" />
+  </I>
+);
+
+export const GoogleMeetIcon = (p) => (
+  <I {...p}>
+    <rect x="3" y="5" width="13" height="14" rx="2.5" />
+    <path d="M16 10l5-3v10l-5-3v-4z" />
+  </I>
+);
+
+export const ZoomIcon = (p) => (
+  <I {...p}>
+    <path d="M15 10l4.5-3v10L15 14v-4z" />
+    <rect x="3" y="6" width="12" height="12" rx="3" />
+  </I>
+);
+
+export const FigmaIcon = (p) => (
+  <I {...p}>
+    <path d="M5 5.5A3.5 3.5 0 0 1 8.5 2H12v7H8.5A3.5 3.5 0 0 1 5 5.5z" />
+    <path d="M12 2h3.5a3.5 3.5 0 1 1 0 7H12V2z" />
+    <path d="M12 9h3.5a3.5 3.5 0 1 1 0 7H12V9z" />
+    <path d="M5 12.5A3.5 3.5 0 0 1 8.5 9H12v7H8.5A3.5 3.5 0 0 1 5 12.5z" />
+    <path d="M5 19.5A3.5 3.5 0 0 1 8.5 16H12v3.5a3.5 3.5 0 1 1-7 0z" />
+  </I>
+);
+
+export const NotionIcon = (p) => (
+  <I {...p}>
+    <rect x="4" y="4" width="16" height="16" rx="2" />
+    <path d="M9 8v8" />
+    <path d="M9 8l6 8" />
+    <path d="M15 8v8" />
+  </I>
+);
+
+export const WaveformIcon = (p) => (
+  <I {...p}>
+    <path d="M2 10v4" />
+    <path d="M6 6v12" />
+    <path d="M10 3v18" />
+    <path d="M14 8v8" />
+    <path d="M18 5v14" />
+    <path d="M22 10v4" />
+  </I>
+);
