@@ -108,7 +108,7 @@ export default function Sidebar() {
             </div>
             <div>
               <div className="font-bold text-lg tracking-tight text-stone-900 leading-none">
-                Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+                Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-[9px] font-sans font-bold px-1.5 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
               </div>
               <div className="text-[11px] text-stone-400 font-medium mt-0.5">Workspace System</div>
             </div>
@@ -143,7 +143,7 @@ export default function Sidebar() {
               <SearchIcon size={14} className="text-stone-400" />
               <span className="font-medium text-stone-500">Quick Search...</span>
             </div>
-            <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-semibold text-stone-400 bg-stone-100 rounded-md border border-stone-200">
+            <kbd className="px-1.5 py-0.5 text-[10px] font-sans font-semibold text-stone-400 bg-stone-100 rounded-md border border-stone-200">
               ⌘K
             </kbd>
           </button>
@@ -238,7 +238,7 @@ export default function Sidebar() {
                         <div
                           key={subItem}
                           onClick={() => {
-                            toast(`Filtered to ${subItem}`, { icon: '🔍' })
+                            toast.success(`Filtered to ${subItem}`)
                             router.push('/kanban')
                           }}
                           className="text-[11px] text-stone-500 hover:text-stone-900 py-1 px-2 rounded-md hover:bg-stone-200/50 cursor-pointer transition-colors"
@@ -291,7 +291,7 @@ export default function Sidebar() {
                     </span>
                   </div>
 
-                  <span className="text-[10px] font-mono text-stone-400 group-hover:text-stone-600">
+                  <span className="text-[10px] font-sans text-stone-400 group-hover:text-stone-600">
                     {m.time}
                   </span>
                 </div>
@@ -316,7 +316,7 @@ export default function Sidebar() {
                 <div className="text-xs font-bold text-stone-800 leading-tight group-hover:text-violet-600 transition-colors truncate">
                   {fullName || 'My Account'}
                 </div>
-                <div className="text-[10px] text-stone-400 font-mono truncate">{user?.email || ''}</div>
+                <div className="text-[10px] text-stone-400 font-sans truncate">{user?.email || 'alex@meridian.io'}</div>
               </div>
             </div>
 

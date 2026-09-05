@@ -6,12 +6,14 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer'
+import MetricCard from '@/components/MetricCard'
 import {
   SearchIcon, PlusIcon, FilterIcon, SortIcon, ShareIcon,
   MessageIcon, AttachIcon, CalendarIcon, MoreHorizontalIcon,
   CheckIcon, CheckDoubleIcon, ClockIcon, ArrowUpRightIcon,
   ClipboardIcon, TargetIcon, ZapIcon, GripVerticalIcon,
-  ListIcon, KanbanBoardIcon, WorkflowIcon, LayersIcon, CheckCircleIcon
+  ListIcon, KanbanBoardIcon, WorkflowIcon, LayersIcon, CheckCircleIcon,
+  RocketIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -435,7 +437,7 @@ export default function KanbanPage() {
                     }`}
                 >
                   <KanbanBoardIcon size={13} />
-                  <span>00 Board</span>
+                  <span>Board</span>
                 </button>
                 <button
                   onClick={() => setViewMode('workflow')}
@@ -461,7 +463,7 @@ export default function KanbanPage() {
               </button>
 
               <button
-                onClick={() => toast('Filtered by High Priority', { icon: '⚡' })}
+                onClick={() => toast.success('Filtered by High Priority')}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-white border border-stone-200/80 text-xs font-bold text-stone-700 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
               >
                 <FilterIcon size={14} />
@@ -469,7 +471,7 @@ export default function KanbanPage() {
               </button>
 
               <button
-                onClick={() => toast('Sorted by Due Date', { icon: '↕️' })}
+                onClick={() => toast.success('Sorted by Due Date')}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-white border border-stone-200/80 text-xs font-bold text-stone-700 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
               >
                 <SortIcon size={14} />
@@ -490,46 +492,36 @@ export default function KanbanPage() {
             />
           </div>
 
-          {/* ── Bento KPI Metric Banners (Ref 1 "Clarity") ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <div className="rounded-3xl p-5 bg-[#EDE9FE] border border-[#DDD6FE] shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#6D28D9] mb-2">
-                <span className="p-1 rounded-lg bg-white/80 text-[#6D28D9]">
-                  <ClipboardIcon size={14} />
-                </span>
-                <span>Total Tasks</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold text-stone-950 stat-number">137</span>
-                <span className="text-xs font-bold text-[#6D28D9]">+20% vs last month</span>
-              </div>
-            </div>
-
-            <div className="rounded-3xl p-5 bg-[#FFEDD5] border border-[#FDBA74] shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#C2410C] mb-2">
-                <span className="p-1 rounded-lg bg-white/80 text-[#C2410C]">
-                  <ZapIcon size={14} />
-                </span>
-                <span>Efficiency Score</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold text-stone-950 stat-number">8.6</span>
-                <span className="text-xs font-bold text-[#C2410C]">+0.5 vs last month</span>
-              </div>
-            </div>
-
-            <div className="rounded-3xl p-5 bg-[#E0F2FE] border border-[#BAE6FD] shadow-xs">
-              <div className="flex items-center gap-2 text-xs font-bold text-[#0369A1] mb-2">
-                <span className="p-1 rounded-lg bg-white/80 text-[#0369A1]">
-                  <TargetIcon size={14} />
-                </span>
-                <span>Completion</span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-extrabold text-stone-950 stat-number">74%</span>
-                <span className="text-xs font-bold text-[#0369A1]">+10% vs last month</span>
-              </div>
-            </div>
+          {/* ── Bento KPI Metric Banners (Reusable MetricCard Suite) ── */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
+            <MetricCard
+              icon={ClipboardIcon}
+              badge="+20% vs last month"
+              value="137"
+              label="Total Tasks"
+              theme="purple"
+            />
+            <MetricCard
+              icon={ZapIcon}
+              badge="+0.5 vs last month"
+              value="8.6"
+              label="Efficiency Score"
+              theme="amber"
+            />
+            <MetricCard
+              icon={TargetIcon}
+              badge="+10% vs last month"
+              value="74%"
+              label="Sprint Completion"
+              theme="sky"
+            />
+            <MetricCard
+              icon={RocketIcon}
+              badge="Top 5% speed"
+              value="94%"
+              label="Team Velocity"
+              theme="lime"
+            />
           </div>
 
           {/* ══════════════════════════════════════════════════════════ */}
@@ -947,25 +939,28 @@ export default function KanbanPage() {
         }}
       />
 
-      {/* Task Inspection Drawer */}
-      <TaskDetailDrawer
-        task={selectedTask}
-        open={Boolean(selectedTask)}
-        onClose={() => setSelectedTask(null)}
-        onUpdateTask={(updated) => {
-          setColumns(prev => prev.map(col => ({
-            ...col,
-            tasks: col.tasks.map(t => t.id === updated.id ? { ...t, ...updated } : t)
-          })))
-        }}
-        onDeleteTask={(id) => {
-          setColumns(prev => prev.map(col => ({
-            ...col,
-            tasks: col.tasks.filter(t => t.id !== id),
-            count: col.tasks.some(t => t.id === id) ? col.count - 1 : col.count
-          })))
-        }}
-      />
+      {/* Task Inspection Modal */}
+      {selectedTask && (
+        <TaskDetailDrawer
+          key={selectedTask.id}
+          task={selectedTask}
+          open={Boolean(selectedTask)}
+          onClose={() => setSelectedTask(null)}
+          onUpdateTask={(updated) => {
+            setColumns(prev => prev.map(col => ({
+              ...col,
+              tasks: col.tasks.map(t => t.id === updated.id ? { ...t, ...updated } : t)
+            })))
+          }}
+          onDeleteTask={(id) => {
+            setColumns(prev => prev.map(col => ({
+              ...col,
+              tasks: col.tasks.filter(t => t.id !== id),
+              count: col.tasks.some(t => t.id === id) ? col.count - 1 : col.count
+            })))
+          }}
+        />
+      )}
     </ProtectedRoute>
   )
 }

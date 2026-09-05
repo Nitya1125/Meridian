@@ -4,10 +4,11 @@ import React, { useState } from 'react'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
+import MetricCard from '@/components/MetricCard'
 import {
   BarChartIcon, TrendingUpIcon, UsersIcon, ClockIcon,
   ChevronDownIcon, ArrowUpRightIcon, DownloadIcon, FilterIcon,
-  ShareIcon, CheckCircleIcon, ZapIcon, ClipboardIcon, TargetIcon
+  ShareIcon, CheckCircleIcon, ZapIcon, ClipboardIcon, TargetIcon, RocketIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -99,49 +100,34 @@ export default function AnalyticsPage() {
 
           {/* Bento KPI Summary Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-            <div className="p-5 rounded-3xl bg-[#EDE9FE] border border-[#DDD6FE] shadow-2xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#6D28D9]">Weekly Velocity</span>
-                <span className="p-1 rounded-lg bg-white/80 text-[#6D28D9] shadow-2xs">
-                  <ZapIcon size={14} />
-                </span>
-              </div>
-              <div className="text-3xl sm:text-4xl font-extrabold text-stone-950 stat-number">103 pts</div>
-              <div className="text-xs font-bold text-[#6D28D9] mt-1.5">+14% vs 4-week avg</div>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-[#FFEDD5] border border-[#FDBA74] shadow-2xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#C2410C]">Cycle Time</span>
-                <span className="p-1 rounded-lg bg-white/80 text-[#C2410C] shadow-2xs">
-                  <ClockIcon size={14} />
-                </span>
-              </div>
-              <div className="text-3xl sm:text-4xl font-extrabold text-stone-950 stat-number">2.4 days</div>
-              <div className="text-xs font-bold text-[#C2410C] mt-1.5">-0.8d reduction</div>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-[#E0F2FE] border border-[#BAE6FD] shadow-2xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#0369A1]">PR Merge Rate</span>
-                <span className="p-1 rounded-lg bg-white/80 text-[#0369A1] shadow-2xs">
-                  <CheckCircleIcon size={14} />
-                </span>
-              </div>
-              <div className="text-3xl sm:text-4xl font-extrabold text-stone-950 stat-number">98.2%</div>
-              <div className="text-xs font-bold text-[#0369A1] mt-1.5">42 PRs merged</div>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-[#ECFCCB] border border-[#D9F99D] shadow-2xs">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#3F6212]">Member Efficiency</span>
-                <span className="p-1 rounded-lg bg-white/80 text-[#3F6212] shadow-2xs">
-                  <TargetIcon size={14} />
-                </span>
-              </div>
-              <div className="text-3xl sm:text-4xl font-extrabold text-stone-950 stat-number">87.4%</div>
-              <div className="text-xs font-bold text-[#3F6212] mt-1.5">High team morale</div>
-            </div>
+            <MetricCard
+              icon={ZapIcon}
+              badge="+14% vs 4w avg"
+              value="103 pts"
+              label="Weekly Velocity"
+              theme="purple"
+            />
+            <MetricCard
+              icon={ClockIcon}
+              badge="-0.8d reduction"
+              value="2.4 days"
+              label="Cycle Time"
+              theme="amber"
+            />
+            <MetricCard
+              icon={CheckCircleIcon}
+              badge="42 PRs merged"
+              value="98.2%"
+              label="PR Merge Rate"
+              theme="sky"
+            />
+            <MetricCard
+              icon={TargetIcon}
+              badge="High team morale"
+              value="87.4%"
+              label="Member Efficiency"
+              theme="lime"
+            />
           </div>
 
           {/* Main Chart Grid: Velocity Burn-up + Project Allocation (Ref Image 1) */}
