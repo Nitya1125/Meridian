@@ -1,28 +1,36 @@
-import { Geist, Geist_Mono, Urbanist, Manrope, Instrument_Serif } from "next/font/google";
+import { Plus_Jakarta_Sans, Manrope, Inter, Instrument_Serif, League_Spartan } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { OrgProvider } from "@/context/OrgContext";
 import CreateOrgModal from "@/components/CreateOrgModal";
 import JoinOrgModal from "@/components/JoinOrgModal";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const leagueSpartan = League_Spartan({
+  variable: "--font-futura",
   subsets: ["latin"],
-});
-
-const urbanist = Urbanist({
-  variable: "--font-urbanist",
-  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
 });
 
 const manrope = Manrope({
   variable: "--font-manrope",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 });
 
 const instrumentSerif = Instrument_Serif({
@@ -30,6 +38,7 @@ const instrumentSerif = Instrument_Serif({
   weight: "400",
   style: ["normal", "italic"],
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata = {
@@ -41,9 +50,9 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${urbanist.variable} ${manrope.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${plusJakartaSans.variable} ${leagueSpartan.variable} ${manrope.variable} ${inter.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>
           <OrgProvider>
             {children}
@@ -55,4 +64,3 @@ export default function RootLayout({ children }) {
     </html>
   );
 }
-

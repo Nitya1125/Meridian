@@ -6,10 +6,24 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import {
   HashIcon, SearchIcon, PlusIcon, SmileIcon, AttachIcon,
-  SendIcon, MoreHorizontalIcon, MicIcon, VideoIcon, PhoneIcon
+  SendIcon, MoreHorizontalIcon, MicIcon, VideoIcon, PhoneIcon,
+  ThumbsUpIcon, HeartIcon, FlameIcon, RocketIcon, ClapIcon,
+  PartyIcon, CheckCircleIcon, BulbIcon, EyeIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+
+const CORE_REACTIONS = [
+  { id: 'thumbsUp', label: 'Agree', Icon: ThumbsUpIcon, color: 'text-sky-600' },
+  { id: 'heart', label: 'Love', Icon: HeartIcon, color: 'text-rose-500' },
+  { id: 'flame', label: 'Fire', Icon: FlameIcon, color: 'text-orange-500' },
+  { id: 'rocket', label: 'Launch', Icon: RocketIcon, color: 'text-violet-600' },
+  { id: 'clap', label: 'Applause', Icon: ClapIcon, color: 'text-amber-500' },
+  { id: 'party', label: 'Celebrate', Icon: PartyIcon, color: 'text-pink-500' },
+  { id: 'check', label: 'Done', Icon: CheckCircleIcon, color: 'text-emerald-600' },
+  { id: 'bulb', label: 'Idea', Icon: BulbIcon, color: 'text-yellow-500' },
+  { id: 'eye', label: 'Watching', Icon: EyeIcon, color: 'text-stone-600' }
+]
 
 const initialChannels = [
   { id: 'general', name: 'general', unread: 3, pinned: true, desc: 'Company announcements and team standup' },
@@ -21,13 +35,13 @@ const initialChannels = [
 
 const initialMessages = {
   general: [
-    { id: 'm1', author: 'Alex Johnson', initials: 'AJ', color: '#8b5cf6', time: '9:02 AM', text: 'Morning everyone 👋 Quick reminder that Sprint 14 review is this Friday at 3pm. Please make sure your tasks are updated on the board before then.' },
-    { id: 'm2', author: 'Sarah Chen', initials: 'SC', color: '#6366f1', time: '9:08 AM', text: "On it! OAuth2 integration is almost wrapped up. Just finishing the GitHub provider — should be done by EOD today.", reactions: [{ emoji: '🔥', count: 4 }, { emoji: '👏', count: 2 }] },
+    { id: 'm1', author: 'Alex Johnson', initials: 'AJ', color: '#8b5cf6', time: '9:02 AM', text: 'Morning everyone. Quick reminder that Sprint 14 review is this Friday at 3pm. Please make sure your tasks are updated on the board before then.' },
+    { id: 'm2', author: 'Sarah Chen', initials: 'SC', color: '#6366f1', time: '9:08 AM', text: "On it! OAuth2 integration is almost wrapped up. Just finishing the GitHub provider — should be done by EOD today.", reactions: [{ type: 'flame', count: 4 }, { type: 'clap', count: 2 }] },
     { id: 'm3', author: 'Marcus Webb', initials: 'MW', color: '#10b981', time: '9:15 AM', text: 'Stripe webhook handlers are deployed to staging. Need someone from QA to run through the payment flows. @Nadia can you pick this up today?' },
-    { id: 'm4', author: 'Nadia Kowalski', initials: 'NK', color: '#ec4899', time: '9:17 AM', text: "Sure! I'll get to it after standup. Should have a report ready by 2pm 🎯", reactions: [{ emoji: '✅', count: 1 }] },
+    { id: 'm4', author: 'Nadia Kowalski', initials: 'NK', color: '#ec4899', time: '9:17 AM', text: "Sure! I'll get to it after standup. Should have a report ready by 2pm.", reactions: [{ type: 'check', count: 1 }] },
     { id: 'm5', author: 'Priya Nair', initials: 'PN', color: '#f59e0b', time: '9:31 AM', text: 'Just pushed the updated design specs for the Customer Portal dashboard to Figma. Would love some feedback before I start handoff. Link in #design.' },
-    { id: 'm6', author: 'Kai Okafor', initials: 'KO', color: '#ef4444', time: '9:44 AM', text: 'Heads up — deployed a fix for the auth service memory leak we spotted yesterday. Monitor is green ✅. Tagging this for the post-mortem doc.' },
-    { id: 'm7', author: 'Jordan Lee', initials: 'JL', color: '#0ea5e9', time: '10:03 AM', text: 'The new landing page is live on staging! Can everyone take a quick look? Performance scores are looking really solid — 97 on Lighthouse 🚀', reactions: [{ emoji: '🚀', count: 6 }, { emoji: '❤️', count: 3 }] },
+    { id: 'm6', author: 'Kai Okafor', initials: 'KO', color: '#ef4444', time: '9:44 AM', text: 'Heads up — deployed a fix for the auth service memory leak we spotted yesterday. Monitor is green. Tagging this for the post-mortem doc.' },
+    { id: 'm7', author: 'Jordan Lee', initials: 'JL', color: '#0ea5e9', time: '10:03 AM', text: 'The new landing page is live on staging! Can everyone take a quick look? Performance scores are looking really solid — 97 on Lighthouse.', reactions: [{ type: 'rocket', count: 6 }, { type: 'heart', count: 3 }] },
     { id: 'm8', author: 'Alex Johnson', initials: 'AJ', color: '#8b5cf6', time: '10:11 AM', text: "Fantastic work Jordan. That's a big jump from where we were last week. Let's use this as the benchmark going forward." },
   ],
   engineering: [
@@ -53,14 +67,12 @@ const onlineUsers = [
   { initials: 'JL', color: '#0ea5e9', name: 'Jordan Lee', role: 'Frontend' },
 ]
 
-const quickEmojis = ['👍', '❤️', '🔥', '🚀', '👏', '🎉', '✅', '💡', '👀']
-
 export default function MessagesPage() {
   const [channels, setChannels] = useState(initialChannels)
   const [activeChannel, setActiveChannel] = useState('general')
   const [draft, setDraft] = useState('')
   const [msgs, setMsgs] = useState(initialMessages)
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showReactionPicker, setShowReactionPicker] = useState(false)
   const [searchChannel, setSearchChannel] = useState('')
   const { fullName, initials } = useCurrentUser()
 
@@ -96,21 +108,21 @@ export default function MessagesPage() {
       [activeChannel]: [...(prev[activeChannel] || []), newM]
     }))
     setDraft('')
-    setShowEmojiPicker(false)
+    setShowReactionPicker(false)
     toast.success('Message sent')
   }
 
-  const addReaction = (msgId, emoji) => {
+  const addReaction = (msgId, reactionType) => {
     setMsgs(prev => {
       const channelMsgs = prev[activeChannel] || []
       const updated = channelMsgs.map(m => {
         if (m.id === msgId) {
           const reactions = m.reactions ? [...m.reactions] : []
-          const existing = reactions.find(r => r.emoji === emoji)
+          const existing = reactions.find(r => r.type === reactionType)
           if (existing) {
             existing.count += 1
           } else {
-            reactions.push({ emoji, count: 1 })
+            reactions.push({ type: reactionType, count: 1 })
           }
           return { ...m, reactions }
         }
@@ -272,25 +284,31 @@ export default function MessagesPage() {
                         {m.text}
                       </div>
 
-                      {/* Reaction Badges */}
+                      {/* Streamline Core Pop Reaction Badges */}
                       <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                        {m.reactions?.map((r, ri) => (
-                          <button
-                            key={ri}
-                            onClick={() => addReaction(m.id, r.emoji)}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 hover:bg-stone-200 text-xs border border-stone-200 font-mono transition-colors cursor-pointer"
-                          >
-                            <span>{r.emoji}</span>
-                            <span className="text-[10px] font-bold text-stone-600">{r.count}</span>
-                          </button>
-                        ))}
+                        {m.reactions?.map((r, ri) => {
+                          const config = CORE_REACTIONS.find(cr => cr.id === r.type)
+                          const IconComp = config?.Icon || ThumbsUpIcon
+                          return (
+                            <button
+                              key={ri}
+                              onClick={() => addReaction(m.id, r.type)}
+                              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs border transition-colors cursor-pointer ${
+                                config ? config.color + ' bg-white border-stone-200 hover:border-stone-300 shadow-2xs' : 'bg-stone-100 text-stone-700'
+                              }`}
+                            >
+                              <IconComp size={12} strokeWidth={2} />
+                              <span className="text-[10.5px] font-mono font-bold text-stone-700">{r.count}</span>
+                            </button>
+                          )
+                        })}
 
                         <button
-                          onClick={() => addReaction(m.id, '❤️')}
-                          className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-rose-500 text-xs transition-opacity px-1"
+                          onClick={() => addReaction(m.id, 'heart')}
+                          className="opacity-0 group-hover:opacity-100 text-stone-400 hover:text-rose-500 text-xs transition-opacity p-1 rounded-lg hover:bg-white"
                           title="Add reaction"
                         >
-                          +❤️
+                          <HeartIcon size={13} />
                         </button>
                       </div>
                     </div>
@@ -300,19 +318,19 @@ export default function MessagesPage() {
 
               {/* Message Composer Bar */}
               <div className="p-4 border-t border-stone-100 bg-[#FAF8F5]/80 relative">
-                {/* Emoji Picker Bar */}
-                {showEmojiPicker && (
+                {/* Streamline Core Pop Quick Reaction Picker Bar */}
+                {showReactionPicker && (
                   <div className="absolute bottom-16 left-4 bg-white p-2 rounded-2xl border border-stone-200 shadow-xl flex items-center gap-1.5 z-20 animate-in zoom-in-95">
-                    {quickEmojis.map(em => (
+                    {CORE_REACTIONS.map(({ id, label, Icon, color }) => (
                       <button
-                        key={em}
+                        key={id}
                         onClick={() => {
-                          setDraft(prev => prev + ' ' + em)
-                          setShowEmojiPicker(false)
+                          setShowReactionPicker(false)
                         }}
-                        className="text-lg hover:scale-125 transition-transform p-1"
+                        title={label}
+                        className={`p-2 rounded-xl hover:bg-stone-100 transition-all cursor-pointer ${color}`}
                       >
-                        {em}
+                        <Icon size={16} strokeWidth={2} />
                       </button>
                     ))}
                   </div>
@@ -321,8 +339,9 @@ export default function MessagesPage() {
                 <form onSubmit={send} className="flex items-center gap-2 bg-white rounded-2xl border border-stone-200/80 p-2 shadow-xs">
                   <button
                     type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-1.5 rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-colors"
+                    onClick={() => setShowReactionPicker(!showReactionPicker)}
+                    className="p-1.5 rounded-xl text-stone-400 hover:text-stone-800 hover:bg-stone-100 transition-colors cursor-pointer"
+                    title="Add reaction"
                   >
                     <SmileIcon size={16} />
                   </button>

@@ -108,7 +108,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500"></span>
             </span>
             <div className="flex items-center gap-2 text-xs font-semibold tracking-wide">
-              <span className="text-lime-400 uppercase text-[9px] font-mono font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30">
+              <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30">
                 {activeOrg?.name ? activeOrg.name : 'Workspace'}
               </span>
               <span className="text-stone-200 text-xs hidden sm:inline font-medium">
@@ -129,7 +129,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
             </div>
 
             {/* Sync Badge */}
-            <div className="flex items-center gap-1.5 text-[11px] text-stone-300 font-mono bg-white/10 px-2.5 py-0.5 rounded-full border border-white/5">
+            <div className="flex items-center gap-1.5 text-[11px] text-stone-300 font-sans bg-white/10 px-2.5 py-0.5 rounded-full border border-white/5">
               <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block animate-pulse" />
               <span>Online</span>
             </div>
@@ -336,7 +336,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
           >
             <SearchIcon size={14} className="text-stone-400" />
             <span className="hidden sm:inline">Search workspace...</span>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-semibold text-stone-500 bg-stone-100 rounded-lg border border-stone-200">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-sans font-semibold text-stone-500 bg-stone-100 rounded-lg border border-stone-200">
               ⌘K
             </kbd>
           </button>

@@ -2,10 +2,22 @@ import {NextResponse} from "next/server";
 import db from "@/Lib/db";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
+import { loginRateLimit } from "@/Lib/rateLimit";
 
 export async function POST(request){
     try{
+
+        const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+        
+        const {success} = await loginRateLimit.limit(ip);
+
+        if(!success){
+            return NextResponse.json({
+                success:false,
+                message:"Too many requests, please try again later"
+            },{status:429})
+        }
+
         const {email,password} = await request.json();
 
         if(!email || !password){

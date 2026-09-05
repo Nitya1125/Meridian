@@ -7,6 +7,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer'
+import MetricCard from '@/components/MetricCard'
 import OrgOnboarding from '@/components/OrgOnboarding'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrg } from '@/context/OrgContext'
@@ -243,6 +244,7 @@ export default function Dashboard() {
             <OrgOnboarding />
           ) : (
             <>
+              {/* ── Greeting & Top Headline with Instrument Serif Italic ── */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-7">
                 <div>
                   <div className="flex items-center gap-3">
@@ -286,95 +288,40 @@ export default function Dashboard() {
                 </div>
               </div>
 
+              {/* ── 1. Bento KPI Metric Cards ── */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                {[
-                  {
-                    id: 'tasks',
-                    label: 'Total Tasks',
-                    value: String(myWork.length),
-                    delta: `${myWork.filter(w => w.tab === 'todo').length} to do`,
-                    bg: 'bg-[#EDE9FE]',
-                    text: 'text-[#6D28D9]',
-                    border: 'border-[#DDD6FE]',
-                    icon: <ClipboardIcon size={18} className="text-[#6D28D9]" />,
-                    sparkline: [1, 2, 3, 4, Math.max(1, myWork.length)]
-                  },
-                  {
-                    id: 'efficiency',
-                    label: 'Efficiency Score',
-                    value: myWork.length > 0 ? (myWork.filter(w => w.tab === 'done').length / myWork.length * 10).toFixed(1) : '10.0',
-                    delta: 'Live calculated',
-                    bg: 'bg-[#FFEDD5]',
-                    text: 'text-[#C2410C]',
-                    border: 'border-[#FDBA74]',
-                    icon: <ZapIcon size={18} className="text-[#C2410C]" />,
-                    sparkline: [6, 7, 8, 9, 10]
-                  },
-                  {
-                    id: 'completion',
-                    label: 'Sprint Completion',
-                    value: `${myWork.length > 0 ? Math.round((myWork.filter(w => w.tab === 'done').length / myWork.length) * 100) : 0}%`,
-                    delta: `${myWork.filter(w => w.tab === 'done').length} of ${myWork.length} done`,
-                    bg: 'bg-[#E0F2FE]',
-                    text: 'text-[#0369A1]',
-                    border: 'border-[#BAE6FD]',
-                    icon: <TargetIcon size={18} className="text-[#0369A1]" />,
-                    sparkline: [20, 40, 60, 80, 100]
-                  },
-                  {
-                    id: 'velocity',
-                    label: 'Active Workspace',
-                    value: activeOrg?.name || 'Standard',
-                    delta: activeOrg?.role || 'Member',
-                    bg: 'bg-[#ECFCCB]',
-                    text: 'text-[#3F6212]',
-                    border: 'border-[#D9F99D]',
-                    icon: <RocketIcon size={18} className="text-[#3F6212]" />,
-                    sparkline: [50, 70, 85, 95]
-                  },
-                ].map(kpi => (
-                  <div
-                    key={kpi.id}
-                    onClick={() =>
-                      router.push(
-                        kpi.id === 'tasks'
-                          ? '/kanban'
-                          : '/Analytics'
-                      )
-                    }
-                    className={`rounded-3xl p-6 border ${kpi.border} ${kpi.bg} bento-card-interactive cursor-pointer relative overflow-hidden group shadow-2xs`}
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="p-2.5 rounded-2xl bg-white/85 backdrop-blur-xs shadow-2xs">
-                        {kpi.icon}
-                      </span>
-
-                      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/95 text-stone-700 shadow-2xs font-mono">
-                        {kpi.delta}
-                      </span>
-                    </div>
-
-                    <div className="text-4xl sm:text-5xl font-extrabold text-stone-950 tracking-tight mb-1 stat-number">
-                      {kpi.value}
-                    </div>
-
-                    <div className="text-xs sm:text-sm font-semibold text-stone-700">
-                      {kpi.label}
-                    </div>
-
-                    <div className="mt-3.5 flex items-end gap-1 h-6 pt-1">
-                      {kpi.sparkline.map((val, idx) => (
-                        <div
-                          key={idx}
-                          className="flex-1 bg-stone-900/20 rounded-full transition-all duration-300 group-hover:bg-stone-900/40"
-                          style={{
-                            height: `${(val / Math.max(...kpi.sparkline)) * 100}%`
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                <MetricCard
+                  icon={ClipboardIcon}
+                  badge={`${myWork.filter(w => w.tab === 'todo').length} to do`}
+                  value={String(myWork.length)}
+                  label="Total Tasks"
+                  theme="purple"
+                  onClick={() => router.push('/kanban')}
+                />
+                <MetricCard
+                  icon={ZapIcon}
+                  badge="Live calculated"
+                  value={myWork.length > 0 ? (myWork.filter(w => w.tab === 'done').length / myWork.length * 10).toFixed(1) : '10.0'}
+                  label="Efficiency Score"
+                  theme="amber"
+                  onClick={() => router.push('/Analytics')}
+                />
+                <MetricCard
+                  icon={TargetIcon}
+                  badge={`${myWork.filter(w => w.tab === 'done').length} of ${myWork.length} done`}
+                  value={`${myWork.length > 0 ? Math.round((myWork.filter(w => w.tab === 'done').length / myWork.length) * 100) : 0}%`}
+                  label="Sprint Completion"
+                  theme="sky"
+                  onClick={() => router.push('/kanban')}
+                />
+                <MetricCard
+                  icon={RocketIcon}
+                  badge={activeOrg?.role || 'Member'}
+                  value={activeOrg?.name || 'Standard'}
+                  label="Active Workspace"
+                  theme="lime"
+                  onClick={() => router.push('/organization')}
+                />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
@@ -795,26 +742,21 @@ export default function Dashboard() {
         }}
       />
 
-      <TaskDetailDrawer
-        task={selectedTask}
-        open={Boolean(selectedTask)}
-        onClose={() => setSelectedTask(null)}
-        onUpdateTask={(updated) => {
-          setMyWork(prev =>
-            prev.map(t =>
-              t.id === updated.id
-                ? { ...t, ...updated }
-                : t
-            )
-          )
-        }}
-        onDeleteTask={(id) => {
-          setMyWork(prev =>
-            prev.filter(t => t.id !== id)
-          )
-        }}
-      />
-
+      {/* Task Inspection Modal */}
+      {selectedTask && (
+        <TaskDetailDrawer
+          key={selectedTask.id}
+          task={selectedTask}
+          open={Boolean(selectedTask)}
+          onClose={() => setSelectedTask(null)}
+          onUpdateTask={(updated) => {
+            setMyWork(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
+          }}
+          onDeleteTask={(id) => {
+            setMyWork(prev => prev.filter(t => t.id !== id))
+          }}
+        />
+      )}
     </ProtectedRoute>
   )
 }
