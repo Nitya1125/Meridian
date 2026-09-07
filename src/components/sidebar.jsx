@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
   HomeIcon, GridIcon, BarChartIcon, UsersIcon, MessageIcon,
-  CreditCardIcon, SettingsIcon, BellIcon, SearchIcon, ChevronDownIcon,
+  SettingsIcon, BellIcon, SearchIcon, ChevronDownIcon,
   ChevronRightIcon, ZapIcon, FolderIcon, CalendarIcon, PlusIcon,
   SparklesIcon, BuildingIcon
 } from './Icons'
@@ -40,7 +40,6 @@ const navItems = [
   { id: 'analytics', label: 'Activity', href: '/Analytics', icon: <BarChartIcon size={17} /> },
   { id: 'team', label: 'Members', href: '/team', icon: <UsersIcon size={17} /> },
   { id: 'chat', label: 'Chat', href: '/messages', icon: <MessageIcon size={17} /> },
-  { id: 'billing', label: 'Billing', href: '/billing', icon: <CreditCardIcon size={17} /> },
   { id: 'settings', label: 'Settings', href: '/settings', icon: <SettingsIcon size={17} /> },
 ]
 
@@ -108,7 +107,7 @@ export default function Sidebar() {
             </div>
             <div>
               <div className="font-bold text-lg tracking-tight text-stone-900 leading-none">
-                Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-[9px] font-sans font-bold px-1.5 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+                Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em>
               </div>
               <div className="text-[11px] text-stone-400 font-medium mt-0.5">Workspace System</div>
             </div>

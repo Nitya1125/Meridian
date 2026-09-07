@@ -7,7 +7,7 @@ import DynamicHeader from '@/components/DynamicHeader'
 import { useAuth } from '@/context/AuthContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  UsersIcon, SettingsIcon, CreditCardIcon, MessageIcon,
+  UsersIcon, SettingsIcon, MessageIcon,
   CheckIcon, ZapIcon, ShieldIcon, BellIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
@@ -32,6 +32,7 @@ export default function SettingsPage() {
   const [twoFactor, setTwoFactor] = useState(false)
   const [language, setLanguage] = useState('English (US)')
   const [timezone, setTimezone] = useState('PST (UTC-8)')
+  const [saving, setSaving] = useState(false)
 
   const valFirstName = firstName !== '' ? firstName : (currentFirstName || '')
   const valLastName = lastName !== '' ? lastName : (currentLastName || '')
@@ -40,8 +41,12 @@ export default function SettingsPage() {
 
   const handleSaveProfile = (e) => {
     e.preventDefault()
-    setCustomInitials(`${valFirstName[0] || ''}${valLastName[0] || ''}`.toUpperCase() || 'AJ')
-    toast.success('Account settings saved successfully!')
+    setSaving(true)
+    setTimeout(() => {
+      setCustomInitials(`${valFirstName[0] || ''}${valLastName[0] || ''}`.toUpperCase() || 'AJ')
+      toast.success('Changes saved successfully')
+      setSaving(false)
+    }, 400)
   }
 
   return (
@@ -156,9 +161,10 @@ export default function SettingsPage() {
                 <div className="pt-4 flex justify-end">
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md cursor-pointer transition-all"
+                    disabled={saving}
+                    className="px-5 py-2.5 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md cursor-pointer transition-all disabled:opacity-50"
                   >
-                    Save Changes
+                    {saving ? 'Saving Changes...' : 'Save Changes'}
                   </button>
                 </div>
 

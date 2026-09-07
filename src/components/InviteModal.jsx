@@ -1,39 +1,14 @@
 "use client"
 
 import React, { useState } from 'react'
-import { PlusIcon, UsersIcon, CheckIcon } from './Icons'
+import { PlusIcon, UsersIcon } from './Icons'
 import { toast } from 'react-hot-toast'
-
-const ROLES = [
-  'Engineering Lead',
-  'Senior Full-Stack',
-  'Backend Engineer',
-  'Frontend Engineer',
-  'Product Designer',
-  'DevOps Engineer',
-  'QA Engineer',
-  'Mobile Engineer',
-  'Product Manager',
-]
-
-const AVATAR_COLORS = [
-  '#f43f5e', '#8b5cf6', '#6366f1', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#f97316',
-]
-
-function getInitials(name) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(w => w[0].toUpperCase())
-    .join('')
-}
+import { useOrg } from '@/context/OrgContext'
+import { inviteOrganizationUser } from '@/Service/organization'
 
 export default function InviteModal({ open, onClose, onInvite }) {
-  const [name, setName] = useState('')
+  const { activeOrg } = useOrg()
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState(ROLES[0])
-  const [nameErr, setNameErr] = useState('')
   const [emailErr, setEmailErr] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -41,46 +16,60 @@ export default function InviteModal({ open, onClose, onInvite }) {
 
   const validate = () => {
     let valid = true
-    if (!name.trim()) { setNameErr('Name is required'); valid = false }
-    else setNameErr('')
-    if (!email.trim()) { setEmailErr('Email is required'); valid = false }
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEmailErr('Enter a valid email'); valid = false }
-    else setEmailErr('')
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setEmailErr('Email is required')
+      valid = false
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setEmailErr('Please enter a valid email address')
+      valid = false
+    } else {
+      setEmailErr('')
+    }
     return valid
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async (e) => {
+    e?.preventDefault()
     if (!validate()) return
+
+    if (!activeOrg || !activeOrg.id) {
+      toast.error('Please select an active organization first')
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      const colorIdx = Math.floor(Math.random() * AVATAR_COLORS.length)
-      if (onInvite) {
-        onInvite({
-          name: name.trim(),
-          email: email.trim(),
-          role,
-          initials: getInitials(name.trim()),
-          color: AVATAR_COLORS[colorIdx],
-          status: 'online',
-          projects: 1,
-          tasks: 0,
-          timeLogged: '00:00:00',
-        })
+    try {
+      const response = await inviteOrganizationUser(email.trim(), activeOrg.id)
+
+      if (response && response.success) {
+        toast.success(response.message || 'Invitation sent successfully')
+        setEmail('')
+        setEmailErr('')
+        if (onInvite) onInvite({ email: email.trim() })
+        onClose()
+      } else {
+        toast.error(response?.message || 'Failed to send invitation')
       }
+    } catch (err) {
+      toast.error('Unable to send invitation. Please try again later.')
+    } finally {
       setLoading(false)
-      toast.success(`Invitation sent to ${email.trim()}!`)
-      setName('')
-      setEmail('')
-      setRole(ROLES[0])
-      onClose()
-    }, 400)
+    }
+  }
+
+  const handleClose = () => {
+    if (loading) return
+    setEmail('')
+    setEmailErr('')
+    onClose()
   }
 
   return (
     <div className="fixed inset-0 z-[900] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        onClick={onClose}
+        onClick={handleClose}
         className="fixed inset-0 bg-stone-950/40 backdrop-blur-xs transition-opacity animate-in fade-in"
       />
 
@@ -97,95 +86,81 @@ export default function InviteModal({ open, onClose, onInvite }) {
               <h3 className="text-xl sm:text-2xl font-normal font-serif text-stone-900 leading-none">
                 Invite <em className="italic font-serif font-normal text-stone-800">Teammate</em>
               </h3>
-              <p className="text-xs text-stone-500 mt-1 font-medium">Send email invite with workspace permissions</p>
+              <p className="text-xs text-stone-500 mt-1 font-medium">
+                Send email invitation to join <strong className="text-stone-800">{activeOrg?.name || 'organization'}</strong>
+              </p>
             </div>
           </div>
 
           <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors"
+            onClick={handleClose}
+            disabled={loading}
+            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors disabled:opacity-40"
           >
             ✕
           </button>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Full Name *</label>
-            <input
-              type="text"
-              autoFocus
-              placeholder="e.g. Mya Guzman"
-              value={name}
-              onChange={e => {
-                setName(e.target.value)
-                if (nameErr) setNameErr('')
-              }}
-              className="w-full px-3.5 py-2 text-xs font-medium rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none"
-            />
-            {nameErr && <span className="text-[10px] text-rose-500 font-semibold mt-1 block">{nameErr}</span>}
-          </div>
-
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-stone-700 mb-1">Email Address *</label>
             <input
               type="email"
-              placeholder="e.g. mya@meridian.io"
+              autoFocus
+              disabled={loading}
+              placeholder="e.g. teammate@company.com"
               value={email}
               onChange={e => {
                 setEmail(e.target.value)
                 if (emailErr) setEmailErr('')
               }}
-              className="w-full px-3.5 py-2 text-xs font-medium rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none"
+              className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-2xl bg-white border outline-none transition-all ${
+                emailErr
+                  ? 'border-rose-400 ring-2 ring-rose-200'
+                  : 'border-stone-200 focus:border-stone-400'
+              } disabled:opacity-60`}
             />
-            {emailErr && <span className="text-[10px] text-rose-500 font-semibold mt-1 block">{emailErr}</span>}
+            {emailErr && <span className="text-[10px] text-rose-500 font-semibold mt-1 block">⚠ {emailErr}</span>}
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1">Role / Department</label>
-            <select
-              value={role}
-              onChange={e => setRole(e.target.value)}
-              className="w-full px-3.5 py-2 text-xs font-semibold rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none cursor-pointer"
-            >
-              {ROLES.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
-          </div>
+          {activeOrg?.invite_code && (
+            <div className="p-3 rounded-2xl bg-white border border-stone-200/60 flex items-center justify-between text-xs">
+              <span className="text-stone-500 text-[11px]">
+                Org Code: <strong className="font-mono text-stone-900">{activeOrg.invite_code}</strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(String(activeOrg.invite_code))
+                  toast.success('Org code copied!')
+                }}
+                className="font-bold text-violet-700 hover:text-violet-900 shrink-0 ml-2 cursor-pointer"
+              >
+                Copy Code
+              </button>
+            </div>
+          )}
 
-          {/* Quick link */}
-          <div className="p-3 rounded-2xl bg-white border border-stone-200/60 flex items-center justify-between text-xs">
-            <span className="text-stone-400 font-mono text-[11px] truncate">https://meridian.io/join/ws_pro</span>
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-stone-200/80">
             <button
               type="button"
-              onClick={() => toast.success('Invite link copied!')}
-              className="font-bold text-violet-700 hover:text-violet-900 shrink-0 ml-2"
+              onClick={handleClose}
+              disabled={loading}
+              className="px-4 py-2 rounded-2xl text-xs font-bold text-stone-600 hover:bg-stone-200/60 transition-colors disabled:opacity-40 cursor-pointer"
             >
-              Copy Link
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || !email.trim()}
+              className="px-5 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <PlusIcon size={14} strokeWidth={2.5} />
+              <span>{loading ? 'Sending invitation...' : 'Send Invitation'}</span>
             </button>
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-stone-200/80">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 rounded-2xl text-xs font-bold text-stone-600 hover:bg-stone-200/60 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-5 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
-          >
-            <PlusIcon size={14} strokeWidth={2.5} />
-            <span>{loading ? 'Sending...' : 'Send Invitation'}</span>
-          </button>
-        </div>
+        </form>
 
       </div>
     </div>

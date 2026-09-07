@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   SearchIcon, HomeIcon, GridIcon, CalendarIcon, BarChartIcon,
-  UsersIcon, MessageIcon, CreditCardIcon, SettingsIcon, ZapIcon,
+  UsersIcon, MessageIcon, SettingsIcon, ZapIcon,
   CheckIcon
 } from './Icons'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -17,7 +17,6 @@ const searchItems = [
   { id: 'nav-analytics', category: 'Navigation', title: 'Analytics & Activity', sub: 'Throughput burn-up, speedometer & distribution', href: '/Analytics', icon: <BarChartIcon size={16} /> },
   { id: 'nav-team', category: 'Navigation', title: 'Members Directory', sub: 'Live presence, tracked time & roles', href: '/team', icon: <UsersIcon size={16} /> },
   { id: 'nav-messages', category: 'Navigation', title: 'Chat & Channels', sub: '#general, #engineering, #design, #product', href: '/messages', icon: <MessageIcon size={16} /> },
-  { id: 'nav-billing', category: 'Navigation', title: 'Billing & Plans', sub: 'Pro Tier, usage meters & invoices', href: '/billing', icon: <CreditCardIcon size={16} /> },
   { id: 'nav-settings', category: 'Navigation', title: 'Workspace Settings', sub: 'Profile, security 2FA & notifications', href: '/settings', icon: <SettingsIcon size={16} /> },
   { id: 'nav-profile', category: 'Navigation', title: 'My Profile', sub: 'Bio, skills, assigned projects & stats', href: '/profile', icon: <UsersIcon size={16} /> },
 

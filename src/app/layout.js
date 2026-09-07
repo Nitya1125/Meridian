@@ -4,6 +4,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { OrgProvider } from "@/context/OrgContext";
 import CreateOrgModal from "@/components/CreateOrgModal";
 import JoinOrgModal from "@/components/JoinOrgModal";
+import { Toaster } from "react-hot-toast";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -55,6 +56,33 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>
           <OrgProvider>
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3500,
+                style: {
+                  background: '#111318',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  borderRadius: '16px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
+                },
+                success: {
+                  iconTheme: {
+                    primary: '#a3e635',
+                    secondary: '#111318',
+                  },
+                },
+                error: {
+                  iconTheme: {
+                    primary: '#f43f5e',
+                    secondary: '#ffffff',
+                  },
+                },
+              }}
+            />
             {children}
             <CreateOrgModal />
             <JoinOrgModal />

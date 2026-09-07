@@ -38,56 +38,56 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
   }, [])
 
   const handleAcceptRequest = async (requestId) => {
-  try {
-    setProcessingRequestId(requestId)
+    try {
+      setProcessingRequestId(requestId)
 
-    const res = await acceptJoinRequest(requestId)
+      const res = await acceptJoinRequest(requestId)
 
-    if (res && res.success) {
-      setRequestStatuses((prev) => ({
-        ...prev,
-        [requestId]: "ACCEPTED"
-      }))
+      if (res && res.success) {
+        setRequestStatuses((prev) => ({
+          ...prev,
+          [requestId]: "ACCEPTED"
+        }))
 
-      toast.success(res.message || "Request accepted successfully")
+        toast.success(res.message || "Join request accepted successfully")
 
-      fetchNotifications()
-      fetchPendingJoinRequests()
-    } else {
-      toast.error(res?.message || "Failed to accept request")
+        fetchNotifications()
+        fetchPendingJoinRequests()
+      } else {
+        toast.error(res?.message || "Failed to accept request")
+      }
+    } catch (err) {
+      toast.error(err.message || "Error accepting join request")
+    } finally {
+      setProcessingRequestId(null)
     }
-  } catch (err) {
-    toast.error(err.message || "Error accepting join request")
-  } finally {
-    setProcessingRequestId(null)
   }
-}
 
   const handleRejectRequest = async (requestId) => {
-  try {
-    setProcessingRequestId(requestId)
+    try {
+      setProcessingRequestId(requestId)
 
-    const res = await rejectJoinRequest(requestId)
+      const res = await rejectJoinRequest(requestId)
 
-    if (res && res.success) {
-      setRequestStatuses((prev) => ({
-        ...prev,
-        [requestId]: "REJECTED"
-      }))
+      if (res && res.success) {
+        setRequestStatuses((prev) => ({
+          ...prev,
+          [requestId]: "REJECTED"
+        }))
 
-      toast.success(res.message || "Request rejected successfully")
+        toast.success(res.message || "Join request rejected successfully")
 
-      fetchNotifications()
-      fetchPendingJoinRequests()
-    } else {
-      toast.error(res?.message || "Failed to reject request")
+        fetchNotifications()
+        fetchPendingJoinRequests()
+      } else {
+        toast.error(res?.message || "Failed to reject request")
+      }
+    } catch (err) {
+      toast.error(err.message || "Error rejecting join request")
+    } finally {
+      setProcessingRequestId(null)
     }
-  } catch (err) {
-    toast.error(err.message || "Error rejecting join request")
-  } finally {
-    setProcessingRequestId(null)
   }
-}
 
   const handleMarkAsReadNotice = () => {
     toast('Mark-as-read API is currently unavailable on the backend.', { icon: 'ℹ️' })
@@ -222,7 +222,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
                                 disabled={processingRequestId === req.id}
                                 className="px-2.5 py-1 rounded-xl bg-white hover:bg-stone-100 border border-stone-200 text-stone-700 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                               >
-                                Reject
+                                {processingRequestId === req.id ? 'Rejecting...' : 'Reject'}
                               </button>
                               <button
                                 type="button"
@@ -230,7 +230,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
                                 disabled={processingRequestId === req.id}
                                 className="px-2.5 py-1 rounded-xl bg-[#111318] hover:bg-black text-white text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                               >
-                                Accept
+                                {processingRequestId === req.id ? 'Accepting...' : 'Accept'}
                               </button>
                             </div>
                           </div>
@@ -279,7 +279,6 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
                         </div>
 
                         {/* Action buttons if notification references a join_request_id */}
-                        {/* Action buttons if notification references a join_request_id */}
                         {n.join_request_id &&
   n.message === "A new user has requested to join your organization" &&
   !requestStatuses[n.join_request_id] && (
@@ -299,18 +298,18 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
         type="button"
         onClick={() => handleRejectRequest(n.join_request_id)}
         disabled={processingRequestId === n.join_request_id}
-        className="px-2.5 py-1 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 text-[11px] font-bold"
+        className="px-2.5 py-1 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 text-[11px] font-bold disabled:opacity-50"
       >
-        Reject
+        {processingRequestId === n.join_request_id ? 'Rejecting...' : 'Reject'}
       </button>
 
       <button
         type="button"
         onClick={() => handleAcceptRequest(n.join_request_id)}
         disabled={processingRequestId === n.join_request_id}
-        className="px-2.5 py-1 rounded-xl bg-[#111318] hover:bg-black text-white text-[11px] font-bold"
+        className="px-2.5 py-1 rounded-xl bg-[#111318] hover:bg-black text-white text-[11px] font-bold disabled:opacity-50"
       >
-        Accept
+        {processingRequestId === n.join_request_id ? 'Accepting...' : 'Accept'}
       </button>
     </div>
   )}

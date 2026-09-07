@@ -239,7 +239,7 @@ function LeftPanel() {
           </div>
           <div>
             <span className="text-2xl font-extrabold text-stone-900 tracking-tight">
-              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em>
             </span>
             <div className="text-xs text-stone-500 font-medium">Enterprise Workspace System</div>
           </div>

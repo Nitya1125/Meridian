@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginApi, googleLogin, githubLogin } from '../Service/authService';
 import { toast } from 'react-hot-toast';
@@ -80,7 +81,7 @@ function LeftPanel() {
           </div>
           <div>
             <span className="text-2xl font-extrabold text-stone-900 tracking-tight">
-              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em>
             </span>
             <div className="text-xs text-stone-500 font-medium">Enterprise Workspace System</div>
           </div>
@@ -136,8 +137,10 @@ function LeftPanel() {
   );
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectParam = searchParams.get('redirect');
   const { login, demoLogin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -147,6 +150,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
+    if (loading) return;
     if (!email) {
       setEmailErr('Email is required');
       return;
@@ -162,10 +166,16 @@ export default function LoginPage() {
     try {
       const result = await loginApi({ email, password });
       login(result.user, result.token);
-      toast.success('Welcome back!');
-      router.push('/dashboard');
+      toast.success(result?.message || 'Logged in successfully');
+      if (redirectParam) {
+        router.push(redirectParam);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
-      setPwErr(error.message || 'Invalid email or password');
+      const msg = error.message || 'Invalid email or password';
+      setPwErr(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -288,5 +298,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF8F5]" />}>
+      <LoginContent />
+    </Suspense>
   );
 }

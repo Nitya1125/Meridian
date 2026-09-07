@@ -152,7 +152,7 @@ function LeftPanel() {
           </div>
           <div>
             <span className="text-2xl font-extrabold text-stone-900 tracking-tight">
-              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em>
             </span>
             <div className="text-xs text-stone-500 font-medium">Enterprise Workspace System</div>
           </div>
@@ -198,7 +198,7 @@ function LeftPanel() {
         </div>
 
         <span className="text-xs font-mono font-bold text-lime-800 bg-lime-100 px-2.5 py-1 rounded-full">
-          Free 14-Day Trial
+          99.9% Uptime
         </span>
       </div>
     </div>
@@ -245,6 +245,7 @@ function OtpModal({ email, onClose, onSuccess }) {
   };
 
   const handleVerify = async (code) => {
+    if (verifying) return;
     if (code.length !== 6) {
       setOtpErr("Please enter the complete OTP");
       return;
@@ -254,14 +255,17 @@ function OtpModal({ email, onClose, onSuccess }) {
       setVerifying(true);
       setOtpErr("");
 
-      await verifyOtp({
+      const res = await verifyOtp({
         email,
         otp: code,
       });
 
+      toast.success(res?.message || "Email verified successfully");
       onSuccess();
     } catch (error) {
-      setOtpErr(error.message || "Invalid verification code");
+      const msg = error.message || "Invalid verification code";
+      setOtpErr(msg);
+      toast.error(msg);
     } finally {
       setVerifying(false);
     }
@@ -373,6 +377,7 @@ export default function SignupPage() {
   };
 
   const handleSendOtp = async () => {
+    if (loading) return;
     let hasError = false;
 
     if (!firstName.trim()) {
@@ -395,20 +400,24 @@ export default function SignupPage() {
 
     try {
       setLoading(true);
-      await sendOtp({
+      const res = await sendOtp({
         firstName,
         lastName,
         email,
       });
+      toast.success(res?.message || "Verification code sent to your email");
       setShowOtpModal(true);
     } catch (error) {
-      setEmailErr(error.message || "Failed to send OTP");
+      const msg = error.message || "Failed to send verification code";
+      setEmailErr(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   const handleFinalSubmit = async () => {
+    if (loading) return;
     let hasError = false;
 
     if (password.length < 8) {
@@ -425,16 +434,18 @@ export default function SignupPage() {
 
     try {
       setLoading(true);
-      await signup({
+      const res = await signup({
         firstName,
         lastName,
         email,
         password,
       });
-      toast.success('Account created! Please sign in.');
+      toast.success(res?.message || "Account created successfully");
       router.push('/');
     } catch (error) {
-      setPwErr(error.message || "Signup failed");
+      const msg = error.message || "Signup failed";
+      setPwErr(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -456,7 +467,7 @@ export default function SignupPage() {
               )}
             </h2>
             <p className="text-xs text-stone-500 font-medium">
-              {step === 3 ? 'Secure your workspace account' : 'Free 14-day trial — no credit card required'}
+              {step === 3 ? 'Secure your workspace account' : 'Join your team and sprint deliverables'}
             </p>
           </div>
 

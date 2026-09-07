@@ -65,6 +65,15 @@ export default function TeamPage() {
     fetchMember()
 }, [activeOrg])
 
+  const isOwner = Boolean(
+    activeOrg && (
+      (activeOrg.created_by && user?.id && String(activeOrg.created_by) === String(user.id)) ||
+      activeOrg.role?.toUpperCase() === 'OWNER' ||
+      activeOrg.role?.toLowerCase().includes('owner') ||
+      activeOrg.role?.toLowerCase().includes('leader')
+    )
+  )
+
   return (
     <ProtectedRoute>
       <div className="flex min-h-screen w-full bg-[#FAF8F5]">
@@ -75,7 +84,7 @@ export default function TeamPage() {
         <main className="flex-1 min-w-0 px-4 py-6 sm:px-6 lg:px-8 overflow-y-auto pt-16 lg:pt-6">
 
           <DynamicHeader
-            onOpenNewTask={() => setInviteModalOpen(true)}
+            onOpenNewTask={isOwner ? () => setInviteModalOpen(true) : undefined}
             onOpenSearch={() => {
               const evt = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
               window.dispatchEvent(evt)
@@ -93,13 +102,15 @@ export default function TeamPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => setInviteModalOpen(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md transition-all cursor-pointer"
-            >
-              <PlusIcon size={15} strokeWidth={2.5} />
-              <span>Invite Member</span>
-            </button>
+            {isOwner && (
+              <button
+                onClick={() => setInviteModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+              >
+                <PlusIcon size={15} strokeWidth={2.5} />
+                <span>Invite Member</span>
+              </button>
+            )}
           </div>
 
           {/* Bento KPI Summary Row (Ref Image 2) */}

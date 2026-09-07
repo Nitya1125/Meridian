@@ -6,8 +6,9 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import { useOrg } from '@/context/OrgContext'
+import { useAuth } from '@/context/AuthContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { acceptJoinRequest, rejectJoinRequest } from '@/Service/organization'
+import { acceptJoinRequest, rejectJoinRequest, inviteOrganizationUser } from '@/Service/organization'
 import {
   BuildingIcon, UsersIcon, ShieldIcon, CopyIcon, CheckIcon,
   SendIcon, PlusIcon, SparklesIcon, CheckCircleIcon
@@ -15,6 +16,7 @@ import {
 import { toast } from 'react-hot-toast'
 
 export default function OrganizationPage() {
+  const { user } = useAuth()
   const { activeOrg, openCreateModal, openJoinModal } = useOrg()
   const { fullName, initials } = useCurrentUser()
   const [modalOpen, setModalOpen] = useState(false)
@@ -26,21 +28,56 @@ export default function OrganizationPage() {
 
   // Join Request Leader Action state
   const [targetRequestId, setTargetRequestId] = useState('')
-  const [actionLoading, setActionLoading] = useState(false)
+  const [acceptingRequest, setAcceptingRequest] = useState(false)
+  const [rejectingRequest, setRejectingRequest] = useState(false)
 
-  const handleSendEmailInvite = (e) => {
+  const isOwner = Boolean(
+    activeOrg && (
+      (activeOrg.created_by && user?.id && String(activeOrg.created_by) === String(user.id)) ||
+      activeOrg.role?.toUpperCase() === 'OWNER' ||
+      activeOrg.role?.toLowerCase().includes('owner') ||
+      activeOrg.role?.toLowerCase().includes('leader')
+    )
+  )
+
+  const handleSendEmailInvite = async (e) => {
     e.preventDefault()
-    if (!inviteEmail.trim()) {
+    if (sendingInvite) return
+    const trimmedEmail = inviteEmail.trim()
+    if (!trimmedEmail) {
       toast.error('Please enter an email address')
       return
     }
 
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+
+    if (!activeOrg || !activeOrg.id) {
+      toast.error('No active organization selected')
+      return
+    }
+
+    if (!isOwner) {
+      toast.error('Only organization owners can send email invitations')
+      return
+    }
+
     setSendingInvite(true)
-    setTimeout(() => {
+    try {
+      const res = await inviteOrganizationUser(trimmedEmail, activeOrg.id)
+      if (res && res.success) {
+        toast.success(res.message || 'Invitation sent successfully')
+        setInviteEmail('')
+      } else {
+        toast.error(res?.message || 'Failed to send invitation')
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Unable to send invitation. Please try again later.')
+    } finally {
       setSendingInvite(false)
-      toast.success(`Invitation sent to ${inviteEmail}`)
-      setInviteEmail('')
-    }, 600)
+    }
   }
 
   const handleCopyInviteCode = () => {
@@ -57,46 +94,47 @@ export default function OrganizationPage() {
 
   const handleAcceptRequest = async (e) => {
     e?.preventDefault()
-    if (!targetRequestId.trim()) {
+    if (acceptingRequest || rejectingRequest) return
+    if (!targetRequestId.toString().trim()) {
       toast.error('Please enter a Join Request ID')
       return
     }
     try {
-      setActionLoading(true)
-      const res = await acceptJoinRequest(targetRequestId.trim())
-      console.log("TARGET REQUEST ID:", targetRequestId)
+      setAcceptingRequest(true)
+      const res = await acceptJoinRequest(targetRequestId.toString().trim())
       if (res && res.success) {
-        toast.success(res.message || 'Request accepted successfully')
+        toast.success(res.message || 'Join request accepted successfully')
         setTargetRequestId('')
       } else {
         toast.error(res?.message || 'Failed to accept join request')
       }
     } catch (err) {
-      toast.error(err.message || 'Error processing request')
+      toast.error(err?.message || 'Error processing request')
     } finally {
-      setActionLoading(false)
+      setAcceptingRequest(false)
     }
   }
 
   const handleRejectRequest = async (e) => {
     e?.preventDefault()
-    if (!targetRequestId.trim()) {
+    if (acceptingRequest || rejectingRequest) return
+    if (!targetRequestId.toString().trim()) {
       toast.error('Please enter a Join Request ID')
       return
     }
     try {
-      setActionLoading(true)
-      const res = await rejectJoinRequest(targetRequestId.trim())
+      setRejectingRequest(true)
+      const res = await rejectJoinRequest(targetRequestId.toString().trim())
       if (res && res.success) {
-        toast.success(res.message || 'Request rejected successfully')
+        toast.success(res.message || 'Join request rejected successfully')
         setTargetRequestId('')
       } else {
         toast.error(res?.message || 'Failed to reject join request')
       }
     } catch (err) {
-      toast.error(err.message || 'Error processing request')
+      toast.error(err?.message || 'Error processing request')
     } finally {
-      setActionLoading(false)
+      setRejectingRequest(false)
     }
   }
 
@@ -333,18 +371,18 @@ export default function OrganizationPage() {
                       <button
                         type="button"
                         onClick={handleAcceptRequest}
-                        disabled={actionLoading || !targetRequestId.trim()}
-                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                        disabled={acceptingRequest || rejectingRequest || !targetRequestId.toString().trim()}
+                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {actionLoading ? 'Processing...' : 'Accept'}
+                        {acceptingRequest ? 'Accepting...' : 'Accept'}
                       </button>
                       <button
                         type="button"
                         onClick={handleRejectRequest}
-                        disabled={actionLoading || !targetRequestId.trim()}
-                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
+                        disabled={acceptingRequest || rejectingRequest || !targetRequestId.toString().trim()}
+                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {actionLoading ? 'Processing...' : 'Reject'}
+                        {rejectingRequest ? 'Rejecting...' : 'Reject'}
                       </button>
                     </div>
                   </div>
@@ -370,15 +408,24 @@ export default function OrganizationPage() {
                   {/* Option A: Invite by Email */}
                   <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#111318] text-lime-400 flex items-center justify-center">
-                          <SendIcon size={14} />
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-[#111318] text-lime-400 flex items-center justify-center">
+                            <SendIcon size={14} />
+                          </div>
+                          <h3 className="text-sm font-bold text-stone-900">Invite by Email</h3>
                         </div>
-                        <h3 className="text-sm font-bold text-stone-900">Invite by Email</h3>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                          isOwner ? 'bg-lime-100 text-lime-800' : 'bg-stone-200 text-stone-600'
+                        }`}>
+                          {isOwner ? 'OWNER ACCESS' : 'OWNER ONLY'}
+                        </span>
                       </div>
 
                       <p className="text-xs text-stone-500 font-medium mb-4">
-                        Send a direct email invitation with workspace access link.
+                        {isOwner
+                          ? 'Send a direct email invitation with workspace access link.'
+                          : 'Direct email invitations can only be dispatched by the workspace owner.'}
                       </p>
 
                       <form onSubmit={handleSendEmailInvite} className="space-y-3">
@@ -388,19 +435,20 @@ export default function OrganizationPage() {
                           </label>
                           <input
                             type="email"
-                            placeholder="teammate@company.com"
+                            disabled={!isOwner || sendingInvite}
+                            placeholder={isOwner ? "teammate@company.com" : "Owner permission required"}
                             value={inviteEmail}
                             onChange={e => setInviteEmail(e.target.value)}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium bg-white rounded-xl border border-stone-200 outline-none focus:border-stone-400 font-sans"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium bg-white rounded-xl border border-stone-200 outline-none focus:border-stone-400 font-sans disabled:opacity-60 disabled:bg-stone-100/60"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          disabled={sendingInvite}
-                          className="w-full py-2.5 rounded-xl bg-[#111318] hover:bg-stone-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                          disabled={!isOwner || sendingInvite || !inviteEmail.trim()}
+                          className="w-full py-2.5 rounded-xl bg-[#111318] hover:bg-stone-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {sendingInvite ? 'Sending...' : 'Send Invitation'}
+                          {sendingInvite ? 'Sending Invitation...' : 'Send Invitation'}
                         </button>
                       </form>
                     </div>

@@ -19,6 +19,7 @@ export default function CreateOrgModal() {
 
   const handleCreate = async (e) => {
     e.preventDefault()
+    if (loading) return
     if (!name.trim()) {
       toast.error('Organization Name is required')
       return

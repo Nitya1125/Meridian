@@ -54,6 +54,7 @@ export default function JoinOrgModal() {
 
   const handleVerify = async (e) => {
     e?.preventDefault()
+    if (verifying) return
     const fullCode = digits.join('')
     if (fullCode.length < 6) {
       setErrorMsg('Please enter all 6 digits of the organization code.')
@@ -71,13 +72,14 @@ export default function JoinOrgModal() {
         setErrorMsg(res?.message || 'Invalid organization code. Please check and try again.')
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Verification failed. Please try again.')
+      setErrorMsg(err?.message || 'Verification failed. Please try again.')
     } finally {
       setVerifying(false)
     }
   }
 
   const handleSendJoinRequest = async () => {
+    if (submitting) return
     if (!orgFound || !orgFound.id) return
 
     setSubmitting(true)
@@ -91,7 +93,7 @@ export default function JoinOrgModal() {
         toast.error(res?.message || 'Failed to send join request')
       }
     } catch (err) {
-      toast.error(err.message || 'Error sending join request')
+      toast.error(err?.message || 'Error sending join request')
     } finally {
       setSubmitting(false)
     }
