@@ -3,18 +3,22 @@
 import React from 'react'
 import { useOrg } from '@/context/OrgContext'
 import { BuildingIcon, UserPlusIcon, ZapIcon, ArrowRightIcon, ClockIcon } from '@/components/Icons'
+import StripedLoader from './StripedLoader'
+
+// ─── Date Helper ───────────────────────────────────────────────────────────
+function formatDaysAgo(isoDate) {
+  if (!isoDate) return 'Recently'
+  const now = new Date()
+  const then = new Date(isoDate)
+  const diff = Math.floor((now.getTime() - then.getTime()) / 86400000)
+  if (diff <= 0) return 'Today'
+  if (diff === 1) return '1 day ago'
+  return `${diff} days ago`
+}
 
 // ─── Pending-Only Screen ───────────────────────────────────────────────────
 function PendingScreen() {
   const { pendingRequests = [], openCreateModal, openJoinModal } = useOrg()
-
-  const formatDaysAgo = (isoDate) => {
-    if (!isoDate) return 'Recently'
-    const diff = Math.floor((Date.now() - new Date(isoDate).getTime()) / 86400000)
-    if (diff === 0) return 'Today'
-    if (diff === 1) return '1 day ago'
-    return `${diff} days ago`
-  }
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center py-12 px-4 select-none">
@@ -197,7 +201,14 @@ function NewUserScreen() {
 
 // ─── Main Export ────────────────────────────────────────────────────────────
 export default function OrgOnboarding() {
-  const { userState } = useOrg()
+  const { userState, orgsLoading } = useOrg()
+  if (orgsLoading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center p-8">
+        <StripedLoader color="green" size="md" label="Loading workspace organizations..." className="max-w-md" />
+      </div>
+    )
+  }
   if (userState === 'pending') return <PendingScreen />
   return <NewUserScreen />
 }

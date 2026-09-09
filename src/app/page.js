@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginApi, googleLogin, githubLogin } from '../Service/authService';
 import { toast } from 'react-hot-toast';
 import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, SparklesIcon } from '@/components/Icons';
+import StripedLoader from '@/components/StripedLoader';
 
 /* ── Tiny Icons ── */
 const GoogleIcon = () => (
@@ -76,21 +76,21 @@ function LeftPanel() {
       {/* Brand Header */}
       <div>
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-2xl bg-[#111318] flex items-center justify-center text-white shadow-md">
-            <ZapIcon size={20} strokeWidth={2.5} className="text-lime-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-900 text-white shadow-md">
+            <span className="font-serif-italic text-2xl leading-none">M</span>
           </div>
           <div>
             <span className="text-2xl font-extrabold text-stone-900 tracking-tight">
-              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em>
+              Meridian <span className="font-serif-italic font-normal text-stone-500">Clarity</span> <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
             </span>
             <div className="text-xs text-stone-500 font-medium">Enterprise Workspace System</div>
           </div>
         </div>
 
         {/* Headline with Instrument Serif Italic Highlights */}
-        <h1 className="font-serif text-5xl lg:text-6xl text-stone-950 font-normal leading-[1.08] tracking-tight mb-5">
-          Where <em className="italic font-normal font-serif text-stone-900 underline decoration-lime-400 decoration-wavy decoration-2">exceptional</em> teams<br />
-          build <em className="italic font-normal font-serif text-stone-900">iconic products</em>.
+        <h1 className="font-serif-italic text-5xl lg:text-6xl text-stone-950 font-normal leading-[1.08] tracking-tight mb-5">
+          Where <span className="text-emerald-700">exceptional</span> teams<br />
+          build <span className="text-violet-700">iconic</span> products.
         </h1>
         <p className="text-sm text-stone-600 leading-relaxed mb-10 max-w-md font-medium">
           Meridian brings your deliverables, sprint velocity, calendar schedules, and team channels into one unified, ultra-premium interface.
@@ -137,10 +137,8 @@ function LeftPanel() {
   );
 }
 
-function LoginContent() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectParam = searchParams.get('redirect');
   const { login, demoLogin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -150,7 +148,6 @@ function LoginContent() {
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
-    if (loading) return;
     if (!email) {
       setEmailErr('Email is required');
       return;
@@ -166,16 +163,10 @@ function LoginContent() {
     try {
       const result = await loginApi({ email, password });
       login(result.user, result.token);
-      toast.success(result?.message || 'Logged in successfully');
-      if (redirectParam) {
-        router.push(redirectParam);
-      } else {
-        router.push('/dashboard');
-      }
+      toast.success('Welcome back!');
+      router.push('/dashboard');
     } catch (error) {
-      const msg = error.message || 'Invalid email or password';
-      setPwErr(msg);
-      toast.error(msg);
+      setPwErr(error.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
@@ -190,17 +181,45 @@ function LoginContent() {
       <div className="w-full lg:w-[480px] shrink-0 flex items-center justify-center bg-white px-7 py-8 md:px-12 md:py-10 shadow-2xl border-l border-stone-200/80 min-h-screen">
         <div className="w-full max-w-[360px]">
 
-          {/* Header with Instrument Serif Italic */}
-          <div className="mb-6">
-            <h2 className="text-3xl font-normal font-serif text-stone-950 tracking-tight mb-1">
-              Sign in to <em className="italic font-serif font-normal text-stone-900">Meridian</em>
+          {/* Header with High-Low Typographic Pairing */}
+          <div className="mb-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white mb-3 shadow-xs">
+              <span className="font-serif-italic text-xl leading-none">M</span>
+            </div>
+            <h2 className="text-[28px] sm:text-[32px] font-extrabold leading-tight tracking-tight text-stone-900 mb-1">
+              Welcome <span className="font-serif-italic font-normal text-violet-700">back</span>
             </h2>
             <p className="text-xs text-stone-500 font-medium">
               Access your team workspace and sprint deliverables
             </p>
           </div>
 
-          
+          {/* Instant Demo Sign-In Card for Testing */}
+          <div className="mb-5 p-3 rounded-2xl bg-gradient-to-r from-lime-50 via-emerald-50 to-lime-50 border border-lime-300/80 flex items-center justify-between gap-3 shadow-2xs">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-lime-500 animate-pulse" />
+                <span className="text-xs font-bold text-stone-900">Demo Test Access</span>
+                <span className="text-[9px] font-mono font-bold bg-lime-200 text-lime-900 px-1.5 py-0.5 rounded-md">
+                  1-CLICK
+                </span>
+              </div>
+              <p className="text-[11px] text-stone-600 font-medium truncate mt-0.5">
+                Instant test sign-in as Alex Johnson
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                demoLogin();
+                toast.success('Signed in with Demo Account!');
+              }}
+              className="px-3.5 py-2 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold shrink-0 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+            >
+              <SparklesIcon size={13} className="text-lime-400" />
+              <span>Demo Sign In</span>
+            </button>
+          </div>
 
           {/* Social Logins */}
           <div className="grid grid-cols-2 gap-2 mb-4">
@@ -268,6 +287,12 @@ function LoginContent() {
               </button>
             </div>
 
+            {loading && (
+              <div className="mb-4 animate-in fade-in duration-200">
+                <StripedLoader color="green" size="md" label="Authenticating session..." />
+              </div>
+            )}
+
             <button
               type="submit"
               disabled={loading}
@@ -298,13 +323,5 @@ function LoginContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-[#FAF8F5]" />}>
-      <LoginContent />
-    </Suspense>
   );
 }

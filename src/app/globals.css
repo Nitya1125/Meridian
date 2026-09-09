@@ -1,10 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap');
-@import url('https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,600,700,800,900&f[]=general-sans@200,300,400,500,600,700,800,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Urbanist:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* Tailwind v4 */
 @import 'tailwindcss';
 
+/* ============================================================
+   MERIDIAN CLARITY PRO — KINETIC 2.0 DESIGN SYSTEM & TYPOGRAPHY
+   ============================================================ */
+
+@theme {
+  --font-sans: 'Urbanist', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --color-canvas: #faf8f5;
+  --color-canvas-subtle: #f4f0e6;
+  --color-canvas-warm: #f8f6f0;
+  --color-surface: #ffffff;
+  --color-obsidian: #111318;
+
+  --color-stone-950: #0c0a09;
+  --color-stone-900: #1c1917;
+  --color-stone-700: #44403c;
+  --color-stone-600: #57534e;
+  --color-stone-500: #78716c;
+  --color-stone-400: #a8a29e;
+
+  --ease-kinetic: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 :root {
+  --meridian-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
   /* Canvas Backgrounds */
   --bg-canvas: #faf8f5;
   --bg-canvas-subtle: #f4f0e6;
@@ -15,19 +41,14 @@
   --text-secondary: #52525b;
   --text-muted: #71717a;
 
-  /* ── Typography Hierarchy (Futura / Plus Jakarta Sans / Satoshi / Manrope / General Sans) ── */
-  --font-serif: var(--font-instrument-serif), 'Instrument Serif', Georgia, serif;
-  --font-futura: 'Futura', 'Futura PT', 'Futura-Medium', var(--font-futura), 'League Spartan', sans-serif;
-  --font-num: 'Futura', 'Futura PT', 'Futura-Medium', var(--font-futura), 'League Spartan', sans-serif;
-  --font-jakarta: var(--font-jakarta), 'Plus Jakarta Sans', var(--font-manrope), sans-serif;
-  --font-satoshi: 'Satoshi', var(--font-jakarta), var(--font-manrope), sans-serif;
-  --font-manrope: var(--font-manrope), 'Manrope', sans-serif;
-  --font-general: 'General Sans', var(--font-jakarta), var(--font-manrope), sans-serif;
-
-  --font-sans: var(--font-jakarta), var(--font-manrope), var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: var(--font-jakarta), 'Satoshi', var(--font-manrope), sans-serif;
-  --font-body: var(--font-jakarta), var(--font-manrope), sans-serif;
-  --font-mono: var(--font-jakarta), var(--font-manrope), sans-serif;
+  /* ── Typography Hierarchy ── */
+  --font-urbanist: 'Urbanist', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Urbanist', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-num: 'Urbanist', 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Urbanist', 'Plus Jakarta Sans', system-ui, sans-serif;
 
   /* Signature Pastels */
   --pastel-lavender: #ede9fe;
@@ -77,13 +98,32 @@ body,
 }
 
 body {
-  font-family: var(--font-body);
-  color: var(--text-primary);
+  font-family: var(--font-sans);
+  color: var(--color-stone-900, #1c1917);
   background-color: var(--bg-canvas);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   font-feature-settings: "cv02" 1, "cv03" 1, "cv04" 1, "cv11" 1, "ss01" 1, "tnum" 1;
+}
+
+/* ── Typography helpers from prototype ── */
+.font-serif-italic {
+  font-family: var(--font-serif) !important;
+  font-style: italic !important;
+  letter-spacing: -0.02em;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: 'tnum' on, 'lnum' on;
+}
+
+.tech-badge {
+  font-family: var(--font-mono) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
 }
 
 /* ── Editorial Headings with Instrument Serif ── */
@@ -114,7 +154,6 @@ h3.font-serif {
 .font-serif em,
 .editorial-heading em,
 em.font-serif,
-.font-serif-italic,
 .heading-highlight,
 .highlight-serif,
 h1 em,
@@ -126,7 +165,6 @@ h4 em {
   font-weight: 400 !important;
   letter-spacing: -0.01em;
 }
-
 
 /* Heading Highlight Accent */
 .heading-highlight-accent {
@@ -341,6 +379,45 @@ textarea,
       #3b82f6 12px);
 }
 
+.striped-bar-rose {
+  background: repeating-linear-gradient(-45deg,
+      #fb7185,
+      #fb7185 6px,
+      #f43f5e 6px,
+      #f43f5e 12px);
+}
+
+.striped-bar-amber {
+  background: repeating-linear-gradient(-45deg,
+      #fcd34d,
+      #fcd34d 6px,
+      #f59e0b 6px,
+      #f59e0b 12px);
+}
+
+.striped-bar-emerald {
+  background: repeating-linear-gradient(-45deg,
+      #34d399,
+      #34d399 6px,
+      #10b981 6px,
+      #10b981 12px);
+}
+
+/* Active Loading Animation for Striped Bars */
+.striped-loader-anim {
+  background-size: 200% 100%;
+  animation: stripe-loader-flow 1.4s linear infinite;
+}
+
+@keyframes stripe-loader-flow {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
 /* Animations */
 @keyframes barGrow {
   from {
@@ -395,8 +472,155 @@ textarea,
   font-family: var(--font-general);
 }
 
-/* Ensure any legacy font-mono renders with clean geometric sans-serif */
-.font-mono {
-  font-family: var(--font-satoshi), 'Satoshi', var(--font-general), var(--font-manrope), -apple-system, sans-serif !important;
-  letter-spacing: -0.01em;
+/* ── RonDesignLab Style Precision Hierarchy ── */
+/* Authentic Technical Monospace for telemetry, metrics, badges, and timestamps */
+.font-mono,
+.tech-mono {
+  font-family: var(--font-mono), 'JetBrains Mono', 'SF Mono', monospace !important;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.015em;
 }
+
+/* Micro Status Badges (Telemetry / Architecture Feel) */
+.tech-badge {
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* Tabular Figures for Numbers */
+.tabular-num {
+  font-family: var(--font-mono), 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+
+/* Clean, crisp body copy with comfortable tracking */
+.body-refined {
+  font-family: var(--font-body);
+  letter-spacing: -0.012em;
+  line-height: 1.55;
+}
+
+/* ── Urbanist Spec Hierarchy (Size 27, Line-Height 120% Spec) ── */
+.font-urbanist {
+  font-family: var(--font-urbanist) !important;
+}
+
+.urbanist-lead,
+.subtitle-spec {
+  font-family: var(--font-urbanist);
+  font-size: 27px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 400;
+}
+
+.urbanist-sub {
+  font-family: var(--font-urbanist);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+/* ── Kinetic Micro-Interactions & Motion ── */
+.tactile {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.tactile:active {
+  transform: scale(0.97);
+}
+
+.striped-anim {
+  background-size: 200% 100%;
+  animation: stripe-flow 18s linear infinite;
+}
+@keyframes stripe-flow {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.striped-bar-sky {
+  background: repeating-linear-gradient(-45deg, #38bdf8, #38bdf8 6px, #0ea5e9 6px, #0ea5e9 12px);
+}
+
+@keyframes beacon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(132, 204, 22, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(132, 204, 22, 0);
+  }
+}
+.beacon {
+  animation: beacon-pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes bar-grow {
+  from { transform: scaleY(0); }
+  to { transform: scaleY(1); }
+}
+.bar-grow {
+  transform-origin: bottom;
+  animation: bar-grow 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes drawer-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.drawer-in {
+  animation: drawer-in 0.38s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.overlay-in {
+  animation: overlay-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes palette-in {
+  from { transform: translateY(-8px) scale(0.98); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+.palette-in {
+  animation: palette-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes rise-in {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.rise-in {
+  animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes donut-draw {
+  from { stroke-dashoffset: var(--dash-len); }
+  to { stroke-dashoffset: var(--dash-to); }
+}
+.donut-seg {
+  animation: donut-draw 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transition: stroke-width 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes count-pop {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.count-pop {
+  animation: count-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes typing-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+.typing-dot {
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}

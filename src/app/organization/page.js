@@ -1,35 +1,24 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import { useOrg } from '@/context/OrgContext'
-import { useAuth } from '@/context/AuthContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { acceptJoinRequest, rejectJoinRequest, inviteOrganizationUser } from '@/Service/organization'
+import { acceptJoinRequest, rejectJoinRequest, handleOrganizationUsers, inviteOrganizationUser } from '@/Service/organization'
 import {
   BuildingIcon, UsersIcon, ShieldIcon, CopyIcon, CheckIcon,
   SendIcon, PlusIcon, SparklesIcon, CheckCircleIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
+import StripedLoader from '@/components/StripedLoader'
 
 export default function OrganizationPage() {
-  const { user } = useAuth()
-  const { activeOrg, openCreateModal, openJoinModal } = useOrg()
-  const { fullName, initials } = useCurrentUser()
+  const { activeOrg, openCreateModal, openJoinModal, fetchNotifications, fetchPendingJoinRequests } = useOrg()
+  const { fullName, initials, user } = useCurrentUser()
   const [modalOpen, setModalOpen] = useState(false)
-
-  // Invite by email form
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [sendingInvite, setSendingInvite] = useState(false)
-  const [copiedCode, setCopiedCode] = useState(false)
-
-  // Join Request Leader Action state
-  const [targetRequestId, setTargetRequestId] = useState('')
-  const [acceptingRequest, setAcceptingRequest] = useState(false)
-  const [rejectingRequest, setRejectingRequest] = useState(false)
 
   const isOwner = Boolean(
     activeOrg && (
@@ -40,41 +29,87 @@ export default function OrganizationPage() {
     )
   )
 
+  // Real members state fetched via Service
+  const [membersList, setMembersList] = useState([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [refreshCount, setRefreshCount] = useState(0)
+
+  // Invite by email form
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [sendingInvite, setSendingInvite] = useState(false)
+  const [copiedCode, setCopiedCode] = useState(false)
+
+  // Join Request Leader Action state
+  const [targetRequestId, setTargetRequestId] = useState('')
+  const [actionLoading, setActionLoading] = useState(false)
+
+  useEffect(() => {
+    let ignore = false
+    const fetchMemberData = async () => {
+      if (!activeOrg || !activeOrg.id) {
+        setMembersList([])
+        return
+      }
+
+      setMembersLoading(true)
+      try {
+        const res = await handleOrganizationUsers(activeOrg.id)
+        if (!ignore && res?.success && Array.isArray(res.members)) {
+          setMembersList(res.members.map(m => ({
+            ...m,
+            name: `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email,
+            initials: `${m.first_name?.[0] || m.email?.[0] || 'U'}${m.last_name?.[0] || ''}`.toUpperCase(),
+            role: m.role || 'Member',
+            avatarColor: '#8b5cf6'
+          })))
+        } else if (!ignore) {
+          setMembersList([])
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('Error fetching org members via service:', err)
+          setMembersList([])
+        }
+      } finally {
+        if (!ignore) {
+          setMembersLoading(false)
+        }
+      }
+    }
+
+    fetchMemberData()
+
+    return () => {
+      ignore = true
+    }
+  }, [activeOrg, refreshCount])
+
   const handleSendEmailInvite = async (e) => {
-    e.preventDefault()
-    if (sendingInvite) return
-    const trimmedEmail = inviteEmail.trim()
-    if (!trimmedEmail) {
+    e?.preventDefault()
+    if (!isOwner) {
+      toast.error('Only workspace owners can send email invitations')
+      return
+    }
+    if (!inviteEmail.trim()) {
       toast.error('Please enter an email address')
       return
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      toast.error('Please enter a valid email address')
-      return
-    }
-
     if (!activeOrg || !activeOrg.id) {
-      toast.error('No active organization selected')
+      toast.error('Please select an active organization first')
       return
     }
 
-    if (!isOwner) {
-      toast.error('Only organization owners can send email invitations')
-      return
-    }
-
-    setSendingInvite(true)
     try {
-      const res = await inviteOrganizationUser(trimmedEmail, activeOrg.id)
+      setSendingInvite(true)
+      const res = await inviteOrganizationUser(inviteEmail.trim(), activeOrg.id)
       if (res && res.success) {
-        toast.success(res.message || 'Invitation sent successfully')
+        toast.success(res.message || `Invitation sent to ${inviteEmail.trim()}`)
         setInviteEmail('')
       } else {
         toast.error(res?.message || 'Failed to send invitation')
       }
     } catch (err) {
-      toast.error(err?.message || 'Unable to send invitation. Please try again later.')
+      toast.error(err?.message || 'Failed to send invitation')
     } finally {
       setSendingInvite(false)
     }
@@ -94,51 +129,54 @@ export default function OrganizationPage() {
 
   const handleAcceptRequest = async (e) => {
     e?.preventDefault()
-    if (acceptingRequest || rejectingRequest) return
-    if (!targetRequestId.toString().trim()) {
+    if (!targetRequestId.trim()) {
       toast.error('Please enter a Join Request ID')
       return
     }
     try {
-      setAcceptingRequest(true)
-      const res = await acceptJoinRequest(targetRequestId.toString().trim())
+      setActionLoading(true)
+      const res = await acceptJoinRequest(targetRequestId.trim())
+      console.log("TARGET REQUEST ID:", targetRequestId)
       if (res && res.success) {
-        toast.success(res.message || 'Join request accepted successfully')
+        toast.success(res.message || 'Request accepted successfully')
         setTargetRequestId('')
+        setRefreshCount(c => c + 1)
+        fetchNotifications?.()
+        fetchPendingJoinRequests?.()
       } else {
         toast.error(res?.message || 'Failed to accept join request')
       }
     } catch (err) {
-      toast.error(err?.message || 'Error processing request')
+      toast.error(err.message || 'Error processing request')
     } finally {
-      setAcceptingRequest(false)
+      setActionLoading(false)
     }
   }
 
   const handleRejectRequest = async (e) => {
     e?.preventDefault()
-    if (acceptingRequest || rejectingRequest) return
-    if (!targetRequestId.toString().trim()) {
+    if (!targetRequestId.trim()) {
       toast.error('Please enter a Join Request ID')
       return
     }
     try {
-      setRejectingRequest(true)
-      const res = await rejectJoinRequest(targetRequestId.toString().trim())
+      setActionLoading(true)
+      const res = await rejectJoinRequest(targetRequestId.trim())
       if (res && res.success) {
-        toast.success(res.message || 'Join request rejected successfully')
+        toast.success(res.message || 'Request rejected successfully')
         setTargetRequestId('')
+        fetchNotifications?.()
+        fetchPendingJoinRequests?.()
       } else {
         toast.error(res?.message || 'Failed to reject join request')
       }
     } catch (err) {
-      toast.error(err?.message || 'Error processing request')
+      toast.error(err.message || 'Error processing request')
     } finally {
-      setRejectingRequest(false)
+      setActionLoading(false)
     }
   }
 
-  const membersList = activeOrg?.members || []
   const inviteCodeDisplay = activeOrg?.invite_code || activeOrg?.code || '—'
 
   return (
@@ -295,13 +333,17 @@ export default function OrganizationPage() {
                   </div>
                 </div>
 
-                {membersList.length === 0 ? (
+                {membersLoading ? (
+                  <div className="p-8 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center">
+                    <StripedLoader color="purple" size="md" label="Loading organization members..." />
+                  </div>
+                ) : membersList.length === 0 ? (
                   <div className="p-8 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 text-center space-y-1.5">
                     <p className="text-xs font-semibold text-stone-700">
-                      No member roster data available.
+                      No members joined yet.
                     </p>
                     <p className="text-[11px] text-stone-400">
-                      (The backend API to list organization members is currently not available)
+                      Share your organization invite code to onboard team members to this workspace.
                     </p>
                   </div>
                 ) : (
@@ -371,18 +413,18 @@ export default function OrganizationPage() {
                       <button
                         type="button"
                         onClick={handleAcceptRequest}
-                        disabled={acceptingRequest || rejectingRequest || !targetRequestId.toString().trim()}
-                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={actionLoading || !targetRequestId.trim()}
+                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                       >
-                        {acceptingRequest ? 'Accepting...' : 'Accept'}
+                        {actionLoading ? 'Processing...' : 'Accept'}
                       </button>
                       <button
                         type="button"
                         onClick={handleRejectRequest}
-                        disabled={acceptingRequest || rejectingRequest || !targetRequestId.toString().trim()}
-                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={actionLoading || !targetRequestId.trim()}
+                        className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-800 text-xs font-bold transition-all cursor-pointer disabled:opacity-50"
                       >
-                        {rejectingRequest ? 'Rejecting...' : 'Reject'}
+                        {actionLoading ? 'Processing...' : 'Reject'}
                       </button>
                     </div>
                   </div>

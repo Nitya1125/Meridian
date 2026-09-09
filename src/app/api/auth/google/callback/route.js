@@ -49,15 +49,14 @@ export async function GET(request){
         const [user] = await db.query(`Select * from users where email = ?`,[email]);
 
         let userId;
-        
+
         if(user.length > 0){
             userId = user[0].id;
-
             await db.query(`UPDATE users SET google_id = ? WHERE email = ?`,[googleId, email]);
         }else{
             const [result] = await db.query(`INSERT INTO users (google_id,email,first_name,last_name) VALUES (?,?,?,?)`,
             [googleId,email,firstName,lastName]);
-            userId = result.insertId
+            userId = result.insertId;
         }
 
         const token = jwt.sign({id:userId,email:email},process.env.JWT_SECRET ,{expiresIn:"7d"});
@@ -79,7 +78,7 @@ export async function GET(request){
     }catch(error){
         return NextResponse.json({
             success:false,
-            message: "Server error",
-        },{status:500})
+            message:error.message},
+            {status:500})
     }
 }

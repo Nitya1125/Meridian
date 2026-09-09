@@ -73,7 +73,7 @@ function InvitationContent() {
         toast.error(msg)
       }
     } catch (err) {
-      const fallbackMsg = 'Network error while accepting invitation'
+      const fallbackMsg = err?.message || 'Network error while accepting invitation'
       setErrorMessage(fallbackMsg)
       toast.error(fallbackMsg)
     } finally {
@@ -109,7 +109,7 @@ function InvitationContent() {
         setShowDeclineModal(false)
       }
     } catch (err) {
-      const fallbackMsg = 'Network error while declining invitation'
+      const fallbackMsg = err?.message || 'Network error while declining invitation'
       setErrorMessage(fallbackMsg)
       toast.error(fallbackMsg)
       setShowDeclineModal(false)
@@ -118,11 +118,10 @@ function InvitationContent() {
     }
   }
 
-  // If successfully declined, show clean final state
   if (declinedSuccess) {
     return (
       <div className="w-full max-w-md bg-white rounded-3xl p-8 sm:p-10 border border-stone-200/80 shadow-2xl text-center space-y-5 animate-in zoom-in-95 duration-200">
-        <div className="w-14 h-14 rounded-2xl bg-stone-100 text-stone-700 flex items-center justify-center mx-auto shadow-xs">
+        <div className="w-14 h-14 rounded-2xl bg-stone-100 text-stone-600 flex items-center justify-center mx-auto shadow-xs">
           <CheckIcon size={24} strokeWidth={2.5} />
         </div>
 

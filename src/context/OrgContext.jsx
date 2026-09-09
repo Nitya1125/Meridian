@@ -43,43 +43,62 @@ export function OrgProvider({ children }) {
         }
     }, [])
 
-    // Fetch real pending join requests for organizations created by user
-    const fetchPendingJoinRequests = useCallback(async () => {
-        try {
-            const res = await getPendingJoinRequests()
-            if (res && res.success && Array.isArray(res.requests)) {
-                setPendingJoinRequests(res.requests)
-            } else {
-                setPendingJoinRequests([])
-            }
-        } catch (err) {
-            console.error("Failed to fetch pending requests:", err)
-            setPendingJoinRequests([])
-        }
-    }, [])
-
-    // Fetch real notifications from backend
+    // Fetch real notifications from backend & derive incoming join requests
     const fetchNotifications = useCallback(async () => {
         try {
             setNotificationsLoading(true)
             const res = await getNotifications()
             if (res && res.success && Array.isArray(res.notification)) {
                 setNotifications(res.notification)
+
+                const incomingRequests = res.notification
+                    .filter(n => n.join_request_id && (
+                        n.message?.toLowerCase().includes('requested to join') ||
+                        n.message?.toLowerCase().includes('new user')
+                    ))
+                    .map(n => ({
+                        id: n.join_request_id,
+                        notification_id: n.id,
+                        first_name: n.first_name,
+                        last_name: n.last_name,
+                        email: n.email,
+                        organization_id: n.organization_id,
+                        organization_name: approvedOrgs.find(o => o.id === n.organization_id)?.name || 'Workspace',
+                        message: n.message,
+                        created_at: n.created_at
+                    }))
+
+                setPendingJoinRequests(incomingRequests)
             } else {
                 setNotifications([])
+                setPendingJoinRequests([])
             }
         } catch (err) {
             console.error("Failed to fetch notifications:", err)
             setNotifications([])
+            setPendingJoinRequests([])
         } finally {
             setNotificationsLoading(false)
         }
-    }, [])
+    }, [approvedOrgs])
+
+    // Refresh pending join requests by syncing notifications
+    const fetchPendingJoinRequests = useCallback(async () => {
+        await fetchNotifications()
+    }, [fetchNotifications])
 
     useEffect(() => {
-        fetchOrganizations()
-        fetchPendingJoinRequests()
-        fetchNotifications()
+        let isMounted = true
+        const init = async () => {
+            if (!isMounted) return
+            await fetchOrganizations()
+            await fetchPendingJoinRequests()
+            await fetchNotifications()
+        }
+        init()
+        return () => {
+            isMounted = false
+        }
     }, [fetchOrganizations, fetchPendingJoinRequests, fetchNotifications])
 
     // Active organization

@@ -1,4 +1,4 @@
-import { Plus_Jakarta_Sans, Manrope, Inter, Instrument_Serif, League_Spartan } from "next/font/google";
+import { Plus_Jakarta_Sans, Manrope, Inter, Instrument_Serif, League_Spartan, JetBrains_Mono, Urbanist } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { OrgProvider } from "@/context/OrgContext";
@@ -6,10 +6,24 @@ import CreateOrgModal from "@/components/CreateOrgModal";
 import JoinOrgModal from "@/components/JoinOrgModal";
 import { Toaster } from "react-hot-toast";
 
+const urbanist = Urbanist({
+  variable: "--font-urbanist",
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
+
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -51,23 +65,24 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="en"
-      className={`${plusJakartaSans.variable} ${leagueSpartan.variable} ${manrope.variable} ${inter.variable} ${instrumentSerif.variable} h-full antialiased`}
+      className={`${urbanist.variable} ${plusJakartaSans.variable} ${leagueSpartan.variable} ${manrope.variable} ${inter.variable} ${instrumentSerif.variable} ${jetbrainsMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>
           <OrgProvider>
             <Toaster
-              position="top-right"
+              position="top-center"
               toastOptions={{
-                duration: 3500,
+                duration: 4000,
                 style: {
                   background: '#111318',
-                  color: '#ffffff',
+                  color: '#fff',
+                  borderRadius: '16px',
                   fontSize: '12px',
                   fontWeight: '600',
-                  borderRadius: '16px',
+                  padding: '12px 16px',
+                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
                   border: '1px solid rgba(255, 255, 255, 0.1)',
-                  boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
                 },
                 success: {
                   iconTheme: {
@@ -78,7 +93,7 @@ export default function RootLayout({ children }) {
                 error: {
                   iconTheme: {
                     primary: '#f43f5e',
-                    secondary: '#ffffff',
+                    secondary: '#fff',
                   },
                 },
               }}

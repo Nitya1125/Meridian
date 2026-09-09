@@ -15,6 +15,8 @@ import {
   ListIcon, KanbanBoardIcon, WorkflowIcon, LayersIcon, CheckCircleIcon,
   RocketIcon
 } from '@/components/Icons'
+import { CalendarClock, BarChart3, AlarmClock, MoonStar } from 'lucide-react'
+import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
@@ -261,6 +263,176 @@ const workflowStages = [
   }
 ]
 
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function TimelineView({ tasks, onOpenTask }) {
+  return (
+    <div className="bento-card overflow-x-auto p-6 mb-12">
+      <div className="min-w-[720px]">
+        <div className="mb-3 grid grid-cols-[220px_repeat(7,1fr)] gap-2 border-b border-stone-100 pb-2">
+          <span className="tech-badge text-[10px] text-stone-400 font-mono">Task</span>
+          {DAYS.map((d) => (
+            <span key={d} className="tech-badge text-center text-[10px] text-stone-400 font-mono">
+              {d}
+            </span>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {tasks.map((t, i) => {
+            const start = i % 5;
+            const span = 2 + (i % 3);
+            const totalSub = t.subtasks?.length || 0;
+            const doneSub = t.subtasks?.filter((s) => s.done).length || 0;
+            const pct = totalSub
+              ? Math.round((doneSub / totalSub) * 100)
+              : t.status === "ready" || t.status === "done"
+              ? 100
+              : 50;
+            const c =
+              t.priority === "Critical"
+                ? PASTEL.rose
+                : t.priority === "High"
+                ? PASTEL.peach
+                : t.priority === "Medium"
+                ? PASTEL.sky
+                : PASTEL.stone;
+
+            return (
+              <div key={t.id} className="grid grid-cols-[220px_repeat(7,1fr)] items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => onOpenTask(t)}
+                  className="tactile flex items-center gap-2 truncate text-left cursor-pointer hover:text-violet-700"
+                >
+                  <span className="tech-badge text-[9px] text-stone-400 font-mono">
+                    {t.taskId || "MRD"}
+                  </span>
+                  <span className="truncate text-[12.5px] font-bold text-stone-800">
+                    {t.title}
+                  </span>
+                </button>
+                <div className="col-span-7 grid grid-cols-7 gap-2">
+                  {DAYS.map((_, day) => {
+                    const inBar = day >= start && day < start + span;
+                    const isStart = day === start;
+                    if (!inBar) return <div key={day} className="h-7 rounded-lg bg-stone-50/80" />;
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => onOpenTask(t)}
+                        className="tactile relative h-7 overflow-hidden rounded-lg cursor-pointer transition-transform hover:scale-[1.02]"
+                        style={{ background: c.bg, border: `1px solid ${c.border}` }}
+                      >
+                        <span
+                          className="absolute inset-y-0 left-0 opacity-60"
+                          style={{ width: `${pct}%`, background: c.solid }}
+                        />
+                        {isStart && (
+                          <span
+                            className="stat-number relative z-10 pl-1.5 text-[9px] font-extrabold leading-7"
+                            style={{ color: c.text }}
+                          >
+                            {pct}%
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BoardAnalytics({ columns, allTasks }) {
+  const total = allTasks.length || 1;
+  const prio = [
+    { p: "Critical", count: allTasks.filter((t) => t.priority === "Critical").length, tint: "rose" },
+    { p: "High", count: allTasks.filter((t) => t.priority === "High").length, tint: "peach" },
+    { p: "Medium", count: allTasks.filter((t) => t.priority === "Medium").length, tint: "sky" },
+    { p: "Low", count: allTasks.filter((t) => t.priority === "Low").length, tint: "stone" },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-12">
+      <div className="bento-card p-6">
+        <h2 className="mb-4 text-[18px] font-extrabold tracking-tight text-stone-900 font-serif">
+          Pipeline <span className="font-serif italic font-normal text-stone-600">Distribution</span>
+        </h2>
+        <div className="space-y-4">
+          {columns.map((col) => {
+            const count = col.tasks.length;
+            const pct = Math.round((count / total) * 100);
+            const tint =
+              col.id === "ready"
+                ? "mint"
+                : col.id === "review"
+                ? "sky"
+                : col.id === "inprogress"
+                ? "peach"
+                : "stone";
+            const c = PASTEL[tint] || PASTEL.stone;
+            return (
+              <div key={col.id}>
+                <div className="mb-1.5 flex items-center justify-between text-[12.5px] font-bold">
+                  <span className="text-stone-700">{col.title}</span>
+                  <span className="stat-number text-stone-500">
+                    {count} tasks · {pct}%
+                  </span>
+                </div>
+                <div className="h-3 w-full overflow-hidden rounded-full bg-stone-100">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: c.solid }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="bento-card p-6">
+        <h2 className="mb-4 text-[18px] font-extrabold tracking-tight text-stone-900 font-serif">
+          Priority <span className="font-serif italic font-normal text-stone-600">Mix</span>
+        </h2>
+        <div className="space-y-4">
+          {prio.map(({ p, count, tint }) => {
+            const pct = Math.round((count / total) * 100);
+            const c = PASTEL[tint];
+            return (
+              <div key={p} className="flex items-center gap-3">
+                <span className="w-20">
+                  <span
+                    className="inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                    style={{ background: c.bg, color: c.text, border: `1px solid ${c.border}` }}
+                  >
+                    {p}
+                  </span>
+                </span>
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-stone-100">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: c.solid }}
+                  />
+                </div>
+                <span className="stat-number w-8 text-right text-[13px] font-extrabold text-stone-900">
+                  {count}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function KanbanPage() {
   const { fullName, initials } = useCurrentUser()
   const [columns, setColumns] = useState(initialColumns)
@@ -413,38 +585,73 @@ export default function KanbanPage() {
           {/* ── Header Title & View Pill Controls ── */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-7">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal text-stone-950 tracking-tight font-serif">
-                Sprint 14 <em className="italic font-serif font-normal text-stone-900">Task Orchestration</em>
-              </h1>
+              <div>
+                <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
+                  Sprint <span className="font-serif-italic font-normal text-violet-700">board</span>
+                </h1>
+                <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
+                  Drag cards to move them across the pipeline.
+                </p>
+              </div>
 
-              {/* View Switcher Capsule (List | Board | Workflow) */}
-              <div className="flex items-center gap-1 bg-stone-200/70 p-1 rounded-2xl">
+              {/* View Switcher Capsule (Board | List | Timeline | Analytics | Workflow) */}
+              <div className="flex items-center gap-1 bg-stone-200/70 p-1 rounded-2xl overflow-x-auto">
                 <button
-                  onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'list'
-                      ? 'bg-[#111318] text-white shadow-xs'
-                      : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                >
-                  <ListIcon size={13} />
-                  <span>List</span>
-                </button>
-                <button
+                  type="button"
                   onClick={() => setViewMode('board')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'board'
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    viewMode === 'board'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
-                    }`}
+                  }`}
                 >
                   <KanbanBoardIcon size={13} />
                   <span>Board</span>
                 </button>
                 <button
-                  onClick={() => setViewMode('workflow')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${viewMode === 'workflow'
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    viewMode === 'list'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
-                    }`}
+                  }`}
+                >
+                  <ListIcon size={13} />
+                  <span>List</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('timeline')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    viewMode === 'timeline'
+                      ? 'bg-[#111318] text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <CalendarClock size={13} />
+                  <span>Timeline</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('analytics')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    viewMode === 'analytics'
+                      ? 'bg-[#111318] text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <BarChart3 size={13} />
+                  <span>Analytics</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('workflow')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                    viewMode === 'workflow'
+                      ? 'bg-[#111318] text-white shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
                 >
                   <WorkflowIcon size={13} />
                   <span>Workflow</span>
@@ -550,10 +757,10 @@ export default function KanbanPage() {
                     {/* Column Header Pill */}
                     <div className="flex items-center justify-between px-2.5 mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-base sm:text-lg font-bold text-stone-950">
+                        <span className="text-[13.5px] font-extrabold tracking-tight text-stone-900">
                           {col.title}
                         </span>
-                        <span className="text-xs font-bold text-stone-400 font-mono bg-stone-100 px-2 py-0.5 rounded-md">
+                        <span className="tnum rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-stone-500 border border-stone-200/60 shadow-2xs">
                           {col.count}
                         </span>
                       </div>
@@ -639,6 +846,27 @@ export default function KanbanPage() {
                                     <div className="w-2 h-5 bg-orange-400 rounded-sm mt-3" />
                                   </div>
                                   <div className="text-[7px] text-stone-400 mono-tag text-center">Charts</div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Subtasks Progress Bar (Figma Make style) */}
+                            {task.subtasks && task.subtasks.length > 0 && (
+                              <div className="mb-3">
+                                <div className="mb-1 flex items-center justify-between text-[11px] font-bold text-stone-500">
+                                  <span>Subtasks</span>
+                                  <span className="stat-number font-mono">
+                                    {task.subtasks.filter(s => s.done).length}/{task.subtasks.length}
+                                  </span>
+                                </div>
+                                <div className="flex gap-1">
+                                  {task.subtasks.map((s, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="h-1.5 flex-1 rounded-full transition-colors"
+                                      style={{ background: s.done ? '#84cc16' : '#e7e5e4' }}
+                                    />
+                                  ))}
                                 </div>
                               </div>
                             )}
@@ -826,6 +1054,20 @@ export default function KanbanPage() {
                 </table>
               </div>
             </div>
+          )}
+
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* VIEW: GANTT TIMELINE VIEW                                 */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          {viewMode === 'timeline' && (
+            <TimelineView tasks={allTasks} onOpenTask={setSelectedTask} />
+          )}
+
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* VIEW: BOARD ANALYTICS (Pipeline & Priority Mix)            */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          {viewMode === 'analytics' && (
+            <BoardAnalytics columns={columns} allTasks={allTasks} />
           )}
 
           {/* ══════════════════════════════════════════════════════════ */}

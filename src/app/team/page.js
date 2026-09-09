@@ -1,12 +1,14 @@
 "use client"
 
-import React, { useState } from 'react'
-import { useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import InviteModal from '@/components/InviteModal'
+import MetricCard from '@/components/MetricCard'
+import TactileSegmentedControl from '@/components/TactileSegmentedControl'
+import KineticMemberCard from '@/components/KineticMemberCard'
 import { handleOrganizationUsers } from '@/Service/organization'
 import {
   PlusIcon, SearchIcon, MoreHorizontalIcon, UsersIcon,
@@ -25,45 +27,83 @@ export default function TeamPage() {
   const { fullName, initials, email } = useCurrentUser()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
-  const [members, setMembers] = useState([])
+  const [members, setMembers] = useState(() => (
+    user ? [{
+      id: `mem_${user.id || 'me'}`,
+      name: fullName ? `${fullName} (You)` : (user.email || 'You'),
+      role: activeOrg?.role || 'Owner / Leader',
+      email: email || user.email || '',
+      initials: initials || 'U',
+      color: '#8b5cf6',
+      status: 'online',
+      projects: 1,
+      tasks: 0,
+      timeLogged: 'Active'
+    }] : []
+  ))
   const [inviteModalOpen, setInviteModalOpen] = useState(false)
 
-
   const filtered = members.filter(m => {
-    const name = `${m.first_name || ''} ${m.last_name || ''}`.toLowerCase()
+    const name = (m.name || `${m.first_name || ''} ${m.last_name || ''}`).trim().toLowerCase()
     const role = (m.role || '').toLowerCase()
     const memberEmail = (m.email || '').toLowerCase()
 
     const matchSearch =
-        name.includes(search.toLowerCase()) ||
-        role.includes(search.toLowerCase()) ||
-        memberEmail.includes(search.toLowerCase())
+      name.includes(search.toLowerCase()) ||
+      role.includes(search.toLowerCase()) ||
+      memberEmail.includes(search.toLowerCase())
 
     if (statusFilter === 'all') return matchSearch
 
     return matchSearch && m.status === statusFilter
-})
+  })
 
   useEffect(() => {
     const fetchMember = async () => {
-        if (!activeOrg || !activeOrg.id) return
+      if (!activeOrg || !activeOrg.id) return
 
+      try {
         const res = await handleOrganizationUsers(activeOrg.id)
-        if (res.success) {
-            const formattedMembers = res.members.map((member) => ({
-        ...member,
-        name: `${member.first_name || ''} ${member.last_name || ''}`.trim(),
-        initials: `${member.first_name?.[0] || ''}${member.last_name?.[0] || ''}`.toUpperCase(),
-        color: '#8b5cf6',
-        status: 'online',
-        timeLogged: 'Active'
-    }))
-
-    setMembers(formattedMembers)
-  }
+        if (res.success && Array.isArray(res.members) && res.members.length > 0) {
+          const formattedMembers = res.members.map((member) => ({
+            ...member,
+            name: `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.email || 'Member',
+            initials: `${member.first_name?.[0] || member.email?.[0] || 'U'}${member.last_name?.[0] || ''}`.toUpperCase(),
+            color: '#8b5cf6',
+            status: 'online',
+            role: member.role || 'Member',
+            timeLogged: 'Active'
+          }))
+          setMembers(formattedMembers)
+        } else if (user) {
+          setMembers([{
+            id: `mem_${user.id || 'me'}`,
+            name: fullName ? `${fullName} (You)` : (user.email || 'You'),
+            role: activeOrg?.role || 'Owner / Leader',
+            email: email || user.email || '',
+            initials: initials || 'U',
+            color: '#8b5cf6',
+            status: 'online',
+            projects: 1,
+            tasks: 0,
+            timeLogged: 'Active'
+          }])
+        }
+      } catch (err) {
+        console.error("Failed to fetch organization members:", err)
+      }
     }
     fetchMember()
-}, [activeOrg])
+  }, [activeOrg, user, fullName, initials, email])
+
+  const isOwner = Boolean(
+    activeOrg && (
+      (activeOrg.created_by && user?.id && String(activeOrg.created_by) === String(user.id)) ||
+      activeOrg.role?.toUpperCase() === 'OWNER' ||
+      activeOrg.role?.toLowerCase().includes('owner') ||
+      activeOrg.role?.toLowerCase().includes('leader')
+    )
+  )
 
   const isOwner = Boolean(
     activeOrg && (
@@ -94,11 +134,11 @@ export default function TeamPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
             <div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal text-stone-950 tracking-tight font-serif">
-                Team <em className="italic font-serif font-normal text-stone-900">Members & Presence</em>
+              <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
+                The <span className="font-serif-italic font-normal text-violet-700">studio</span>
               </h1>
-              <p className="text-xs sm:text-sm text-stone-500 font-medium mt-1.5">
-                Manage team directory, live availability, tracked hours, and workspace invitations
+              <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
+                {members.length} members · {members.filter(m => m.status === 'online').length} active now
               </p>
             </div>
 
@@ -113,78 +153,48 @@ export default function TeamPage() {
             )}
           </div>
 
-          {/* Bento KPI Summary Row (Ref Image 2) */}
+          {/* Bento KPI Summary Row with Live Interactive Scrubbing */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            {/* Total Members */}
-            <div className="p-5 rounded-3xl bg-[#EDE9FE] border border-[#DDD6FE] shadow-2xs hover:shadow-xs transition-all bento-card-interactive">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#6D28D9]">Total Members</span>
-                <span className="p-1.5 rounded-xl bg-white/80 text-[#6D28D9] shadow-2xs">
-                  <UsersIcon size={14} />
-                </span>
-              </div>
-              <div className="text-4xl font-extrabold text-stone-950 stat-number mb-1">
-                {members.length}
-              </div>
-              <div className="flex items-center justify-between text-xs font-semibold text-[#6D28D9]">
-                <span>12 seats limit</span>
-                <span className="font-mono text-[10px] bg-white/60 px-2 py-0.5 rounded-full">4 open</span>
-              </div>
-            </div>
-
-            {/* Online Now */}
-            <div className="p-5 rounded-3xl bg-[#ECFCCB] border border-[#D9F99D] shadow-2xs hover:shadow-xs transition-all bento-card-interactive">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#3F6212]">Online Now</span>
-                <span className="p-1.5 rounded-xl bg-white/80 text-[#3F6212] shadow-2xs">
-                  <ZapIcon size={14} />
-                </span>
-              </div>
-              <div className="text-4xl font-extrabold text-stone-950 stat-number mb-1">
-                {members.filter(m => m.status === 'online').length}
-              </div>
-              <div className="flex items-center justify-between text-xs font-semibold text-[#3F6212]">
-                <span>Active collaboration</span>
-                <span className="font-mono text-[10px] bg-white/60 px-2 py-0.5 rounded-full">● Live</span>
-              </div>
-            </div>
-
-            {/* Away / Break */}
-            <div className="p-5 rounded-3xl bg-[#FFEDD5] border border-[#FDBA74] shadow-2xs hover:shadow-xs transition-all bento-card-interactive">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#C2410C]">Away / Break</span>
-                <span className="p-1.5 rounded-xl bg-white/80 text-[#C2410C] shadow-2xs">
-                  <ClockIcon size={14} />
-                </span>
-              </div>
-              <div className="text-4xl font-extrabold text-stone-950 stat-number mb-1">
-                {members.filter(m => m.status === 'away').length}
-              </div>
-              <div className="flex items-center justify-between text-xs font-semibold text-[#C2410C]">
-                <span>Standup in 20m</span>
-                <span className="font-mono text-[10px] bg-white/60 px-2 py-0.5 rounded-full">Sync</span>
-              </div>
-            </div>
-
-            {/* Hours Logged */}
-            <div className="p-5 rounded-3xl bg-[#E0F2FE] border border-[#BAE6FD] shadow-2xs hover:shadow-xs transition-all bento-card-interactive">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-bold text-[#0369A1]">Hours Logged</span>
-                <span className="p-1.5 rounded-xl bg-white/80 text-[#0369A1] shadow-2xs">
-                  <BarChartIcon size={14} />
-                </span>
-              </div>
-              <div className="text-4xl font-extrabold text-stone-950 stat-number mb-1">
-                184h
-              </div>
-              <div className="flex items-center justify-between text-xs font-semibold text-[#0369A1]">
-                <span>Sprint 14 total</span>
-                <span className="font-mono text-[10px] bg-white/60 px-2 py-0.5 rounded-full">+12%</span>
-              </div>
-            </div>
+            <MetricCard
+              icon={UsersIcon}
+              badge="4 open seats"
+              value={String(members.length)}
+              label="Total Members"
+              theme="purple"
+            />
+            <MetricCard
+              icon={ZapIcon}
+              badge="Active live"
+              value={String(members.filter(m => m.status === 'online').length)}
+              label="Online Now"
+              theme="lime"
+            />
+            <MetricCard
+              icon={ClockIcon}
+              badge="Standup in 20m"
+              value={String(members.filter(m => m.status === 'away').length)}
+              label="Away / In Break"
+              theme="amber"
+            />
+            <MetricCard
+              icon={BarChartIcon}
+              badge="+12% tracked"
+              value="184h"
+              label="Hours Logged"
+              theme="sky"
+              series={[
+                { day: 'Mon', val: '24h', heightPercent: 45 },
+                { day: 'Tue', val: '32h', heightPercent: 68 },
+                { day: 'Wed', val: '38h', heightPercent: 82 },
+                { day: 'Thu', val: '44h', heightPercent: 95 },
+                { day: 'Fri', val: '28h', heightPercent: 60 },
+                { day: 'Sat', val: '12h', heightPercent: 28 },
+                { day: 'Sun', val: '6h', heightPercent: 18 }
+              ]}
+            />
           </div>
 
-          {/* Search & Filter Bar */}
+          {/* Search & Tactile Mechanical Filter Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             <div className="relative flex-1 max-w-md">
               <SearchIcon size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -193,84 +203,34 @@ export default function TeamPage() {
                 placeholder="Search member by name, role, email..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-xs font-medium bg-white rounded-2xl border border-stone-200 shadow-2xs outline-none focus:border-stone-400 font-sans"
+                className="w-full pl-9 pr-4 py-2 text-xs font-medium bg-white rounded-2xl border border-stone-200 shadow-2xs outline-none focus:border-stone-400 font-sans transition-all focus:shadow-sm"
               />
             </div>
 
-            {/* Filter pills */}
-            <div className="flex items-center gap-1 bg-stone-200/70 p-1 rounded-2xl">
-              {['all', 'online', 'away', 'offline'].map(s => (
-                <button
-                  key={s}
-                  onClick={() => setStatusFilter(s)}
-                  className={`px-3 py-1 text-xs font-bold rounded-xl capitalize transition-all cursor-pointer ${statusFilter === s ? 'bg-[#111318] text-white shadow-xs' : 'text-stone-600 hover:text-stone-900'
-                    }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+            {/* Kinetic Sliding Pill Segmented Switch */}
+            <TactileSegmentedControl
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={[
+                { id: 'all', label: 'All', badge: members.length },
+                { id: 'online', label: 'Online', dotColor: '#10b981', badge: members.filter(m => m.status === 'online').length },
+                { id: 'away', label: 'Away', dotColor: '#f59e0b', badge: members.filter(m => m.status === 'away').length },
+                { id: 'offline', label: 'Offline', dotColor: '#a8a29e', badge: members.filter(m => m.status === 'offline').length }
+              ]}
+            />
           </div>
 
-          {/* Bento Member Grid */}
+          {/* Bento Member Grid with Kinetic Alive Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-12">
             {filtered.map(member => (
-              <div
+              <KineticMemberCard
                 key={member.id}
-                className="bg-white rounded-3xl p-5 border border-stone-200/80 shadow-2xs hover:shadow-md bento-card-interactive flex flex-col justify-between"
-              >
-                <div>
-                  {/* Top Avatar & Presence */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="relative">
-                      <div
-                        className="w-12 h-12 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center shadow-xs"
-                        style={{ backgroundColor: member.color }}
-                      >
-                        {member.initials}
-                      </div>
-                      <span
-                        className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full ring-2 ring-white ${member.status === 'online'
-                            ? 'bg-emerald-500'
-                            : member.status === 'away'
-                              ? 'bg-amber-500'
-                              : 'bg-stone-400'
-                          }`}
-                      />
-                    </div>
-
-                    <span className="text-[10px] font-mono font-bold text-stone-400 bg-stone-50 px-2 py-0.5 rounded-md border border-stone-200/60">
-                      {member.status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  {/* Name & Role */}
-                  <h3 className="text-sm font-bold text-stone-900 leading-snug">
-                    {member.name}
-                  </h3>
-                  <div className="text-xs text-stone-500 font-medium mt-0.5">{member.role}</div>
-                  <div className="text-[11px] text-stone-400 font-mono mt-1">{member.email}</div>
-                </div>
-
-                {/* Footer Stats & Message CTA */}
-                <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1 font-mono text-[11px] text-stone-500">
-                    <ClockIcon size={12} />
-                    <span>{member.timeLogged}</span>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      router.push('/messages')
-                      toast.success(`Opening chat with ${member.name}`)
-                    }}
-                    className="p-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors cursor-pointer"
-                    title="Send message"
-                  >
-                    <MessageIcon size={14} />
-                  </button>
-                </div>
-              </div>
+                member={member}
+                onMessage={() => {
+                  router.push('/messages')
+                  toast.success(`Opening chat with ${member.name}`)
+                }}
+              />
             ))}
           </div>
 

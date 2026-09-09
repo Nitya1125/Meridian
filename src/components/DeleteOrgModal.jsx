@@ -7,7 +7,7 @@ import { deleteOrganization } from "@/Service/organization"
 import { useOrg } from "@/context/OrgContext"
 
 export default function DeleteOrgModal({ open, onClose, organization }) {
-  const { fetchOrganizations } = useOrg()
+  const { fetchOrganizations } = useOrg() || {}
   const [typedName, setTypedName] = useState("")
   const [deleting, setDeleting] = useState(false)
   const [errorMsg, setErrorMsg] = useState("")

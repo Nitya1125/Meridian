@@ -69,7 +69,7 @@ function DeclineContent() {
         toast.error(msg)
       }
     } catch (err) {
-      const fallbackMsg = 'Network error while declining invitation'
+      const fallbackMsg = err?.message || 'Network error while declining invitation'
       setErrorMessage(fallbackMsg)
       toast.error(fallbackMsg)
     } finally {

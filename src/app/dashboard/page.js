@@ -9,6 +9,9 @@ import CreateTaskModal from '@/components/CreateTaskModal'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer'
 import MetricCard from '@/components/MetricCard'
 import OrgOnboarding from '@/components/OrgOnboarding'
+import AttentionCenter from '@/components/AttentionCenter'
+import MetricBars from '@/components/MetricBars'
+import CapacityDial from '@/components/CapacityDial'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrg } from '@/context/OrgContext'
 import {
@@ -103,8 +106,11 @@ const myWorkInitial = [
     subtasksCompleted: 3,
     subtasksTotal: 5,
     due: 'Today 5pm',
+    dueOffsetDays: 0,
+    updatedOffsetDays: 1,
     tab: 'todo',
     priority: 'High',
+    assigneeName: 'Kacie Velasquez',
     assignees: [],
     description: 'Deliverable required for marketing hero shots on Dribbble and social publication channels.',
     subtasks: [
@@ -122,9 +128,12 @@ const myWorkInitial = [
     title: 'Implement OAuth2 token refresh & user session handler',
     subtasksCompleted: 4,
     subtasksTotal: 5,
-    due: 'Tomorrow',
+    due: '2 days ago',
+    dueOffsetDays: -2,
+    updatedOffsetDays: 0,
     tab: 'todo',
     priority: 'Critical',
+    assigneeName: 'Marcus Chen',
     assignees: [],
     description: 'Secure JWT rotation with Redis distributed cache for fast token validation.',
     subtasks: [
@@ -143,8 +152,11 @@ const myWorkInitial = [
     subtasksCompleted: 1,
     subtasksTotal: 2,
     due: 'July 30',
+    dueOffsetDays: 4,
+    updatedOffsetDays: 6,
     tab: 'todo',
     priority: 'Medium',
+    assigneeName: 'Sophia Aris',
     assignees: [],
     description: 'Provide seamless touch gestures and drag-and-drop column handling for iPad Pro and Galaxy Tab.',
     subtasks: [
@@ -160,8 +172,11 @@ const myWorkInitial = [
     subtasksCompleted: 1,
     subtasksTotal: 1,
     due: 'July 28',
+    dueOffsetDays: -5,
+    updatedOffsetDays: 0,
     tab: 'done',
     priority: 'Low',
+    assigneeName: 'Elena Vance',
     assignees: [],
     description: 'Signed off by enterprise stakeholder committee.',
     subtasks: [
@@ -181,6 +196,27 @@ export default function Dashboard() {
 
   const { fullName } = useCurrentUser()
   const { userState, activeOrg } = useOrg()
+
+  const handleReschedule = (taskId, days) => {
+    setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, dueOffsetDays: days, updatedOffsetDays: 0 } : t))
+    toast.success(days === 1 ? 'Rescheduled to tomorrow' : `Rescheduled to +${days} days`)
+  }
+
+  const handleMarkDone = (taskId) => {
+    setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, tab: 'done', updatedOffsetDays: 0 } : t))
+    toast.success('Marked as done — nice work!')
+  }
+
+  const handleCaughtUp = (taskId) => {
+    setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, updatedOffsetDays: 0 } : t))
+    toast.success('Marked as reviewed — clock reset')
+  }
+
+  const handleNudge = (taskId) => {
+    const t = myWork.find(x => x.id === taskId)
+    const who = t?.assigneeName || 'assignee'
+    toast.success(`Nudge alert sent to ${who}`)
+  }
 
   const filteredWork = myWork
     .filter(w => {
@@ -244,15 +280,15 @@ export default function Dashboard() {
             <OrgOnboarding />
           ) : (
             <>
-              {/* ── Greeting & Top Headline with Instrument Serif Italic ── */}
+              {/* ── Greeting & Top Headline with High-Low Typographic Contrast ── */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-7">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal text-stone-950 tracking-tight font-serif leading-tight">
+                    <h1 className="text-[34px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[40px]">
                       Good morning,{' '}
-                      <em className="italic font-serif font-normal text-stone-900">
+                      <span className="font-serif-italic font-normal text-violet-700">
                         {fullName || 'there'}
-                      </em>
+                      </span>
                     </h1>
 
                     {activeOrg?.name && (
@@ -262,12 +298,8 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <p className="text-sm sm:text-base text-stone-600 font-medium mt-1.5">
-                    Command center for{' '}
-                    <em className="font-serif italic font-normal text-stone-800 text-base sm:text-lg">
-                      {activeOrg?.name || 'workspace'}
-                    </em>{' '}
-                    execution · 3 priorities queued
+                  <p className="mt-2 text-[14px] font-medium text-stone-500">
+                    Here&apos;s what&apos;s moving across your workspace today — Sprint 24 is 74% complete.
                   </p>
                 </div>
 
@@ -286,6 +318,20 @@ export default function Dashboard() {
                     <ArrowUpRightIcon size={16} />
                   </div>
                 </div>
+              </div>
+
+              {/* ── 0. Attention & Triage Center ── */}
+              <div className="mb-8">
+                <AttentionCenter
+                  tasks={myWork}
+                  onOpenTask={(t) => setSelectedTask(t)}
+                  onReschedule={handleReschedule}
+                  onMarkDone={handleMarkDone}
+                  onCaughtUp={handleCaughtUp}
+                  onNudge={handleNudge}
+                  sprintName={activeOrg?.name ? `${activeOrg.name} Sprint 24` : "Sprint 24"}
+                  sprintDaysLeft={4}
+                />
               </div>
 
               {/* ── 1. Bento KPI Metric Cards ── */}
@@ -331,15 +377,12 @@ export default function Dashboard() {
                   <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
-                        <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif tracking-tight">
-                          LineUp &{' '}
-                          <em className="italic font-serif font-normal text-stone-800">
-                            Focal Points
-                          </em>
+                        <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                          Active <span className="font-serif-italic font-normal text-stone-500">lineup</span>
                         </h2>
 
-                        <span className="text-xs font-bold text-stone-400 font-mono bg-stone-100 px-2 py-0.5 rounded-md">
-                          2 active
+                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-400">
+                          In flight
                         </span>
                       </div>
 
@@ -381,8 +424,15 @@ export default function Dashboard() {
                             </span>
                           </div>
 
-                          <div className="text-sm font-bold text-stone-900 group-hover:text-stone-700 leading-snug mb-3.5">
+                          <div className="text-sm font-bold text-stone-900 group-hover:text-stone-700 leading-snug mb-3">
                             {item.title}
+                          </div>
+
+                          <div className="w-full h-1.5 rounded-full bg-stone-200/60 overflow-hidden mb-3">
+                            <div
+                              className={`h-full rounded-full striped-anim ${item.category === 'Commercial' ? 'striped-bar-orange' : 'striped-bar-purple'}`}
+                              style={{ width: `${item.pct}%` }}
+                            />
                           </div>
 
                           <div className="flex items-center justify-between text-xs text-stone-500 pt-2.5 border-t border-stone-900/5">
@@ -413,14 +463,11 @@ export default function Dashboard() {
                   <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-2xs">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <h3 className="text-xl sm:text-2xl font-normal text-stone-950 font-serif tracking-tight">
-                          Trending{' '}
-                          <em className="italic font-serif font-normal text-stone-800">
-                            Initiatives
-                          </em>
+                        <h3 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                          Trending <span className="font-serif-italic font-normal text-stone-500">initiatives</span>
                         </h3>
 
-                        <span className="text-xs font-bold text-stone-400 font-mono bg-stone-100 px-2 py-0.5 rounded-md">
+                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-400">
                           3 total
                         </span>
                       </div>
@@ -473,11 +520,8 @@ export default function Dashboard() {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif tracking-tight">
-                        Working{' '}
-                        <em className="italic font-serif font-normal text-stone-800">
-                          Activity
-                        </em>
+                      <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                        Working <span className="font-serif-italic font-normal text-stone-500">activity</span>
                       </h2>
 
                       <span className="text-[11px] font-bold text-stone-500 font-mono bg-stone-100 px-2.5 py-0.5 rounded-md">
@@ -584,12 +628,8 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-stone-100">
 
                   <div className="flex items-center gap-3">
-                    <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif tracking-tight">
-                      My{' '}
-                      <em className="italic font-serif font-normal text-stone-800">
-                        Work
-                      </em>{' '}
-                      & Deliverables
+                    <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                      My <span className="font-serif-italic font-normal text-stone-500">focus</span> & deliverables
                     </h2>
 
                     <span className="text-xs font-bold text-stone-400 font-mono bg-stone-100 px-2 py-0.5 rounded-md">
@@ -704,6 +744,68 @@ export default function Dashboard() {
 
                 </div>
 
+              </div>
+
+              {/* ── 3. Bottom Telemetry Bento Row ── */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+                {/* Hours Logged with MetricBars */}
+                <div className="bento-card bento-card-interactive p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[13px] font-bold text-stone-500">Hours logged</span>
+                      <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-lime-100 px-2.5 py-0.5 text-[11px] font-extrabold text-lime-800">
+                        <ArrowUpRightIcon size={12} /> +18.4%
+                      </span>
+                    </div>
+                    <div className="stat-number text-[34px] font-extrabold tracking-tight text-stone-900 mt-1">
+                      106<span className="text-[18px] text-stone-400 font-normal ml-0.5">h</span>
+                    </div>
+                  </div>
+                  <MetricBars tint="lime" highlight={4} />
+                </div>
+
+                {/* Tasks Completed with MetricBars */}
+                <div className="bento-card bento-card-interactive p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[13px] font-bold text-stone-500">Tasks completed</span>
+                      <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-extrabold text-purple-800">
+                        <ArrowUpRightIcon size={12} /> +12%
+                      </span>
+                    </div>
+                    <div className="stat-number text-[34px] font-extrabold tracking-tight text-stone-900 mt-1">
+                      1,482
+                    </div>
+                  </div>
+                  <MetricBars tint="lavender" highlight={5} unit=" tasks" />
+                </div>
+
+                {/* Team Capacity Dial */}
+                <div className="bento-card bento-card-interactive p-6 flex flex-col justify-between">
+                  <div>
+                    <div className="text-[13px] font-bold text-stone-500 mb-3">Team capacity</div>
+                    <div className="flex items-center gap-4">
+                      <CapacityDial value={68} tint="peach" size={68} />
+                      <div className="space-y-1 text-[12.5px]">
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-orange-500" />
+                          <span className="font-semibold text-stone-700">Allocated (68%)</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="h-2 w-2 rounded-full bg-orange-200" />
+                          <span className="font-semibold text-stone-500">Available (32%)</span>
+                        </div>
+                        <div className="stat-number pt-1 font-bold text-stone-900 text-xs">
+                          6 members · 54 tasks
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-stone-100 text-xs font-medium text-stone-500 flex items-center justify-between">
+                    <span>Sprint 24 capacity</span>
+                    <span className="stat-number font-bold text-stone-800">32h headroom</span>
+                  </div>
+                </div>
               </div>
             </>
           )}

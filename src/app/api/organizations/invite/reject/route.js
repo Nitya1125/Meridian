@@ -2,146 +2,130 @@ import { NextResponse } from "next/server";
 import db from "@/Lib/db";
 import jwt from "jsonwebtoken";
 
-export async function POST(request) {
+async function processRejectInvitation(invitationToken, sessionToken) {
+    if (!invitationToken) {
+        return { status: 400, body: { message: "Invitation token is required", success: false } };
+    }
+
+    if (!sessionToken) {
+        return { status: 401, body: { message: "Authorization token is missing. Please sign in.", success: false } };
+    }
+
+    let decoded;
     try {
-        const { token: invitationToken } = await request.json();
+        decoded = jwt.verify(sessionToken, process.env.JWT_SECRET);
+    } catch {
+        return { status: 401, body: { message: "Session is invalid or expired", success: false } };
+    }
 
-        if (!invitationToken) {
-            return NextResponse.json({
-                message: "Invitation token is required",
-                success: false
-            }, { status: 400 });
-        }
+    const currentUserId = decoded.id || decoded.userId;
 
-        const token = request.cookies.get("token")?.value;
+    const [user] = await db.query(
+        `SELECT id FROM users WHERE id = ?`,
+        [currentUserId]
+    );
 
-        if (!token) {
-            return NextResponse.json({
-                message: "Authorization token is missing",
-                success: false
-            }, { status: 401 });
-        }
+    if (user.length === 0) {
+        return { status: 404, body: { message: "User not found", success: false } };
+    }
 
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
+    let invitation;
+    const secret = process.env.INVITATION_SECRET || process.env.JWT_SECRET;
+    try {
+        invitation = jwt.verify(invitationToken, secret);
+    } catch {
+        return { status: 400, body: { message: "Invitation token is invalid or expired", success: false } };
+    }
 
-        const [user] = await db.query(
-            `SELECT id FROM users WHERE id = ?`,
-            [decoded.id]
-        );
+    const {
+        joinRequestId,
+        organizationId,
+        invitedUserId
+    } = invitation;
 
-        if (user.length === 0) {
-            return NextResponse.json({
-                message: "User Not Found",
-                success: false
-            }, { status: 404 });
-        }
+    if (String(invitedUserId) !== String(currentUserId)) {
+        return {
+            status: 403,
+            body: { message: "You are not authorized to decline this invitation", success: false }
+        };
+    }
 
-        const invitation = jwt.verify(
-            invitationToken,
-            process.env.INVITATION_SECRET
-        );
+    const [joinRequest] = await db.query(
+        `SELECT * FROM join_requests
+         WHERE id = ?
+         AND organization_id = ?
+         AND user_id = ?`,
+        [joinRequestId, organizationId, invitedUserId]
+    );
 
-        const {
-            joinRequestId,
-            organizationId,
-            invitedUserId
-        } = invitation;
+    if (joinRequest.length === 0) {
+        return { status: 404, body: { message: "Invitation record not found", success: false } };
+    }
 
-        // Make sure the logged-in user is the invited user
-        if (invitedUserId !== decoded.id) {
-            return NextResponse.json({
-                message: "You are not authorized to decline this invitation",
-                success: false
-            }, { status: 403 });
-        }
+    if (joinRequest[0].status === "ACCEPTED") {
+        return { status: 400, body: { message: "Invitation has already been accepted", success: false } };
+    }
 
-        const [request_id] = await db.query(
-            `SELECT * FROM join_requests
-             WHERE id = ?
-             AND organization_id = ?
-             AND user_id = ?`,
-            [joinRequestId, organizationId, invitedUserId]
-        );
+    if (joinRequest[0].status === "REJECTED") {
+        return { status: 200, body: { message: "Invitation has already been declined", success: true } };
+    }
 
-        if (request_id.length === 0) {
-            return NextResponse.json({
-                message: "Invitation not found",
-                success: false
-            }, { status: 404 });
-        }
+    const [organization] = await db.query(
+        `SELECT * FROM organizations WHERE id = ?`,
+        [organizationId]
+    );
 
-        if (request_id[0].status === "ACCEPTED") {
-            return NextResponse.json({
-                message: "Invitation already accepted",
-                success: false
-            }, { status: 400 });
-        }
+    await db.query(
+        `UPDATE join_requests
+         SET status = 'REJECTED', updated_at = NOW()
+         WHERE id = ?`,
+        [joinRequestId]
+    );
 
-        if (request_id[0].status === "REJECTED") {
-            return NextResponse.json({
-                message: "Invitation already rejected",
-                success: false
-            }, { status: 400 });
-        }
-
-        const [organization] = await db.query(
-            `SELECT * FROM organizations WHERE id = ?`,
-            [organizationId]
-        );
-
-        if (organization.length === 0) {
-            return NextResponse.json({
-                message: "Organization not found",
-                success: false
-            }, { status: 404 });
-        }
-
-        await db.query(
-            `UPDATE join_requests
-             SET status = 'REJECTED'
-             WHERE id = ?`,
-            [joinRequestId]
-        );
-
+    if (organization.length > 0) {
         await db.query(
             `INSERT INTO notifications
              (user_id, message, organization_id, join_request_id)
              VALUES (?, ?, ?, ?)`,
             [
                 organization[0].created_by,
-                "Invitation has been declined",
+                "An organization invitation was declined",
                 organizationId,
                 joinRequestId
             ]
         );
+    }
 
-        await db.query(
-            `UPDATE notifications
-             SET message = 'Invitation declined'
-             WHERE join_request_id = ?
-             AND organization_id = ?
-             AND user_id = ?`,
-            [
-                joinRequestId,
-                organizationId,
-                invitedUserId
-            ]
-        );
+    return {
+        status: 200,
+        body: { message: "Invitation declined successfully", success: true }
+    };
+}
 
-        return NextResponse.json({
-            message: "Invitation declined successfully",
-            success: true
-        }, { status: 200 });
+export async function POST(request) {
+    try {
+        const body = await request.json().catch(() => ({}));
+        const invitationToken = body.token;
+        const sessionToken = request.cookies.get("token")?.value;
 
+        const result = await processRejectInvitation(invitationToken, sessionToken);
+        return NextResponse.json(result.body, { status: result.status });
     } catch (error) {
-        console.log(error);
+        console.error("REJECT INVITATION ERROR:", error);
+        return NextResponse.json({ message: "Server Error", success: false }, { status: 500 });
+    }
+}
 
-        return NextResponse.json({
-            message: "Server Error",
-            success: false
-        }, { status: 500 });
+export async function GET(request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const invitationToken = searchParams.get("token");
+        const sessionToken = request.cookies.get("token")?.value;
+
+        const result = await processRejectInvitation(invitationToken, sessionToken);
+        return NextResponse.json(result.body, { status: result.status });
+    } catch (error) {
+        console.error("REJECT INVITATION GET ERROR:", error);
+        return NextResponse.json({ message: "Server Error", success: false }, { status: 500 });
     }
 }

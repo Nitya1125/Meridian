@@ -95,7 +95,7 @@ export default function OrgSwitcher({ compact = false }) {
                     return (
                       <div
                         key={org.id}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold transition-all group ${
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold transition-all ${
                           isActive
                             ? "bg-[#111318] text-white shadow-xs"
                             : "text-stone-700 hover:bg-stone-100 hover:text-stone-900"
@@ -204,7 +204,7 @@ export default function OrgSwitcher({ compact = false }) {
                 className="w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-bold text-stone-800 hover:bg-stone-100 hover:text-stone-950 transition-colors cursor-pointer"
               >
                 <div className="w-5 h-5 rounded-lg bg-stone-100 text-stone-800 flex items-center justify-center">
-                  <UserPlusIcon size={13} strokeWidth={2.5} />
+                  <UserPlusIcon size={13} strokeWidth={2} />
                 </div>
 
                 <span>+ Join Organization</span>

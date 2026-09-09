@@ -6,7 +6,6 @@ import { loginRateLimit } from "@/Lib/rateLimit";
 
 export async function POST(request){
     try{
-
         const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
         
         const {success} = await loginRateLimit.limit(ip);

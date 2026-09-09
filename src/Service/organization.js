@@ -155,14 +155,11 @@ export const acceptOrganizationInvitation = async (token) => {
         });
 
         if (response.status === 405) {
-            response = await fetch("/api/organizations/invite/accept", {
+            response = await fetch(`/api/organizations/invite/accept?token=${encodeURIComponent(token)}`, {
                 method: "GET",
                 headers: {
                     "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    token
-                })
+                }
             });
         }
 
@@ -220,16 +217,23 @@ export const declineOrganizationInvitation = async (token) => {
     }
 };
 
-export const deleteOrganization = async (organizationId) =>{
-    const response = await fetch(`${API_URL}/delete`, {
-        method: "DELETE",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            organizationId
-        })
-    });
+export const deleteOrganization = async (organizationId) => {
+    try {
+        const response = await fetch(`${API_URL}/delete`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                organizationId
+            })
+        });
 
-    return response.json();
-}
+        return response.json();
+    } catch (error) {
+        return {
+            success: false,
+            message: error.message || "Network error while deleting organization"
+        };
+    }
+};
