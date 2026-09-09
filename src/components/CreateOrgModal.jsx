@@ -5,6 +5,7 @@ import { useOrg } from '@/context/OrgContext'
 import { createOrganization } from '@/Service/organization'
 import { BuildingIcon, CopyIcon, CheckIcon, PlusIcon } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
+import StripedLoader from './StripedLoader'
 
 export default function CreateOrgModal() {
   const { isCreateModalOpen, closeCreateModal, addRealOrg } = useOrg()
@@ -19,6 +20,7 @@ export default function CreateOrgModal() {
 
   const handleCreate = async (e) => {
     e.preventDefault()
+    if (loading) return
     if (!name.trim()) {
       toast.error('Organization Name is required')
       return
@@ -99,8 +101,8 @@ export default function CreateOrgModal() {
                 <BuildingIcon size={22} strokeWidth={2} />
               </div>
               <div>
-                <h2 className="text-2xl font-normal text-stone-950 font-serif tracking-tight">
-                  Create <em className="italic font-serif font-normal text-stone-800">Organization</em>
+                <h2 className="text-[20px] font-extrabold tracking-tight text-stone-900 leading-tight">
+                  Create <span className="font-serif-italic font-normal text-violet-700">workspace</span>
                 </h2>
                 <p className="text-xs text-stone-500 font-medium">Set up a new workspace for your company or team</p>
               </div>
@@ -148,6 +150,12 @@ export default function CreateOrgModal() {
                   className="w-full px-4 py-2.5 text-xs font-medium bg-white rounded-2xl border border-stone-200 outline-none focus:border-stone-400 focus:ring-2 focus:ring-stone-200 transition-all font-sans resize-none"
                 />
               </div>
+
+              {loading && (
+                <div className="pt-3 animate-in fade-in duration-200">
+                  <StripedLoader color="green" size="md" label="Provisioning new workspace organization..." />
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
                 <button

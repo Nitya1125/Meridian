@@ -4,6 +4,7 @@ import React, { useEffect, useSyncExternalStore } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { ShieldLockIcon, ZapIcon } from './Icons'
+import StripedLoader from './StripedLoader'
 
 if (typeof window !== 'undefined') {
   const params = new URLSearchParams(window.location.search);
@@ -48,12 +49,12 @@ export default function ProtectedRoute({ children }) {
 
   if (loading || !isHydrated) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-[#FAF8F5]">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-stone-200 border-t-stone-900" />
-          <span className="text-xs font-bold text-stone-500 font-mono">Syncing workspace...</span>
-        </div>
-      </div>
+      <StripedLoader
+        variant="page"
+        color="green"
+        size="md"
+        label="Syncing workspace session..."
+      />
     )
   }
 

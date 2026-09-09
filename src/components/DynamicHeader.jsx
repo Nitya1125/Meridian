@@ -25,6 +25,23 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
   const { fullName, initials } = useCurrentUser()
   const [processingRequestId, setProcessingRequestId] = useState(null)
   const [requestStatuses, setRequestStatuses] = useState({})
+  const [sprintTime, setSprintTime] = useState({ d: 4, h: 12, m: 47, s: 20 })
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setSprintTime((r) => {
+        let { d, h, m, s } = r
+        s -= 1
+        if (s < 0) { s = 59; m -= 1 }
+        if (m < 0) { m = 59; h -= 1 }
+        if (h < 0) { h = 23; d -= 1 }
+        return { d, h, m, s }
+      })
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const pad = (n) => String(n).padStart(2, '0')
 
   // Close notifications popover on click outside
   useEffect(() => {
@@ -43,57 +60,57 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
 
     const res = await acceptJoinRequest(requestId)
 
-    if (res && res.success) {
-      setRequestStatuses((prev) => ({
-        ...prev,
-        [requestId]: "ACCEPTED"
-      }))
+      if (res && res.success) {
+        setRequestStatuses((prev) => ({
+          ...prev,
+          [requestId]: "ACCEPTED"
+        }))
 
-      toast.success(res.message || "Request accepted successfully")
+        toast.success(res.message || "Join request accepted successfully")
 
-      fetchNotifications()
-      fetchPendingJoinRequests()
-    } else {
-      toast.error(res?.message || "Failed to accept request")
+        fetchNotifications()
+        fetchPendingJoinRequests()
+      } else {
+        toast.error(res?.message || "Failed to accept request")
+      }
+    } catch (err) {
+      toast.error(err.message || "Error accepting join request")
+    } finally {
+      setProcessingRequestId(null)
     }
-  } catch (err) {
-    toast.error(err.message || "Error accepting join request")
-  } finally {
-    setProcessingRequestId(null)
   }
-}
 
   const handleRejectRequest = async (requestId) => {
-  try {
-    setProcessingRequestId(requestId)
+    try {
+      setProcessingRequestId(requestId)
 
-    const res = await rejectJoinRequest(requestId)
+      const res = await rejectJoinRequest(requestId)
 
-    if (res && res.success) {
-      setRequestStatuses((prev) => ({
-        ...prev,
-        [requestId]: "REJECTED"
-      }))
+      if (res && res.success) {
+        setRequestStatuses((prev) => ({
+          ...prev,
+          [requestId]: "REJECTED"
+        }))
 
-      toast.success(res.message || "Request rejected successfully")
+        toast.success(res.message || "Join request rejected successfully")
 
-      fetchNotifications()
-      fetchPendingJoinRequests()
-    } else {
-      toast.error(res?.message || "Failed to reject request")
+        fetchNotifications()
+        fetchPendingJoinRequests()
+      } else {
+        toast.error(res?.message || "Failed to reject request")
+      }
+    } catch (err) {
+      toast.error(err.message || "Error rejecting join request")
+    } finally {
+      setProcessingRequestId(null)
     }
-  } catch (err) {
-    toast.error(err.message || "Error rejecting join request")
-  } finally {
-    setProcessingRequestId(null)
   }
-}
 
   const handleMarkAsReadNotice = () => {
     toast('Mark-as-read API is currently unavailable on the backend.', { icon: 'ℹ️' })
   }
 
-  const totalBadges = (notifications?.length || 0) + (pendingJoinRequests?.length || 0)
+  const totalBadges = Math.max(notifications?.length || 0, pendingJoinRequests?.length || 0)
 
   return (
     <header className="w-full mb-6">
@@ -101,11 +118,11 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
 
         {/* Dynamic Island Capsule */}
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-[#111318] text-white rounded-full shadow-xl shadow-black/15 border border-white/12 hover:border-white/20 transition-all duration-300">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-[#111318] text-white rounded-full shadow-xl shadow-black/15 border border-white/12 hover:border-white/20 transition-all duration-300">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500" />
             </span>
             <div className="flex items-center gap-2 text-xs font-semibold tracking-wide">
               <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30">
@@ -117,13 +134,30 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
             </div>
           </div>
 
+          {/* Real-time Sprint Ticker & Standup Beacon */}
+          <div className="hidden md:flex items-center gap-3 text-xs font-medium">
+            <span className="h-3.5 w-px bg-white/15" />
+            <div className="flex items-center gap-1.5 text-lime-400 font-bold">
+              <ZapIcon size={12} className="fill-lime-400 text-lime-400" />
+              <span className="text-white text-[12px]">Sprint 24</span>
+            </div>
+            <span className="tnum font-mono text-[11.5px] text-white/80">
+              {pad(sprintTime.d)}d {pad(sprintTime.h)}h {pad(sprintTime.m)}m {pad(sprintTime.s)}s
+            </span>
+            <span className="h-3.5 w-px bg-white/15" />
+            <div className="flex items-center gap-1.5 text-[11px] text-white/80">
+              <span className="beacon inline-block h-2 w-2 rounded-full bg-lime-400" />
+              <span>4 live in standup</span>
+            </div>
+          </div>
+
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Dynamic User Avatar */}
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-full bg-violet-600 text-[10px] font-bold flex items-center justify-center text-white ring-2 ring-[#111318]">
                 {initials || 'U'}
               </div>
-              <span className="text-[11px] font-medium text-stone-300 hidden md:inline truncate max-w-[120px]">
+              <span className="text-[11px] font-medium text-stone-300 hidden xl:inline truncate max-w-[100px]">
                 {fullName || 'User'}
               </span>
             </div>
@@ -222,7 +256,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
                                 disabled={processingRequestId === req.id}
                                 className="px-2.5 py-1 rounded-xl bg-white hover:bg-stone-100 border border-stone-200 text-stone-700 text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                               >
-                                Reject
+                                {processingRequestId === req.id ? 'Rejecting...' : 'Reject'}
                               </button>
                               <button
                                 type="button"
@@ -230,7 +264,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
                                 disabled={processingRequestId === req.id}
                                 className="px-2.5 py-1 rounded-xl bg-[#111318] hover:bg-black text-white text-[11px] font-bold transition-colors cursor-pointer disabled:opacity-50"
                               >
-                                Accept
+                                {processingRequestId === req.id ? 'Accepting...' : 'Accept'}
                               </button>
                             </div>
                           </div>
@@ -299,18 +333,18 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
         type="button"
         onClick={() => handleRejectRequest(n.join_request_id)}
         disabled={processingRequestId === n.join_request_id}
-        className="px-2.5 py-1 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 text-[11px] font-bold"
+        className="px-2.5 py-1 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 text-[11px] font-bold disabled:opacity-50"
       >
-        Reject
+        {processingRequestId === n.join_request_id ? 'Rejecting...' : 'Reject'}
       </button>
 
       <button
         type="button"
         onClick={() => handleAcceptRequest(n.join_request_id)}
         disabled={processingRequestId === n.join_request_id}
-        className="px-2.5 py-1 rounded-xl bg-[#111318] hover:bg-black text-white text-[11px] font-bold"
+        className="px-2.5 py-1 rounded-xl bg-[#111318] hover:bg-black text-white text-[11px] font-bold disabled:opacity-50"
       >
-        Accept
+        {processingRequestId === n.join_request_id ? 'Accepting...' : 'Accept'}
       </button>
     </div>
   )}
@@ -336,7 +370,7 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
           >
             <SearchIcon size={14} className="text-stone-400" />
             <span className="hidden sm:inline">Search workspace...</span>
-            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-sans font-semibold text-stone-500 bg-stone-100 rounded-lg border border-stone-200">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono font-bold text-stone-500 bg-stone-100/90 rounded-md border border-stone-200/80 shadow-2xs">
               ⌘K
             </kbd>
           </button>

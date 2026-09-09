@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
@@ -10,46 +10,304 @@ import {
   ChevronDownIcon, ArrowUpRightIcon, DownloadIcon, FilterIcon,
   ShareIcon, CheckCircleIcon, ZapIcon, ClipboardIcon, TargetIcon, RocketIcon
 } from '@/components/Icons'
+import { Timer, Flame, OctagonAlert, Gauge } from 'lucide-react'
+import { PASTEL } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-const weeklyData = [
-  { week: 'W28', completed: 48, added: 32 },
-  { week: 'W29', completed: 54, added: 42 },
-  { week: 'W30', completed: 68, added: 38 },
-  { week: 'W31', completed: 52, added: 54 },
-  { week: 'W32', completed: 74, added: 35 },
-  { week: 'W33', completed: 62, added: 44 },
-  { week: 'W34', completed: 59, added: 48 },
-  { week: 'W35', completed: 86, added: 34 },
+// ─── Burndown Data ──────────────────────────────────────────────────────────
+const BURNDOWN = [
+  { d: "W1", ideal: 100, actual: 100 },
+  { d: "W2", ideal: 83, actual: 88 },
+  { d: "W3", ideal: 66, actual: 71 },
+  { d: "W4", ideal: 50, actual: 52 },
+  { d: "W5", ideal: 33, actual: 30 },
+  { d: "W6", ideal: 16, actual: 14 },
+  { d: "W7", ideal: 0, actual: 4 },
 ]
 
-const projectDistribution = [
-  { name: 'Publications & Shots', share: 34, color: '#f43f5e', tasks: 28 },
-  { name: 'Commercial Portals', share: 22, color: '#8b5cf6', tasks: 18 },
-  { name: 'Design Internal', share: 18, color: '#10b981', tasks: 14 },
-  { name: 'Mobile App v2', share: 15, color: '#f59e0b', tasks: 12 },
-  { name: 'Analytics Core', share: 11, color: '#0ea5e9', tasks: 9 },
+const VELOCITY = [32, 38, 29, 44, 41, 48, 42, 51]
+
+const DIST = [
+  { label: "Design", v: 34, tint: "lavender" },
+  { label: "Dev", v: 41, tint: "sky" },
+  { label: "QA", v: 15, tint: "mint" },
+  { label: "Research", v: 10, tint: "peach" },
 ]
 
-const memberVelocity = [
-  { name: 'Alex Johnson', role: 'Design Lead', pts: 42, target: 35, speed: '120%', avatar: 'AJ', color: '#8b5cf6' },
-  { name: 'Sarah Chen', role: 'Full Stack Engineer', pts: 38, target: 35, speed: '108%', avatar: 'SC', color: '#6366f1' },
-  { name: 'Marcus Webb', role: 'Security Architect', pts: 31, target: 30, speed: '103%', avatar: 'MW', color: '#10b981' },
-  { name: 'Kacie Velasquez', role: 'UI Engineer', pts: 29, target: 28, speed: '104%', avatar: 'KV', color: '#f43f5e' },
-  { name: 'Priya Nair', role: 'Backend Lead', pts: 26, target: 25, speed: '104%', avatar: 'PN', color: '#f59e0b' },
+// 7 cols (days) x 5 rows (weeks) of activity intensity 0-4
+const HEAT = [
+  [1, 2, 0, 3, 2, 1, 0],
+  [2, 3, 4, 2, 3, 1, 0],
+  [0, 1, 2, 4, 3, 2, 1],
+  [1, 4, 3, 2, 4, 2, 0],
+  [2, 3, 4, 3, 4, 1, 0],
 ]
+const HEAT_TINTS = ["#f1efe9", "#dcedc8", "#bef264", "#a3e635", "#84cc16"]
+const DOW = ["M", "T", "W", "T", "F", "S", "S"]
+
+// ─── Interactive SVG Burndown Line Chart ─────────────────────────────────────
+function BurndownChart() {
+  const w = 620, h = 210, pad = 14
+  const [hover, setHover] = useState(null)
+  const x = (i) => pad + (i / (BURNDOWN.length - 1)) * (w - pad * 2)
+  const y = (v) => pad + (1 - v / 100) * (h - pad * 2)
+  const path = (key) =>
+    BURNDOWN.map((p, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(p[key])}`).join(" ")
+  const area = `${path("actual")} L${x(BURNDOWN.length - 1)},${h - pad} L${x(0)},${h - pad} Z`
+  const hp = hover !== null ? BURNDOWN[hover] : null
+
+  return (
+    <div className="relative pt-2">
+      <svg viewBox={`0 0 ${w} ${h}`} className="h-56 w-full overflow-visible">
+        <defs>
+          <linearGradient id="burnfill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a855f7" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {[0, 25, 50, 75, 100].map((g) => (
+          <g key={g}>
+            <line
+              x1={pad}
+              x2={w - pad}
+              y1={y(g)}
+              y2={y(g)}
+              stroke="rgba(0,0,0,0.06)"
+              strokeWidth="1"
+            />
+            <text
+              x={0}
+              y={y(g) + 3}
+              className="stat-number font-mono"
+              fontSize="9"
+              fontWeight="700"
+              fill="#a8a29e"
+            >
+              {g}
+            </text>
+          </g>
+        ))}
+        <path d={area} fill="url(#burnfill)" />
+        <path
+          d={path("ideal")}
+          fill="none"
+          stroke="#d6d3d1"
+          strokeWidth="2"
+          strokeDasharray="5 5"
+          strokeLinecap="round"
+        />
+        <path
+          d={path("actual")}
+          fill="none"
+          stroke="#a855f7"
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {hover !== null && (
+          <line
+            x1={x(hover)}
+            x2={x(hover)}
+            y1={pad}
+            y2={h - pad}
+            stroke="#a855f7"
+            strokeWidth="1.5"
+            strokeDasharray="3 3"
+            opacity="0.6"
+          />
+        )}
+        {BURNDOWN.map((p, i) => (
+          <circle
+            key={i}
+            cx={x(i)}
+            cy={y(p.actual)}
+            r={hover === i ? 6 : 4}
+            fill="#fff"
+            stroke="#a855f7"
+            strokeWidth="2.5"
+            className="transition-all"
+          />
+        ))}
+        {BURNDOWN.map((_, i) => (
+          <rect
+            key={i}
+            x={x(i) - w / BURNDOWN.length / 2}
+            y={0}
+            width={w / BURNDOWN.length}
+            height={h}
+            fill="transparent"
+            className="cursor-pointer"
+            onMouseEnter={() => setHover(i)}
+            onMouseLeave={() => setHover(null)}
+          />
+        ))}
+      </svg>
+      {hp && (
+        <div
+          className="pointer-events-none absolute -translate-x-1/2 rounded-xl bg-[#111318] px-3 py-1.5 text-white shadow-xl z-20 border border-white/10"
+          style={{ left: `${(x(hover) / w) * 100}%`, top: 0 }}
+        >
+          <div className="tech-badge text-[8px] text-lime-400 font-mono">{hp.d}</div>
+          <div className="stat-number text-[12px] font-extrabold">{hp.actual} pts remaining</div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Interactive SVG Donut Chart ────────────────────────────────────────────
+function DonutChart() {
+  const total = DIST.reduce((s, d) => s + d.v, 0)
+  const [active, setActive] = useState(null)
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 40)
+    return () => clearTimeout(t)
+  }, [])
+
+  const size = 168,
+    R = 66,
+    SW = 20,
+    C = 2 * Math.PI * R,
+    GAP = 0.02
+  const segs = useMemo(() => {
+    return DIST.map((d, i) => {
+      const frac = d.v / total
+      const dash = Math.max(frac - GAP, 0.001) * C
+      const prevSum = DIST.slice(0, i).reduce((acc, curr) => acc + (curr.v / total), 0)
+      const rot = prevSum * 360 - 90
+      return { d, i, dash, rot }
+    })
+  }, [total, C, GAP])
+  const sel = active !== null ? DIST[active] : null
+  const selPct = sel ? Math.round((sel.v / total) * 100) : 100
+
+  return (
+    <div className="flex flex-col items-center gap-6 sm:flex-row">
+      <div
+        className="relative shrink-0"
+        style={{ width: size, height: size }}
+        onMouseLeave={() => setActive(null)}
+      >
+        <svg viewBox={`0 0 ${size} ${size}`} className="h-full w-full">
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={R}
+            fill="none"
+            stroke="#f4f0e6"
+            strokeWidth={SW}
+          />
+          {segs.map(({ d, i, dash, rot }) => {
+            const on = active === i
+            const dim = active !== null && !on
+            return (
+              <circle
+                key={d.label}
+                className="donut-seg cursor-pointer"
+                cx={size / 2}
+                cy={size / 2}
+                r={R}
+                fill="none"
+                stroke={PASTEL[d.tint].solid}
+                strokeWidth={on ? SW + 6 : SW}
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${C}`}
+                strokeDashoffset={mounted ? 0 : C}
+                opacity={dim ? 0.28 : 1}
+                transform={`rotate(${rot} ${size / 2} ${size / 2})`}
+                style={{
+                  "--dash-len": `${C}px`,
+                  "--dash-to": "0px",
+                  animationDelay: `${i * 120}ms`,
+                  filter: on ? "drop-shadow(0 4px 10px rgba(0,0,0,0.14))" : "none",
+                }}
+                onMouseEnter={() => setActive(i)}
+              />
+            )
+          })}
+        </svg>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+          <div key={active ?? "all"} className="count-pop">
+            <div
+              className="stat-number text-[32px] font-extrabold leading-none tracking-tight"
+              style={{ color: sel ? PASTEL[sel.tint].solid : "#1c1917" }}
+            >
+              {selPct}%
+            </div>
+            <div className="tech-badge mt-1 text-[9px] text-stone-400 font-mono">
+              {sel ? sel.label : "Total tasks"}
+            </div>
+            {sel && (
+              <div className="stat-number mt-0.5 text-[11px] font-bold text-stone-500">
+                {sel.v} of {total}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full flex-1 space-y-1.5">
+        {DIST.map((d, i) => {
+          const on = active === i
+          const pct = Math.round((d.v / total) * 100)
+          return (
+            <button
+              key={d.label}
+              type="button"
+              onMouseEnter={() => setActive(i)}
+              onMouseLeave={() => setActive(null)}
+              className="tactile flex w-full items-center gap-3 rounded-xl px-2.5 py-2 text-left transition-colors cursor-pointer"
+              style={{ background: on ? PASTEL[d.tint].bg : "transparent" }}
+            >
+              <span
+                className="h-3 w-3 shrink-0 rounded-full transition-transform"
+                style={{
+                  background: PASTEL[d.tint].solid,
+                  transform: on ? "scale(1.3)" : "scale(1)",
+                }}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12.5px] font-bold text-stone-700">{d.label}</span>
+                  <span
+                    className="stat-number text-[12.5px] font-extrabold"
+                    style={{ color: on ? PASTEL[d.tint].text : "#1c1917" }}
+                  >
+                    {pct}%
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-stone-100">
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{
+                      width: `${pct}%`,
+                      background: PASTEL[d.tint].solid,
+                      opacity: active === null || on ? 1 : 0.35,
+                    }}
+                  />
+                </div>
+              </div>
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 export default function AnalyticsPage() {
   const { fullName, initials } = useCurrentUser()
-  const [timeRange, setTimeRange] = useState('Sprint 14')
-  const [hoveredWeek, setHoveredWeek] = useState(null)
-  const maxVal = 95
+  const [timeRange, setTimeRange] = useState("30d")
+  const maxVel = Math.max(...VELOCITY)
 
-  // Replace first velocity row with real logged-in user
-  const velocityData = memberVelocity.map((m, i) =>
-    i === 0 ? { ...m, name: fullName || m.name, avatar: initials || m.avatar } : m
-  )
+  const memberVelocity = [
+    { name: fullName || "Alex Johnson", role: "Design Lead", tasks: 42, color: "#8b5cf6", initials: initials || "AJ" },
+    { name: "Marcus Chen", role: "Full Stack Engineer", tasks: 38, color: "#6366f1", initials: "MC" },
+    { name: "Elena Vance", role: "Security Architect", tasks: 31, color: "#10b981", initials: "EV" },
+    { name: "Sophia Aris", role: "UI Engineer", tasks: 29, color: "#f43f5e", initials: "SA" },
+  ]
 
   return (
     <ProtectedRoute>
@@ -59,11 +317,10 @@ export default function AnalyticsPage() {
 
         {/* Main Content */}
         <main className="flex-1 min-w-0 px-4 py-6 sm:px-6 lg:px-8 overflow-y-auto pt-16 lg:pt-6">
-
           <DynamicHeader
-            onOpenNewTask={() => toast.success('Analytics report downloaded')}
+            onOpenNewTask={() => toast.success("Analytics report downloaded")}
             onOpenSearch={() => {
-              const evt = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true })
+              const evt = new KeyboardEvent("keydown", { key: "k", metaKey: true, bubbles: true })
               window.dispatchEvent(evt)
             }}
           />
@@ -71,137 +328,176 @@ export default function AnalyticsPage() {
           {/* Page Title & Range Selector */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
             <div>
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal text-stone-950 tracking-tight font-serif">
-                High-throughput <em className="italic font-serif font-normal text-stone-900">Velocity & Insights</em>
+              <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
+                Sprint <span className="font-serif-italic font-normal text-violet-700">telemetry</span>
               </h1>
-              <p className="text-xs sm:text-sm text-stone-500 font-medium mt-1.5">
-                Real-time throughput velocity, burndown accuracy, and resource allocation across spaces
+              <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
+                Velocity, burndown & throughput across the org.
               </p>
             </div>
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => toast.success('Exporting CSV & PDF...')}
+                type="button"
+                onClick={() => toast.success("Exporting CSV & PDF...")}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-white border border-stone-200 text-xs font-bold text-stone-700 hover:bg-stone-50 shadow-2xs transition-all cursor-pointer"
               >
                 <DownloadIcon size={13} />
                 <span>Export Report</span>
               </button>
 
-              <button
-                onClick={() => toast.success('Filtered range applied')}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-[#111318] text-white text-xs font-bold shadow-xs hover:bg-black transition-all cursor-pointer"
-              >
-                <span>{timeRange}</span>
-                <ChevronDownIcon size={12} />
-              </button>
+              <div className="inline-flex rounded-full bg-stone-200/70 p-1">
+                {[
+                  ["7d", "7 days"],
+                  ["30d", "30 days"],
+                  ["90d", "90 days"],
+                ].map(([val, label]) => (
+                  <button
+                    key={val}
+                    type="button"
+                    onClick={() => setTimeRange(val)}
+                    className={`tactile rounded-full px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                      timeRange === val
+                        ? "bg-[#111318] text-white shadow-xs"
+                        : "text-stone-600 hover:text-stone-900"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Bento KPI Summary Row */}
+          {/* ── 1. Bento Stat Tiles with Mini Sparklines ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
             <MetricCard
-              icon={ZapIcon}
-              badge="+14% vs 4w avg"
-              value="103 pts"
-              label="Weekly Velocity"
-              theme="purple"
+              icon={Gauge}
+              badge="+8.2% surge"
+              value="42 pts"
+              label="Sprint Velocity"
+              theme="lime"
             />
             <MetricCard
-              icon={ClockIcon}
-              badge="-0.8d reduction"
+              icon={Timer}
+              badge="-12% cycle drop"
               value="2.4 days"
-              label="Cycle Time"
-              theme="amber"
-            />
-            <MetricCard
-              icon={CheckCircleIcon}
-              badge="42 PRs merged"
-              value="98.2%"
-              label="PR Merge Rate"
+              label="Avg Cycle Time"
               theme="sky"
             />
             <MetricCard
-              icon={TargetIcon}
-              badge="High team morale"
-              value="87.4%"
-              label="Member Efficiency"
-              theme="lime"
+              icon={Flame}
+              badge="+20% vs target"
+              value="137 tasks"
+              label="Total Throughput"
+              theme="purple"
+            />
+            <MetricCard
+              icon={OctagonAlert}
+              badge="+2 resolved"
+              value="6 blocked"
+              label="Blocker Clearance"
+              theme="amber"
             />
           </div>
 
-          {/* Main Chart Grid: Velocity Burn-up + Project Allocation (Ref Image 1) */}
+          {/* ── 2. Middle Row: Burndown Line Chart & Interactive Donut ── */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-7">
-
-            {/* Left 2 Cols: Sprint Burn-Up Bar Chart (Image 1 Left) */}
-            <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs flex flex-col justify-between">
+            <div className="bento-card p-6 sm:p-7 lg:col-span-2 flex flex-col justify-between">
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                   <div>
-                    <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif">
-                      Sprint Throughput & <em className="italic font-serif font-normal text-stone-800">Scope</em>
+                    <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                      Sprint <span className="font-serif-italic font-normal text-stone-500">burndown</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-stone-500 mt-1 font-medium">Story points completed vs scope additions per week</p>
+                    <p className="text-xs font-medium text-stone-400 mt-0.5">
+                      4 pts ahead of ideal trajectory · on track to close early
+                    </p>
                   </div>
 
-                  {/* Legend */}
                   <div className="flex items-center gap-4 text-xs font-bold">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#111318]" />
-                      <span className="text-stone-700">Completed</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-[#a3e635]" />
-                      <span className="text-stone-700">Added</span>
-                    </div>
+                    <span className="flex items-center gap-1.5 text-stone-700">
+                      <span className="h-2.5 w-4 rounded-full bg-[#a855f7]" />
+                      Actual
+                    </span>
+                    <span className="flex items-center gap-1.5 text-stone-400">
+                      <span className="h-2.5 w-4 rounded-full border-b-2 border-dashed border-stone-300" />
+                      Ideal
+                    </span>
                   </div>
                 </div>
 
-                {/* Bar Columns Container with Gridlines */}
-                <div className="h-64 flex items-end justify-between gap-2 sm:gap-4 pt-8 pb-3 border-b border-stone-100 relative">
+                <BurndownChart />
 
-                  {/* Subtle Gridlines */}
-                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-30">
-                    <div className="border-b border-dashed border-stone-200 w-full" />
-                    <div className="border-b border-dashed border-stone-200 w-full" />
-                    <div className="border-b border-dashed border-stone-200 w-full" />
-                    <div className="border-b border-dashed border-stone-200 w-full" />
+                <div className="mt-2 flex justify-between px-3 text-[10px] font-bold text-stone-400 font-mono">
+                  {BURNDOWN.map((p) => (
+                    <span key={p.d}>{p.d}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 font-medium">
+                <span>Current status: <strong className="text-stone-900">Sprint 24 · Week 5</strong></span>
+                <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-mono">
+                  96% Burndown Accuracy
+                </span>
+              </div>
+            </div>
+
+            {/* Right: Work Distribution Interactive Donut */}
+            <div className="bento-card p-6 sm:p-7 flex flex-col justify-between">
+              <div>
+                <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900 mb-1">
+                  Work <span className="font-serif-italic font-normal text-stone-500">distribution</span>
+                </h2>
+                <p className="text-xs font-medium text-stone-400 mb-6">Resource effort by space category</p>
+                <DonutChart />
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+                <span>Active Spaces</span>
+                <span className="font-bold text-stone-900 font-mono">4 spaces</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ── 3. Weekly Velocity Histogram & 5-Week Activity Map ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-7">
+            {/* Weekly Velocity Bars */}
+            <div className="bento-card p-6 sm:p-7 lg:col-span-2 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                      Weekly <span className="font-serif-italic font-normal text-stone-500">velocity</span>
+                    </h2>
+                    <p className="text-xs font-medium text-stone-400 mt-0.5">Throughput across consecutive sprints</p>
                   </div>
+                  <span className="stat-number text-xs font-bold text-stone-400 font-mono bg-stone-100 px-2.5 py-1 rounded-full">
+                    Avg {Math.round(VELOCITY.reduce((a, b) => a + b, 0) / VELOCITY.length)} pts / sprint
+                  </span>
+                </div>
 
-                  {weeklyData.map((d) => {
-                    const isHovered = hoveredWeek === d.week
+                <div className="flex h-44 items-end gap-3 pt-6 pb-2 border-b border-stone-100">
+                  {VELOCITY.map((v, i) => {
+                    const last = i === VELOCITY.length - 1
                     return (
-                      <div
-                        key={d.week}
-                        onMouseEnter={() => setHoveredWeek(d.week)}
-                        onMouseLeave={() => setHoveredWeek(null)}
-                        className="flex-1 flex flex-col items-center gap-2 h-full justify-end relative cursor-pointer group z-10"
-                      >
-                        {/* Hover Tooltip */}
-                        {isHovered && (
-                          <div className="absolute -top-12 left-1/2 -translate-x-1/2 bg-[#111318] text-white text-[11px] font-sans font-bold px-3 py-1.5 rounded-xl shadow-xl whitespace-nowrap z-30 flex items-center gap-2 border border-white/10">
-                            <span className="text-white">{d.completed} pts done</span>
-                            <span className="text-stone-400">·</span>
-                            <span className="text-lime-400">{d.added} added</span>
-                          </div>
-                        )}
-
-                        <div className="w-full flex items-end justify-center gap-1.5 h-full">
-                          {/* Completed Bar (Dark Charcoal) */}
+                      <div key={i} className="group flex flex-1 flex-col items-center gap-2 cursor-pointer">
+                        <span className="stat-number text-[11px] font-extrabold text-stone-600 opacity-0 transition-opacity group-hover:opacity-100 font-mono">
+                          {v}
+                        </span>
+                        <div className="flex w-full flex-1 items-end">
                           <div
-                            className="w-full max-w-[18px] bg-[#111318] rounded-t-md transition-all duration-300 group-hover:bg-black group-hover:scale-y-105 origin-bottom shadow-xs"
-                            style={{ height: `${(d.completed / maxVal) * 100}%` }}
-                          />
-                          {/* Added Bar (Lime Green) */}
-                          <div
-                            className="w-full max-w-[18px] bg-[#a3e635] rounded-t-md transition-all duration-300 group-hover:bg-[#84cc16] group-hover:scale-y-105 origin-bottom shadow-xs"
-                            style={{ height: `${(d.added / maxVal) * 100}%` }}
+                            className="bar-grow w-full rounded-lg transition-all group-hover:brightness-95 shadow-xs"
+                            style={{
+                              height: `${(v / maxVel) * 100}%`,
+                              background: last ? "#84cc16" : "#e7e5e4",
+                              animationDelay: `${i * 45}ms`,
+                            }}
                           />
                         </div>
-
-                        {/* Week Label (Clean, Sharp, No Fuzzy Serif!) */}
-                        <span className="chart-axis-label font-sans font-semibold text-[11px] text-stone-500 group-hover:text-stone-900 group-hover:font-bold transition-colors">
-                          {d.week}
+                        <span className="stat-number text-[10px] font-bold text-stone-400 font-mono">
+                          S{i + 1}
                         </span>
                       </div>
                     )
@@ -209,121 +505,118 @@ export default function AnalyticsPage() {
                 </div>
               </div>
 
-              {/* Bottom Insight Footer */}
-              <div className="mt-4 flex items-center justify-between text-xs text-stone-500 font-medium">
-                <span>Peak throughput: <strong>W35 (86 pts)</strong></span>
-                <span className="text-lime-700 font-bold">+28% Sprint Velocity Surge</span>
+              <div className="mt-3 flex items-center justify-between text-xs text-stone-500 font-medium">
+                <span>Peak Sprint: <strong>S8 (51 pts)</strong></span>
+                <span className="text-lime-700 font-bold font-mono">+18% Velocity Trend</span>
               </div>
             </div>
 
-            {/* Right 1 Col: Project Distribution (Image 1 Right) */}
-            <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs flex flex-col justify-between">
+            {/* 5-Week Activity Map (Heatmap) */}
+            <div className="bento-card p-6 sm:p-7 flex flex-col justify-between">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif mb-1">
-                  Project <em className="italic font-serif font-normal text-stone-800">Distribution</em>
+                <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900 mb-1">
+                  Activity <span className="font-serif-italic font-normal text-stone-500">map</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-stone-500 font-medium mb-6">Resource effort by space category</p>
+                <p className="text-xs font-medium text-stone-400 mb-5">Commits & task completions, last 5 weeks</p>
 
-                {/* Progress Breakdown Rows */}
-                <div className="space-y-4">
-                  {projectDistribution.map(p => (
-                    <div key={p.name} className="group cursor-pointer">
-                      <div className="flex items-center justify-between text-xs mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0 shadow-2xs"
-                            style={{ backgroundColor: p.color }}
-                          />
-                          <span className="font-semibold text-stone-800 group-hover:text-stone-950 transition-colors">
-                            {p.name}
-                          </span>
-                        </div>
-                        <span className="chart-percentage-badge text-stone-950 font-bold text-xs">
-                          {p.share}%
-                        </span>
-                      </div>
-
-                      <div className="w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${p.share}%`, backgroundColor: p.color }}
+                <div className="flex flex-col items-center gap-1.5">
+                  <div className="flex gap-1.5 pl-6">
+                    {DOW.map((d, i) => (
+                      <span key={i} className="w-6 text-center text-[9px] font-bold text-stone-400 font-mono">
+                        {d}
+                      </span>
+                    ))}
+                  </div>
+                  {HEAT.map((week, wi) => (
+                    <div key={wi} className="flex items-center gap-1.5">
+                      <span className="w-4 text-[8px] font-bold text-stone-400 font-mono">
+                        {5 - wi}w
+                      </span>
+                      {week.map((lvl, di) => (
+                        <span
+                          key={di}
+                          className="h-6 w-6 rounded-md transition-transform hover:scale-115 cursor-pointer shadow-2xs"
+                          style={{ background: HEAT_TINTS[lvl] }}
+                          title={`Week ${5 - wi}, Day ${di + 1}: ${lvl * 3} actions`}
                         />
-                      </div>
+                      ))}
                     </div>
                   ))}
+                  <div className="mt-3 flex items-center gap-1.5 self-end text-[9px] font-bold text-stone-400 font-mono">
+                    <span>Less</span>
+                    {HEAT_TINTS.map((c) => (
+                      <span key={c} className="h-3 w-3 rounded-xs" style={{ background: c }} />
+                    ))}
+                    <span>More</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Active Tracked Spaces Footer (as shown in image) */}
-              <div className="pt-6 mt-6 border-t border-stone-100 flex items-center justify-between text-xs">
-                <span className="text-stone-500 font-medium">Active Tracked Spaces:</span>
-                <span className="font-bold text-stone-950 font-sans">5 spaces</span>
+              <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500">
+                <span>Total logged</span>
+                <span className="font-bold text-stone-900 font-mono">82 actions</span>
               </div>
             </div>
-
           </div>
 
-          {/* Member Velocity Leaderboard */}
-          <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-2xs mb-12">
+          {/* ── 4. Top Contributors Leaderboard ── */}
+          <div className="bento-card p-6 sm:p-7 mb-12">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif">
-                  Team Member Velocity & <em className="italic font-serif font-normal text-stone-800">Output</em>
+                <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                  Top <span className="font-serif-italic font-normal text-stone-500">contributors</span>
                 </h2>
-                <p className="text-xs sm:text-sm text-stone-500 mt-1 font-medium">Individual points delivered against target capacity</p>
+                <p className="text-xs font-medium text-stone-400 mt-0.5">Sprint throughput ranking and output</p>
               </div>
-
-              <span className="text-xs font-bold px-3 py-1 rounded-full bg-stone-100 text-stone-800">
-                Sprint 14 Target: 160 pts
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-stone-100 text-stone-800 font-mono">
+                Sprint 24 Leaderboard
               </span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead>
-                  <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px] tracking-wider">
-                    <th className="pb-3 pl-3">Member</th>
-                    <th className="pb-3">Role</th>
-                    <th className="pb-3">Points Delivered</th>
-                    <th className="pb-3">Target</th>
-                    <th className="pb-3">Efficiency</th>
-                    <th className="pb-3 pr-3 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {velocityData.map(m => (
-                    <tr key={m.name} className="hover:bg-stone-50/80 transition-colors">
-                      <td className="py-3.5 pl-3">
-                        <div className="flex items-center gap-2.5">
-                          <div
-                            className="w-7 h-7 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-2xs"
-                            style={{ backgroundColor: m.color }}
-                          >
-                            {m.avatar}
-                          </div>
-                          <span className="font-bold text-stone-900">{m.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 text-stone-500">{m.role}</td>
-                      <td className="py-3.5 font-bold text-stone-900 stat-number text-sm">{m.pts} pts</td>
-                      <td className="py-3.5 text-stone-400 stat-number">{m.target} pts</td>
-                      <td className="py-3.5">
-                        <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 text-[11px] stat-number">
-                          {m.speed}
-                        </span>
-                      </td>
-                      <td className="py-3.5 pr-3 text-right">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-lime-100 text-lime-800">
-                          ● On Track
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {memberVelocity.map((m, i) => {
+                const max = memberVelocity[0].tasks
+                return (
+                  <div
+                    key={m.name}
+                    className="flex items-center gap-3 rounded-2xl bg-stone-50/80 p-3.5 border border-stone-200/60 hover:bg-stone-100/80 transition-colors"
+                  >
+                    <span
+                      className="stat-number flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold"
+                      style={{
+                        background: i === 0 ? PASTEL.gold.bg : "#fff",
+                        color: i === 0 ? PASTEL.gold.text : "#a8a29e",
+                        border: "1px solid rgba(0,0,0,0.06)",
+                      }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-extrabold text-white shadow-2xs"
+                      style={{ background: m.color }}
+                    >
+                      {m.initials}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-bold text-stone-900">{m.name}</div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-stone-200">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${(m.tasks / max) * 100}%`,
+                            background: m.color,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <span className="stat-number text-[15px] font-extrabold text-stone-900 ml-1">
+                      {m.tasks}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           </div>
-
         </main>
       </div>
     </ProtectedRoute>

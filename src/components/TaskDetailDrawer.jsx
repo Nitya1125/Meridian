@@ -7,6 +7,8 @@ import {
   ShareIcon, CheckCircleIcon, TargetIcon, ZapIcon, SparklesIcon,
   ThumbsUpIcon, HeartIcon, RocketIcon, BulbIcon, FlameIcon, CopyIcon
 } from './Icons'
+import { AlarmClock, MoonStar, Play, Pause, Clock } from 'lucide-react'
+import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
@@ -57,6 +59,16 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     task?.assignees || (task?.assignee ? [{ initials: task.assignee, name: task.assigneeName || 'Alex Johnson', color: task.assigneeColor || '#8b5cf6' }] : [])
   )
   const [showAssigneePicker, setShowAssigneePicker] = useState(false)
+  const [timing, setTiming] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+
+  useEffect(() => {
+    if (!timing) return
+    const t = setInterval(() => setElapsed((e) => e + 1), 1000)
+    return () => clearInterval(t)
+  }, [timing])
+
+  const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
   const [comments, setComments] = useState([
     {
@@ -239,6 +251,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     toast.success('Task ID copied to clipboard!')
   }
 
+  const health = taskHealth(task)
   const completedCount = subtasks.filter(s => s.done).length
   const totalCount = subtasks.length
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
@@ -330,6 +343,28 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
             
             {/* ── Left Column: Editorial Content (8 cols) ── */}
             <div className="lg:col-span-8 space-y-6">
+
+              {/* Health Alert Banner if overdue or stale */}
+              {(health.kind === 'overdue' || health.stale) && (
+                <div
+                  className="flex items-center gap-2.5 rounded-2xl px-4 py-3 border animate-in fade-in duration-200"
+                  style={{
+                    background: health.kind === 'overdue' ? PASTEL.rose.bg : PASTEL.gold.bg,
+                    borderColor: health.kind === 'overdue' ? PASTEL.rose.border : PASTEL.gold.border,
+                  }}
+                >
+                  {health.kind === 'overdue' ? (
+                    <AlarmClock className="beacon h-5 w-5 shrink-0 rounded-full" style={{ color: PASTEL.rose.text }} strokeWidth={2.2} />
+                  ) : (
+                    <MoonStar className="h-5 w-5 shrink-0" style={{ color: PASTEL.gold.text }} strokeWidth={2.2} />
+                  )}
+                  <p className="text-[12.5px] font-bold" style={{ color: health.kind === 'overdue' ? PASTEL.rose.text : PASTEL.gold.text }}>
+                    {health.kind === 'overdue'
+                      ? `This task is ${health.daysOverdue} day${health.daysOverdue > 1 ? 's' : ''} overdue.`
+                      : `No update in ${health.daysSinceUpdate} days — is this still moving?`}
+                  </p>
+                </div>
+              )}
               
               {/* Inline Editable Title */}
               <div>
@@ -342,7 +377,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                   onChange={(e) => setTitle(e.target.value)}
                   onBlur={handleTitleBlur}
                   placeholder="Enter task title..."
-                  className="w-full font-serif text-2xl sm:text-3xl lg:text-4xl font-normal text-stone-950 tracking-tight leading-snug bg-transparent border-b border-transparent focus:border-stone-300 focus:bg-white/60 rounded-xl px-2 py-1 -ml-2 transition-all outline-none resize-none"
+                  className="w-full text-2xl sm:text-3xl font-extrabold text-stone-950 tracking-tight leading-snug bg-transparent border-b border-transparent focus:border-stone-300 focus:bg-white/60 rounded-xl px-2 py-1 -ml-2 transition-all outline-none resize-none font-sans"
                 />
               </div>
 
@@ -365,13 +400,13 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
               <div className="p-5 rounded-3xl bg-white border border-stone-200/80 shadow-2xs">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-stone-900">Checklist & Deliverables</span>
-                    <span className="text-[11px] font-mono font-bold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
+                    <span className="text-sm font-bold text-stone-900">Subtasks</span>
+                    <span className="tnum text-[11px] font-bold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
                       {completedCount}/{totalCount}
                     </span>
                   </div>
 
-                  <span className={`text-xs font-bold font-mono px-2.5 py-0.5 rounded-full ${
+                  <span className={`tnum text-xs font-bold px-2.5 py-0.5 rounded-full ${
                     isAllCompleted ? 'bg-lime-100 text-lime-800' : 'bg-stone-100 text-stone-600'
                   }`}>
                     {progressPct}% Completed
@@ -381,7 +416,9 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                 {/* Animated Progress Bar */}
                 <div className="w-full bg-stone-100 h-2 rounded-full overflow-hidden mb-4">
                   <div
-                    className="h-full bg-lime-500 transition-all duration-500 rounded-full"
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      isAllCompleted ? 'bg-lime-500' : 'striped-bar-green striped-anim'
+                    }`}
                     style={{ width: `${progressPct}%` }}
                   />
                 </div>
@@ -520,6 +557,36 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
               
               <div className="p-5 rounded-3xl bg-white border border-stone-200/80 shadow-xs space-y-5 text-xs">
                 
+                {/* Live Stopwatch Time Tracker */}
+                <div className="flex items-center justify-between rounded-2xl bg-[#111318] p-3.5 text-white shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-lime-400">
+                      <Clock className={`h-4 w-4 ${timing ? 'beacon rounded-full' : ''}`} strokeWidth={2.2} />
+                    </div>
+                    <div>
+                      <div className="text-[9.5px] font-mono font-bold uppercase tracking-wider text-stone-400">Stopwatch</div>
+                      <div className="font-mono text-sm font-bold text-white tracking-wide">{fmt(elapsed)}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTiming((t) => !t)}
+                    className="tactile flex items-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/20 px-3 py-1.5 text-xs font-bold transition-all cursor-pointer border border-white/15 select-none"
+                  >
+                    {timing ? (
+                      <>
+                        <Pause className="h-3.5 w-3.5" strokeWidth={2.4} />
+                        <span>Pause</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3.5 w-3.5" strokeWidth={2.4} fill="currentColor" />
+                        <span>Start</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
                 {/* 1. Status Selector */}
                 <div>
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 block mb-2">

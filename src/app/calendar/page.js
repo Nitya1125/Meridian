@@ -13,6 +13,7 @@ import {
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { PASTEL } from '@/Lib/meridianTheme'
 
 // ─── Data for Card & Table Views ─────────────────────────────────
 const scheduleEvents = [
@@ -364,6 +365,432 @@ const allocPeriodsData = {
   }
 }
 
+// ─── Dots per day for MiniMonth ──────────────────────────────────
+const DAY_DOTS = {
+  3: ['#84cc16'],
+  17: ['#f97316'],
+  18: ['#84cc16', '#0ea5e9'],
+  19: ['#f43f5e'],
+  20: ['#0ea5e9'],
+  25: ['#84cc16'],
+  27: ['#a855f7'],
+  29: ['#f43f5e']
+}
+
+function MiniMonth({ selectedDay, onSelectDay }) {
+  const leading = [27, 28, 29, 30]
+  const days = Array.from({ length: 30 }, (_, i) => i + 1)
+  const trailing = [1, 2, 3, 4]
+  const cells = [
+    ...leading.map((n) => ({ n, muted: true })),
+    ...days.map((n) => ({ n })),
+    ...trailing.map((n) => ({ n, muted: true }))
+  ]
+
+  return (
+    <div>
+      <div className="grid grid-cols-7 gap-y-2 text-center">
+        {['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].map((d) => (
+          <div key={d} className="tech-badge text-[10px] text-stone-400 font-bold">{d}</div>
+        ))}
+        {cells.map((c, i) => {
+          const isSelected = !c.muted && c.n === selectedDay
+          const isToday = !c.muted && c.n === 3
+          const dots = !c.muted ? DAY_DOTS[c.n] : undefined
+          return (
+            <div key={i} className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!c.muted) {
+                    onSelectDay(c.n)
+                    toast.success(`Selected May ${c.n}`)
+                  }
+                }}
+                className={`tactile flex h-8 w-8 items-center justify-center rounded-full text-[12.5px] font-bold font-mono transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-stone-900 text-white shadow-xs'
+                    : isToday
+                    ? 'border border-stone-900 text-stone-900 font-extrabold'
+                    : c.muted
+                    ? 'text-stone-300 cursor-default'
+                    : 'text-stone-700 hover:bg-stone-100'
+                }`}
+              >
+                {c.n}
+              </button>
+              <div className="flex h-1.5 items-center gap-0.5">
+                {dots?.map((dColor, j) => (
+                  <span key={j} className="h-1.5 w-1.5 rounded-full" style={{ background: dColor }} />
+                ))}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function DeliverablesDock({
+  activeUrgentTasks,
+  dockCategoryFilter,
+  setDockCategoryFilter,
+  setNewUrgentModalOpen,
+  setSelectedUrgentTask,
+  handleToggleUrgentTask,
+  handleJoinMeeting,
+  statsPeriod,
+  setStatsPeriod,
+  statsDropdownOpen,
+  setStatsDropdownOpen,
+  activeStats,
+  allocPeriod,
+  setAllocPeriod,
+  allocDropdownOpen,
+  setAllocDropdownOpen,
+  activeAlloc,
+  arcDashOffset
+}) {
+  return (
+    <div
+      className="rounded-3xl p-6 text-white space-y-6 xl:sticky xl:top-4 xl:self-start transition-all"
+      style={{ background: '#111318', boxShadow: '0 20px 40px -8px rgba(0,0,0,0.45)' }}
+    >
+      <div>
+        {/* Top Status & Filter Pills */}
+        <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+          <div className="flex items-center gap-2">
+            <span className="beacon h-2 w-2 rounded-full bg-lime-400" />
+            <span className="text-xs font-mono text-white/70">Today, 18 May 2026</span>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-1.5">
+            {['Design', 'Copyright', 'Dev'].map(t => {
+              const isActive = dockCategoryFilter.toLowerCase() === t.toLowerCase()
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    if (isActive) {
+                      setDockCategoryFilter('All')
+                      toast.success('Showing all deliverables')
+                    } else {
+                      setDockCategoryFilter(t)
+                      toast.success(`Filtered by ${t}`)
+                    }
+                  }}
+                  className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-lime-400 text-stone-950 font-bold shadow-xs'
+                      : 'bg-white/10 text-white/80 hover:bg-white/20'
+                  }`}
+                >
+                  {t}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Active Deliverables Heading */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[22px] font-extrabold tracking-tight text-white">
+              Active <span className="font-serif-italic font-normal text-lime-400">Deliverables</span> <span className="text-white/50 text-base font-normal">({activeUrgentTasks.length})</span>
+            </h2>
+
+            <div className="flex items-center gap-1.5">
+              <span className="rounded-full bg-lime-400/15 px-2.5 py-1 text-[10px] font-bold text-lime-400">
+                Output Backlog
+              </span>
+              <button
+                type="button"
+                onClick={() => setNewUrgentModalOpen(true)}
+                className="tactile flex h-6 w-6 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-white/80 transition-colors cursor-pointer"
+                title="Add deliverable"
+              >
+                <PlusIcon size={12} strokeWidth={2.4} />
+              </button>
+            </div>
+          </div>
+          <p className="mt-1 text-[12px] font-medium text-white/50">
+            Ship during open focus blocks · Output backlog &amp; velocity
+          </p>
+        </div>
+
+        {/* Deliverables Cards List */}
+        <div className="space-y-3 mb-6 max-h-[560px] overflow-y-auto pr-1">
+          {activeUrgentTasks.length === 0 ? (
+            <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 text-center text-stone-400 text-xs font-mono">
+              No urgent tasks matching filter.
+            </div>
+          ) : (
+            activeUrgentTasks.map(task => (
+              <div
+                key={task.id}
+                className={`rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] p-4 transition-colors border border-white/[0.07] ${
+                  task.status === 'completed' ? 'opacity-60' : ''
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className={`tnum flex items-center gap-1.5 text-[12px] font-bold ${task.timeColor || 'text-white'}`}>
+                    <span className="h-2 w-2 rounded-full bg-current" />
+                    {task.time}
+                  </span>
+                  {task.badge ? (
+                    <span className="shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white/80">
+                      {task.badge}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedUrgentTask(task)}
+                      className="cursor-pointer text-white/40 hover:text-white transition-colors"
+                      title="View details"
+                    >
+                      <ArrowUpRightIcon size={14} className="shrink-0 text-white/40" />
+                    </button>
+                  )}
+                </div>
+
+                <h4
+                  onClick={() => setSelectedUrgentTask(task)}
+                  className={`mt-2 text-[15px] font-bold leading-snug tracking-tight text-white cursor-pointer hover:text-lime-300 transition-colors ${
+                    task.status === 'completed' ? 'line-through text-stone-400' : ''
+                  }`}
+                >
+                  {task.title}
+                </h4>
+
+                {/* Progress row */}
+                {typeof task.progress === 'number' && (
+                  <div className="mt-3">
+                    <div className="mb-1.5 flex items-center justify-between text-[11px] font-bold">
+                      <span className="text-white/50">Progress</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleUrgentTask(task.id)}
+                        className="tnum text-lime-400 hover:underline cursor-pointer font-mono"
+                        title="Toggle progress"
+                      >
+                        {task.progress}%
+                      </button>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-lime-400 transition-all duration-300"
+                        style={{ width: `${task.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Footer: people or meta */}
+                {(task.avatars || task.people) && (
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+                    {task.avatars ? (
+                      <div className="flex -space-x-1.5">
+                        {task.avatars.map((av, avIdx) => (
+                          <span
+                            key={avIdx}
+                            className={`flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-extrabold text-white ring-2 ring-[#111318] ${av.bg || 'bg-stone-700'}`}
+                          >
+                            {av.initials}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-[12px] font-medium text-white/50">{task.people}</span>
+                    )}
+                    {task.tasksCount && <span className="text-[12px] font-medium text-white/50">{task.tasksCount}</span>}
+                  </div>
+                )}
+
+                {/* Link row */}
+                {task.meetUrl && (
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+                    <span
+                      onClick={() => {
+                        navigator.clipboard?.writeText(task.fullMeetUrl || task.meetUrl)
+                        toast.success('Meeting link copied!')
+                      }}
+                      className="min-w-0 flex-1 truncate text-[12px] font-medium text-white/50 cursor-pointer hover:text-white"
+                      title="Click to copy link"
+                    >
+                      {task.meetUrl}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleJoinMeeting(task)}
+                      className="tactile shrink-0 rounded-full bg-violet-500 px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-violet-400 cursor-pointer"
+                    >
+                      Join
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Dark Data Viz Widgets: Speedometer & Allocation */}
+      <div className="space-y-4 pt-4 border-t border-white/10">
+        {/* Radial Speedometer Widget */}
+        <div className="p-4 rounded-2xl bg-[#181A22] border border-white/10 relative">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-white font-sans">Task Statistics</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setStatsDropdownOpen(!statsDropdownOpen)
+                  setAllocDropdownOpen(false)
+                }}
+                className="text-[10px] font-mono text-stone-300 hover:text-white flex items-center gap-1 cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 transition-colors"
+              >
+                <span>{activeStats.label} ▾</span>
+              </button>
+              {statsDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-32 bg-[#1E2028] border border-white/15 rounded-xl shadow-2xl z-30 py-1 overflow-hidden">
+                  {Object.entries(statsPeriodsData).map(([key, item]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setStatsPeriod(key)
+                        setStatsDropdownOpen(false)
+                        toast.success(`Task Statistics: ${item.label}`)
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors flex items-center justify-between cursor-pointer ${
+                        statsPeriod === key ? 'text-lime-400 bg-white/10 font-bold' : 'text-stone-300 hover:bg-white/5'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {statsPeriod === key && <span className="text-[10px]">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="relative flex flex-col items-center py-2">
+            <svg viewBox="0 0 100 55" className="w-36 overflow-visible">
+              <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="#2D313F" strokeWidth="8" strokeLinecap="round" />
+              <path
+                d="M 10 50 A 40 40 0 0 1 90 50"
+                fill="none"
+                stroke="url(#speedometerGradient)"
+                strokeWidth="8"
+                strokeLinecap="round"
+                strokeDasharray="125.66"
+                strokeDashoffset={arcDashOffset}
+                className="transition-all duration-700 ease-out"
+              />
+              <defs>
+                <linearGradient id="speedometerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#F43F5E" />
+                  <stop offset="50%" stopColor="#F59E0B" />
+                  <stop offset="100%" stopColor="#84CC16" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            <div className="absolute top-7 flex flex-col items-center">
+              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${activeStats.badgeColor}`}>
+                <CheckCircleIcon size={11} />
+                <span>{activeStats.resultBadge}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 text-center pt-2 border-t border-white/5">
+            <div>
+              <div className="text-2xl font-extrabold text-white stat-number transition-all">{activeStats.completedRate}%</div>
+              <div className="text-[10px] text-stone-400 font-sans mt-0.5">Completed Tasks</div>
+            </div>
+            <div>
+              <div className="text-2xl font-extrabold text-stone-400 stat-number transition-all">{activeStats.unfulfilledRate}%</div>
+              <div className="text-[10px] text-stone-400 font-sans mt-0.5">Unfulfilled Tasks</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bubble Chart Widget */}
+        <div className="p-4 rounded-2xl bg-[#181A22] border border-white/10 relative">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-bold text-white font-sans">Task Type Allocation</span>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setAllocDropdownOpen(!allocDropdownOpen)
+                  setStatsDropdownOpen(false)
+                }}
+                className="text-[10px] font-mono text-stone-300 hover:text-white flex items-center gap-1 cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 transition-colors"
+              >
+                <span>{activeAlloc.label} ▾</span>
+              </button>
+              {allocDropdownOpen && (
+                <div className="absolute right-0 top-full mt-1 w-32 bg-[#1E2028] border border-white/15 rounded-xl shadow-2xl z-30 py-1 overflow-hidden">
+                  {Object.entries(allocPeriodsData).map(([key, item]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => {
+                        setAllocPeriod(key)
+                        setAllocDropdownOpen(false)
+                        toast.success(`Allocation: ${item.label}`)
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors flex items-center justify-between cursor-pointer ${
+                        allocPeriod === key ? 'text-lime-400 bg-white/10 font-bold' : 'text-stone-300 hover:bg-white/5'
+                      }`}
+                    >
+                      <span>{item.label}</span>
+                      {allocPeriod === key && <span className="text-[10px]">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-center gap-3 py-2">
+            <div
+              onClick={() => toast.success(activeAlloc.learningInfo, { icon: '💡' })}
+              className="w-16 h-16 rounded-full bg-[#FEF08A] hover:scale-105 active:scale-95 transition-transform text-stone-950 flex flex-col items-center justify-center font-bold shadow-md cursor-pointer"
+              title="Click for details"
+            >
+              <span className="text-sm font-extrabold stat-number leading-none">{activeAlloc.learning}%</span>
+              <span className="text-[9px] font-sans">Learning</span>
+            </div>
+            <div
+              onClick={() => toast.success(activeAlloc.designInfo, { icon: '🎨' })}
+              className="w-12 h-12 rounded-full bg-[#C4B5FD] hover:scale-105 active:scale-95 transition-transform text-violet-950 flex flex-col items-center justify-center font-bold shadow-md -ml-4 cursor-pointer"
+              title="Click for details"
+            >
+              <span className="text-xs font-extrabold stat-number leading-none">{activeAlloc.design}%</span>
+              <span className="text-[8px] font-sans">Design</span>
+            </div>
+            <div
+              onClick={() => toast.success(activeAlloc.bizInfo, { icon: '📈' })}
+              className="w-10 h-10 rounded-full bg-[#A7F3D0] hover:scale-105 active:scale-95 transition-transform text-emerald-950 flex flex-col items-center justify-center font-bold shadow-md -ml-3 cursor-pointer"
+              title="Click for details"
+            >
+              <span className="text-[10px] font-extrabold stat-number leading-none">{activeAlloc.biz}%</span>
+              <span className="text-[7px] font-sans">Biz</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function CalendarPage() {
   const { fullName, initials } = useCurrentUser()
 
@@ -550,9 +977,14 @@ export default function CalendarPage() {
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-stone-200/80 shadow-2xs mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-100">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-normal text-stone-950 tracking-tight font-serif">
-                  Schedule & <em className="italic font-serif font-normal text-stone-900">Sprint Timelines</em>
-                </h1>
+                <div>
+                  <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
+                    Schedule & <span className="font-serif-italic font-normal text-violet-700">calendar</span>
+                  </h1>
+                  <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
+                    Sprint milestones, team syncs & delivery deadlines.
+                  </p>
+                </div>
 
                 {/* View Switcher Capsule (Differentiated by AIM: Week Horizon | Day Focus | Agenda Ledger) */}
                 <div className="flex items-center gap-1 bg-stone-100/90 p-1 rounded-2xl sm:ml-2 border border-stone-200/60">
@@ -659,9 +1091,261 @@ export default function CalendarPage() {
           </div>
 
           {/* ══════════════════════════════════════════════════════════ */}
-          {/* MAIN UNIFIED DUAL-PANE VIEW: 8 COLS (VIEWS) + 4 COLS (DOCK)*/}
+          {/* MAIN UNIFIED CALENDAR VIEWS                                */}
           {/* ══════════════════════════════════════════════════════════ */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-12">
+          {viewMode === 'block' ? (
+            <div className="rise-in grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)_360px] mb-12">
+              {/* LEFT: Mini Month, Upcoming Events & Quick Tasks */}
+              <div className="bento-card flex flex-col gap-5 p-5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-900 text-lime-400 font-bold text-xs shadow-2xs">
+                      <span className="font-serif-italic text-lg leading-none">M</span>
+                    </div>
+                    <div className="text-[16px] font-extrabold tracking-tight text-stone-900">
+                      Calendar <span className="font-serif-italic font-normal text-stone-400">May 2026</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toast.success('Search calendar dates')}
+                    className="tactile flex h-8 w-8 items-center justify-center rounded-full hover:bg-stone-100 cursor-pointer"
+                  >
+                    <SearchIcon size={14} className="text-stone-500" />
+                  </button>
+                </div>
+
+                <MiniMonth selectedDay={selectedMatrixDay} onSelectDay={setSelectedMatrixDay} />
+
+                <div className="h-px bg-stone-100" />
+
+                <div>
+                  <div className="mb-2.5 flex items-center justify-between">
+                    <h3 className="font-serif-italic text-[16px] text-stone-800">Upcoming Events</h3>
+                    <button
+                      type="button"
+                      onClick={() => setNewMeetingModal(true)}
+                      className="tactile flex h-6 w-6 items-center justify-center rounded-full hover:bg-stone-100 cursor-pointer"
+                    >
+                      <PlusIcon size={13} className="text-stone-500" />
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {events.map((ev) => (
+                      <div
+                        key={ev.id}
+                        onClick={() => toast.success(`Viewing ${ev.name}`)}
+                        className="flex items-center gap-2.5 p-1 rounded-xl hover:bg-stone-50 transition-colors cursor-pointer"
+                      >
+                        <div
+                          className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-extrabold text-white shadow-2xs shrink-0"
+                          style={{ background: ev.color }}
+                        >
+                          {ev.initials}
+                        </div>
+                        <span className="flex-1 text-[13px] font-bold text-stone-800 truncate">{ev.name}</span>
+                        <span className="font-mono text-[11px] font-medium text-stone-400 shrink-0">{ev.time}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="h-px bg-stone-100" />
+
+                <div>
+                  <div className="mb-2.5 flex items-center justify-between">
+                    <h3 className="font-serif-italic text-[16px] text-stone-800">
+                      Tasks <span className="font-mono text-stone-400 text-xs font-normal">({tasks.filter(t => t.done).length}/{tasks.length})</span>
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleAddNewTask}
+                      className="tactile flex h-6 w-6 items-center justify-center rounded-full hover:bg-stone-100 cursor-pointer"
+                    >
+                      <PlusIcon size={13} className="text-stone-500" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    {tasks.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => toggleTask(t.id)}
+                        className="tactile flex w-full items-center gap-2.5 py-1.5 px-1 rounded-lg hover:bg-stone-50 text-left transition-colors cursor-pointer"
+                      >
+                        <span className={`text-[13px] font-medium flex-1 truncate ${t.done ? "text-stone-400 line-through" : "text-stone-700"}`}>
+                          {t.title}
+                        </span>
+                        <span
+                          className={`flex h-5 w-5 items-center justify-center rounded-md transition-all shrink-0 ${
+                            t.done ? "bg-stone-900 border-stone-900" : "bg-white border-stone-300"
+                          }`}
+                          style={{ borderWidth: "1.5px" }}
+                        >
+                          {t.done && <CheckIcon size={11} className="text-white" strokeWidth={3} />}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-auto flex items-center gap-2.5 pt-3 border-t border-stone-100">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-lime-400 text-[11px] font-extrabold">
+                    {initials || 'AJ'}
+                  </div>
+                  <span className="flex-1 text-[13.5px] font-bold text-stone-800 truncate">{fullName || 'Alex Johnson'}</span>
+                  <button
+                    type="button"
+                    onClick={() => setNewMeetingModal(true)}
+                    className="tactile flex h-8 w-8 items-center justify-center rounded-full bg-stone-900 text-white hover:bg-black cursor-pointer shadow-2xs"
+                  >
+                    <PlusIcon size={14} />
+                  </button>
+                </div>
+              </div>
+
+              {/* CENTER: Editorial Timeline */}
+              <div className="bento-card p-6 lg:p-8">
+                <div className="mb-6 flex items-start justify-between">
+                  <div>
+                    <h1 className="font-serif-italic text-[36px] sm:text-[40px] leading-none text-stone-900">May 2026</h1>
+                    <p className="mt-2 text-[13.5px] font-medium text-stone-500">Sprint &amp; Meeting Editorial Timeline</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(window.location.href)
+                        toast.success('Timeline link copied!')
+                      }}
+                      className="tactile flex items-center gap-1.5 rounded-full bg-stone-100 px-3.5 py-2 text-[13px] font-bold text-stone-700 hover:bg-stone-200 cursor-pointer"
+                    >
+                      <ShareIcon size={14} />
+                      <span>Share</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNewMeetingModal(true)}
+                      className="tactile flex items-center gap-1.5 rounded-full bg-stone-900 px-4 py-2 text-[13px] font-extrabold text-white hover:bg-black cursor-pointer"
+                    >
+                      <PlusIcon size={14} />
+                      <span>Event</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-8">
+                  {schedules.map((dayItem) => (
+                    <div key={dayItem.dayNumber} className="grid grid-cols-[64px_minmax(0,1fr)] gap-4 sm:grid-cols-[84px_minmax(0,1fr)] sm:gap-6">
+                      <div className="flex flex-col items-center select-none">
+                        <span className="tech-badge text-[10px] text-stone-400 font-bold">{dayItem.dayName}</span>
+                        <span className="font-serif-italic text-[44px] leading-none text-stone-900 font-mono sm:text-[52px]">
+                          {dayItem.dayNumber}
+                        </span>
+                      </div>
+
+                      <div className="min-w-0 space-y-3 border-t border-stone-100 pt-1">
+                        {dayItem.events.length === 0 ? (
+                          <div
+                            className="flex items-center gap-2.5 rounded-2xl bg-stone-50 px-4 py-4 text-[13.5px] font-medium text-stone-400"
+                            style={{ border: "1px dashed rgba(0,0,0,0.08)" }}
+                          >
+                            <CalendarIcon size={16} />
+                            <span>Focus Time — No meetings scheduled</span>
+                          </div>
+                        ) : (
+                          dayItem.events.map((ev, eIdx) => {
+                            const PlatIcon = ev.platformIcon
+                            const isLive = dayItem.isToday && eIdx === 0
+                            return (
+                              <div key={ev.id}>
+                                {isLive && (
+                                  <div className="mb-2 flex items-center gap-2">
+                                    <span className="beacon h-2.5 w-2.5 rounded-full bg-lime-500" />
+                                    <div className="h-0.5 flex-1 rounded-full striped-bar-green striped-anim" />
+                                    <span className="tech-badge rounded-full bg-lime-100 px-2 py-0.5 text-[9px] text-lime-700 font-bold">
+                                      Live now
+                                    </span>
+                                  </div>
+                                )}
+
+                                <div
+                                  className="rounded-2xl bg-white p-4"
+                                  style={{ border: "1px solid rgba(0,0,0,0.06)", boxShadow: "0 4px 16px -4px rgba(18,19,22,0.05)" }}
+                                >
+                                  <div className="flex items-start gap-3">
+                                    <span className="mt-0.5 h-11 w-1.5 shrink-0 rounded-full" style={{ background: ev.accentColor || '#8B5CF6' }} />
+                                    <div className="min-w-0 flex-1">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <span className="tech-badge text-[9px] font-bold" style={{ color: ev.accentColor || '#8B5CF6' }}>
+                                          {ev.category}
+                                        </span>
+                                        <div className="text-right">
+                                          <div className="font-mono text-[14px] font-extrabold text-stone-900">{ev.timeStart}</div>
+                                          <div className="font-mono text-[11px] font-medium text-stone-400">–{ev.timeEnd}</div>
+                                        </div>
+                                      </div>
+                                      <h4 className="mt-0.5 text-[15px] font-bold tracking-tight text-stone-900">{ev.title}</h4>
+                                    </div>
+                                  </div>
+
+                                  <div className="mt-3 flex items-center justify-between border-t border-stone-100 pt-3">
+                                    <button
+                                      type="button"
+                                      onClick={() => toast.success(`Opening ${ev.platform || 'Meeting'}...`)}
+                                      className="flex items-center gap-1.5 text-[12.5px] font-medium text-stone-500 hover:text-stone-900 transition-colors cursor-pointer"
+                                    >
+                                      {PlatIcon ? <PlatIcon size={14} /> : <VideoIcon size={14} />}
+                                      <span>{ev.platform}</span>
+                                    </button>
+                                    <div className="flex -space-x-1.5">
+                                      {ev.attendees?.map((att, aIdx) => (
+                                        <span
+                                          key={aIdx}
+                                          className="flex h-6 w-6 items-center justify-center rounded-full text-[9px] font-extrabold text-white ring-2 ring-white shadow-2xs"
+                                          style={{ background: att.color || '#8B5CF6' }}
+                                          title={att.name}
+                                        >
+                                          {att.initials}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RIGHT: Obsidian Dark Deliverables dock */}
+              <DeliverablesDock
+                activeUrgentTasks={activeUrgentTasks}
+                dockCategoryFilter={dockCategoryFilter}
+                setDockCategoryFilter={setDockCategoryFilter}
+                setNewUrgentModalOpen={setNewUrgentModalOpen}
+                setSelectedUrgentTask={setSelectedUrgentTask}
+                handleToggleUrgentTask={handleToggleUrgentTask}
+                handleJoinMeeting={handleJoinMeeting}
+                statsPeriod={statsPeriod}
+                setStatsPeriod={setStatsPeriod}
+                statsDropdownOpen={statsDropdownOpen}
+                setStatsDropdownOpen={setStatsDropdownOpen}
+                activeStats={activeStats}
+                allocPeriod={allocPeriod}
+                setAllocPeriod={setAllocPeriod}
+                allocDropdownOpen={allocDropdownOpen}
+                setAllocDropdownOpen={setAllocDropdownOpen}
+                activeAlloc={activeAlloc}
+                arcDashOffset={arcDashOffset}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 mb-12">
 
             {/* ── LEFT / MAIN CONTENT AREA (8 cols) ── */}
             <div className="xl:col-span-8 flex flex-col gap-6">
@@ -1108,348 +1792,6 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {/* VIEW MODE 2: BLOCK VIEW (REDESIGNED WITH MERIDIAN DESIGN SYSTEM) */}
-              {viewMode === 'block' && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-
-                  {/* ── SUB-COL 1: LEFT MINI CALENDAR, QUICK EVENTS & TASKS (5 cols) ── */}
-                  <div className="lg:col-span-5 rounded-3xl bg-white border border-stone-200/80 p-5 shadow-2xs flex flex-col justify-between space-y-5">
-                    <div>
-                      {/* Mini Calendar Header */}
-                      <div className="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-[#111318] text-lime-400 flex items-center justify-center font-bold text-xs shadow-2xs">
-                            M
-                          </div>
-                          <h3 className="font-serif font-normal text-base text-stone-900 tracking-tight">
-                            Calendar <em className="italic font-serif font-normal text-stone-500 text-xs">May 2026</em>
-                          </h3>
-                        </div>
-                        <button
-                          onClick={() => toast.success('Search calendar dates')}
-                          className="text-stone-400 hover:text-stone-800 p-1 rounded-lg transition-colors cursor-pointer"
-                          title="Search dates"
-                        >
-                          <SearchIcon size={14} />
-                        </button>
-                      </div>
-
-                      {/* Month Matrix Grid */}
-                      <div className="mb-5">
-                        <div className="grid grid-cols-7 text-center text-[10px] font-mono font-bold text-stone-400 mb-2 uppercase tracking-wider">
-                          <span>Su</span>
-                          <span>Mo</span>
-                          <span>Tu</span>
-                          <span>We</span>
-                          <span>Th</span>
-                          <span>Fr</span>
-                          <span>Sa</span>
-                        </div>
-
-                        <div className="grid grid-cols-7 gap-y-2 text-center text-xs font-sans">
-                          {calendarMatrix.map((item, idx) => {
-                            const isCurrentActive = item.day === selectedMatrixDay && !item.isPrev && !item.isNext
-                            return (
-                              <div
-                                key={idx}
-                                onClick={() => {
-                                  if (!item.isPrev && !item.isNext) {
-                                    setSelectedMatrixDay(item.day)
-                                    toast.success(`Selected May ${item.day}`)
-                                  }
-                                }}
-                                className="flex flex-col items-center justify-center cursor-pointer group"
-                              >
-                                <span
-                                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] transition-all font-semibold ${
-                                    isCurrentActive
-                                      ? 'bg-[#111318] text-lime-400 font-bold shadow-xs ring-1 ring-lime-400/40'
-                                      : item.isPrev || item.isNext
-                                      ? 'text-stone-300 font-normal'
-                                      : 'text-stone-700 hover:bg-stone-100 font-medium'
-                                  }`}
-                                >
-                                  {item.day}
-                                </span>
-                                <div className="flex items-center gap-0.5 mt-0.5 h-1">
-                                  {item.dots.map((dotColor, dIdx) => (
-                                    <span
-                                      key={dIdx}
-                                      className="w-1 h-1 rounded-full"
-                                      style={{ backgroundColor: dotColor }}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Upcoming Events Section */}
-                    <div className="pt-3 border-t border-stone-100">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-serif font-normal text-stone-900 tracking-tight">
-                          Upcoming Events
-                        </span>
-                        <button
-                          onClick={() => setNewMeetingModal(true)}
-                          className="text-stone-400 hover:text-stone-900 p-1 rounded-md transition-colors cursor-pointer"
-                          title="Add event"
-                        >
-                          <PlusIcon size={13} />
-                        </button>
-                      </div>
-
-                      <div className="space-y-2">
-                        {events.map(ev => (
-                          <div
-                            key={ev.id}
-                            onClick={() => toast.success(`Viewing ${ev.name}`)}
-                            className="flex items-center justify-between text-xs group cursor-pointer hover:bg-stone-50 p-2 rounded-xl transition-all border border-transparent hover:border-stone-200/60"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div
-                                className="w-6 h-6 rounded-full text-white text-[9px] font-bold flex items-center justify-center shadow-2xs shrink-0"
-                                style={{ backgroundColor: ev.color }}
-                              >
-                                {ev.initials}
-                              </div>
-                              <span className="font-semibold text-stone-800 text-xs truncate">
-                                {ev.name}
-                              </span>
-                            </div>
-                            <span className="text-[11px] font-mono text-stone-400 font-normal shrink-0">
-                              {ev.time}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Daily Tasks Checklist */}
-                    <div className="pt-3 border-t border-stone-100">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-xs font-serif font-normal text-stone-900 tracking-tight">
-                          Tasks ({tasks.filter(t => t.done).length}/{tasks.length})
-                        </span>
-                        <button
-                          onClick={handleAddNewTask}
-                          className="text-stone-400 hover:text-stone-900 p-1 rounded-md transition-colors cursor-pointer"
-                          title="Add quick task"
-                        >
-                          <PlusIcon size={13} />
-                        </button>
-                      </div>
-
-                      <div className="space-y-1.5 font-sans">
-                        {tasks.map(tsk => (
-                          <div
-                            key={tsk.id}
-                            onClick={() => toggleTask(tsk.id)}
-                            className="flex items-center justify-between text-xs cursor-pointer group p-1.5 rounded-xl hover:bg-stone-50 transition-colors"
-                          >
-                            <span
-                              className={`text-xs font-medium transition-all truncate pr-2 ${
-                                tsk.done
-                                  ? 'line-through text-stone-400'
-                                  : 'text-stone-700'
-                              }`}
-                            >
-                              {tsk.title}
-                            </span>
-
-                            <div
-                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition-all shrink-0 ${
-                                tsk.done
-                                  ? 'bg-[#111318] border-[#111318] text-lime-400 shadow-2xs'
-                                  : 'border-stone-300 bg-white group-hover:border-stone-600'
-                              }`}
-                            >
-                              {tsk.done && <CheckIcon size={10} strokeWidth={3} />}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Bottom Profile Line */}
-                    <div className="pt-3 border-t border-stone-100 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-[#111318] text-lime-400 flex items-center justify-center font-bold text-[10px]">
-                          {initials || 'AJ'}
-                        </div>
-                        <span className="text-xs font-semibold text-stone-800">{fullName || 'Alex'}</span>
-                      </div>
-                      <button
-                        onClick={() => setNewMeetingModal(true)}
-                        className="w-7 h-7 rounded-full bg-[#111318] hover:bg-black text-white flex items-center justify-center shadow-xs transition-transform hover:scale-105 cursor-pointer"
-                        title="Schedule meeting"
-                      >
-                        <PlusIcon size={13} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ── SUB-COL 2: MAIN TIMELINE STAGE (7 cols) ── */}
-                  <div className="lg:col-span-7 rounded-3xl bg-white border border-stone-200/80 p-5 sm:p-7 shadow-2xs space-y-6">
-                    <div className="flex items-center justify-between pb-3 border-b border-stone-100">
-                      <div>
-                        <h2 className="text-2xl sm:text-3xl font-serif font-normal text-stone-950 tracking-tight">
-                          May <em className="italic font-serif font-normal text-stone-900">2026</em>
-                        </h2>
-                        <p className="text-xs text-stone-400 font-sans mt-0.5">
-                          Sprint & Meeting Editorial Timeline
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard?.writeText(window.location.href)
-                            toast.success('Timeline link copied!')
-                          }}
-                          className="px-3.5 py-1.5 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                        >
-                          <ShareIcon size={12} />
-                          <span>Share</span>
-                        </button>
-                        <button
-                          onClick={() => setNewMeetingModal(true)}
-                          className="px-3.5 py-1.5 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-transform active:scale-98 cursor-pointer"
-                        >
-                          <PlusIcon size={12} />
-                          <span>Event</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Stream of Day Blocks */}
-                    <div className="space-y-8">
-                      {schedules.map((dayItem) => (
-                        <div
-                          key={dayItem.dayNumber}
-                          className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-start pt-6 border-t border-stone-100 first:border-t-0 first:pt-0"
-                        >
-                          {/* Day Number and Day Badge */}
-                          <div className="sm:col-span-4 flex items-start select-none">
-                            <span className="text-5xl sm:text-6xl font-serif font-normal text-stone-950 tracking-tight leading-none">
-                              {dayItem.dayNumber}
-                            </span>
-                            <span
-                              className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md ml-2 border ${
-                                dayItem.isToday
-                                  ? 'text-lime-900 bg-lime-100 border-lime-300'
-                                  : 'text-stone-600 bg-stone-100 border-stone-200/70'
-                              }`}
-                            >
-                              {dayItem.dayName}
-                            </span>
-                          </div>
-
-                          {/* Events for this day */}
-                          <div className="sm:col-span-8 space-y-3.5">
-                            {dayItem.events.length === 0 ? (
-                              <div className="p-4 rounded-2xl bg-stone-50/80 border border-dashed border-stone-200 flex items-center gap-3 text-stone-400 font-sans">
-                                <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-stone-400 shadow-2xs border border-stone-100">
-                                  <CalendarIcon size={12} />
-                                </div>
-                                <span className="text-xs font-medium">
-                                  Focus Time — No meetings scheduled
-                                </span>
-                              </div>
-                            ) : (
-                              dayItem.events.map((ev, eIdx) => {
-                                const PlatIcon = ev.platformIcon
-                                const isFirstLive = dayItem.isToday && eIdx === 0
-
-                                return (
-                                  <div key={ev.id} className="relative font-sans group">
-                                    {isFirstLive && (
-                                      <div className="flex items-center gap-2 mb-2">
-                                        <div className="w-2 h-2 rounded-full bg-lime-500 animate-pulse relative z-10" />
-                                        <div className="flex-1 h-[1.5px] bg-lime-400" />
-                                        <span className="text-[9px] font-mono font-bold text-lime-800 bg-lime-100 px-1.5 py-0.2 rounded-sm uppercase tracking-wider">
-                                          LIVE NOW
-                                        </span>
-                                      </div>
-                                    )}
-
-                                    <div className="p-3.5 rounded-2xl bg-stone-50 hover:bg-stone-100/80 border border-stone-200/80 transition-all shadow-2xs">
-                                      <div className="flex items-start justify-between gap-2 text-xs">
-                                        <div className="flex items-center gap-2">
-                                          <div
-                                            className="w-1.5 h-6 rounded-full shrink-0"
-                                            style={{ backgroundColor: ev.accentColor }}
-                                          />
-                                          <div>
-                                            <span
-                                              className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md font-mono"
-                                              style={{
-                                                backgroundColor: `${ev.accentColor}15`,
-                                                color: ev.accentColor
-                                              }}
-                                            >
-                                              {ev.category}
-                                            </span>
-                                            <h4 className="text-xs sm:text-sm font-bold text-stone-900 mt-1 font-sans">
-                                              {ev.title}
-                                            </h4>
-                                          </div>
-                                        </div>
-
-                                        <div className="text-right shrink-0">
-                                          <span className="font-mono text-xs font-bold text-stone-700 block">
-                                            {ev.timeStart}
-                                          </span>
-                                          <span className="font-mono text-[11px] text-stone-400">
-                                            -{ev.timeEnd}
-                                          </span>
-                                        </div>
-                                      </div>
-
-                                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-stone-200/60">
-                                        {ev.platform && (
-                                          <button
-                                            type="button"
-                                            onClick={() => toast.success(`Opening ${ev.platform} meeting...`)}
-                                            className="flex items-center gap-1.5 text-[11px] font-semibold text-stone-600 hover:text-stone-950 transition-colors cursor-pointer"
-                                          >
-                                            {PlatIcon && <PlatIcon size={12} className="text-stone-700" />}
-                                            <span>{ev.platform}</span>
-                                          </button>
-                                        )}
-
-                                        {ev.attendees && (
-                                          <div className="flex -space-x-1.5 ml-auto">
-                                            {ev.attendees.map((att, aIdx) => (
-                                              <div
-                                                key={aIdx}
-                                                className="w-5 h-5 rounded-full text-white text-[8px] font-bold flex items-center justify-center ring-2 ring-white shadow-2xs"
-                                                style={{ backgroundColor: att.color }}
-                                                title={att.name}
-                                              >
-                                                {att.initials}
-                                              </div>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                )
-                              })
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                </div>
-              )}
-
               {/* VIEW MODE 3: AGENDA LEDGER (AIM: TEAM OPERATIONS & DIRECTORY) */}
               {viewMode === 'table' && (
                 <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-2xs">
@@ -1542,360 +1884,31 @@ export default function CalendarPage() {
 
             </div>
 
-            {/* ── RIGHT DOCK: DEEP OBSIDIAN COMMAND PANEL (4 cols) ── */}
-            <div className="xl:col-span-4 dark-dock p-6 flex flex-col justify-between space-y-6">
-              <div>
-                {/* Top Status & Filter Pills */}
-                <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-lime-400 text-xs">●</span>
-                    <span className="text-xs font-mono text-stone-400">Today, 18 May 2026</span>
-                  </div>
-
-                  {/* Filter Pills */}
-                  <div className="flex items-center gap-1.5">
-                    {['Design', 'Copyright', 'Dev'].map(t => {
-                      const isActive = dockCategoryFilter.toLowerCase() === t.toLowerCase()
-                      return (
-                        <button
-                          key={t}
-                          type="button"
-                          onClick={() => {
-                            if (isActive) {
-                              setDockCategoryFilter('All')
-                              toast.success('Showing all urgent tasks')
-                            } else {
-                              setDockCategoryFilter(t)
-                              toast.success(`Filtered by ${t}`)
-                            }
-                          }}
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all cursor-pointer ${
-                            isActive
-                              ? 'bg-lime-400 text-stone-950 font-bold shadow-xs'
-                              : 'bg-white/10 text-stone-300 hover:bg-white/20'
-                          }`}
-                        >
-                          {t}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-
-                {/* Active Deliverables Heading (Differentiated by AIM: Output Backlog vs. Left Calendar) */}
-                <div className="mb-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl sm:text-2xl font-normal text-white tracking-tight font-serif">
-                      Active <em className="italic font-serif font-normal text-lime-400">Deliverables</em> ({activeUrgentTasks.length})
-                    </h2>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-bold text-lime-400 bg-lime-950/80 border border-lime-500/30 px-2 py-0.5 rounded-full">
-                        Output Backlog
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setNewUrgentModalOpen(true)}
-                        className="w-5 h-5 rounded-full bg-white/10 hover:bg-white/20 text-stone-300 hover:text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
-                        title="Add urgent deliverable"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-stone-400 font-mono mt-1">
-                    Ship during open focus blocks · Output backlog &amp; velocity
-                  </p>
-                </div>
-
-                {/* Dark Urgent Task Cards */}
-                <div className="space-y-3 mb-6">
-                  {activeUrgentTasks.length === 0 ? (
-                    <div className="p-4 rounded-2xl bg-[#1E2028] border border-white/10 text-center text-stone-400 text-xs font-mono">
-                      No urgent tasks matching filter.
-                    </div>
-                  ) : (
-                    activeUrgentTasks.map(task => (
-                      <div
-                        key={task.id}
-                        className={`p-4 rounded-2xl bg-[#1E2028] border transition-all ${
-                          task.status === 'completed'
-                            ? 'border-lime-500/30 opacity-75'
-                            : 'border-white/10 hover:border-white/25'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between text-xs font-mono mb-1">
-                          <span className={task.timeColor}>Time: {task.time}</span>
-                          <div className="flex items-center gap-1.5">
-                            {task.badge && (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 border border-violet-500/30">
-                                {task.badge}
-                              </span>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => setSelectedUrgentTask(task)}
-                              className="text-stone-400 hover:text-white p-0.5 rounded cursor-pointer transition-colors"
-                              title="View task detail"
-                            >
-                              <ArrowUpRightIcon size={12} className="text-white" />
-                            </button>
-                          </div>
-                        </div>
-
-                        <div
-                          onClick={() => setSelectedUrgentTask(task)}
-                          className={`text-sm font-bold text-white mb-2 font-sans cursor-pointer hover:text-lime-300 transition-colors ${
-                            task.status === 'completed' ? 'line-through text-stone-400' : ''
-                          }`}
-                        >
-                          {task.title}
-                        </div>
-
-                        {/* Card Footer: avatars, progress, meet button, or stats */}
-                        {task.meetUrl ? (
-                          <div className="flex items-center justify-between gap-2 mt-3">
-                            <div
-                              onClick={() => {
-                                navigator.clipboard?.writeText(task.fullMeetUrl || task.meetUrl)
-                                toast.success('Meeting link copied!')
-                              }}
-                              className="text-[10px] text-stone-400 font-mono truncate cursor-pointer hover:text-stone-200"
-                              title="Click to copy link"
-                            >
-                              {task.meetUrl}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleJoinMeeting(task)}
-                              className="px-3 py-1 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold shadow-xs transition-colors shrink-0 cursor-pointer active:scale-95"
-                            >
-                              Join Meeting
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center justify-between text-xs text-stone-400">
-                            {task.avatars ? (
-                              <div className="flex -space-x-1">
-                                {task.avatars.map((av, avIdx) => (
-                                  <div
-                                    key={avIdx}
-                                    className={`w-5 h-5 rounded-full ${av.bg} text-[9px] font-bold text-white flex items-center justify-center shadow-xs`}
-                                  >
-                                    {av.initials}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : task.people ? (
-                              <span>{task.people}</span>
-                            ) : (
-                              <span>Team Workspace</span>
-                            )}
-
-                            {task.progressLabel ? (
-                              <button
-                                type="button"
-                                onClick={() => handleToggleUrgentTask(task.id)}
-                                className="font-extrabold text-lime-400 stat-number cursor-pointer hover:underline"
-                                title="Click to toggle completion"
-                              >
-                                {task.progressLabel}
-                              </button>
-                            ) : task.tasksCount ? (
-                              <span className="text-lime-400 font-extrabold stat-number">
-                                {task.tasksCount}
-                              </span>
-                            ) : null}
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-              {/* Dark Data Viz Widgets */}
-              <div className="space-y-4 pt-4 border-t border-white/10">
-                {/* Radial Speedometer Widget */}
-                <div className="p-4 rounded-2xl bg-[#181A22] border border-white/10 relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-white font-sans">Task Statistics</span>
-
-                    {/* Working Dropdown Selector */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setStatsDropdownOpen(!statsDropdownOpen)
-                          setAllocDropdownOpen(false)
-                        }}
-                        className="text-[10px] font-mono text-stone-300 hover:text-white flex items-center gap-1 cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 transition-colors"
-                      >
-                        <span>{activeStats.label} ▾</span>
-                      </button>
-
-                      {statsDropdownOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-32 bg-[#1E2028] border border-white/15 rounded-xl shadow-2xl z-30 py-1 overflow-hidden">
-                          {Object.entries(statsPeriodsData).map(([key, item]) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => {
-                                setStatsPeriod(key)
-                                setStatsDropdownOpen(false)
-                                toast.success(`Task Statistics: ${item.label}`)
-                              }}
-                              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors flex items-center justify-between cursor-pointer ${
-                                statsPeriod === key
-                                  ? 'text-lime-400 bg-white/10 font-bold'
-                                  : 'text-stone-300 hover:bg-white/5'
-                              }`}
-                            >
-                              <span>{item.label}</span>
-                              {statsPeriod === key && <span className="text-[10px]">✓</span>}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="relative flex flex-col items-center py-2">
-                    <svg viewBox="0 0 100 55" className="w-36 overflow-visible">
-                      <path
-                        d="M 10 50 A 40 40 0 0 1 90 50"
-                        fill="none"
-                        stroke="#2D313F"
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d="M 10 50 A 40 40 0 0 1 90 50"
-                        fill="none"
-                        stroke="url(#speedometerGradient)"
-                        strokeWidth="8"
-                        strokeLinecap="round"
-                        strokeDasharray="125.66"
-                        strokeDashoffset={arcDashOffset}
-                        className="transition-all duration-700 ease-out"
-                      />
-                      <defs>
-                        <linearGradient id="speedometerGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                          <stop offset="0%" stopColor="#F43F5E" />
-                          <stop offset="50%" stopColor="#F59E0B" />
-                          <stop offset="100%" stopColor="#84CC16" />
-                        </linearGradient>
-                      </defs>
-                    </svg>
-
-                    <div className="absolute top-7 flex flex-col items-center">
-                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${activeStats.badgeColor}`}>
-                        <CheckCircleIcon size={11} />
-                        <span>{activeStats.resultBadge}</span>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 text-center pt-2 border-t border-white/5">
-                    <div>
-                      <div className="text-2xl font-extrabold text-white stat-number transition-all">
-                        {activeStats.completedRate}%
-                      </div>
-                      <div className="text-[10px] text-stone-400 font-sans mt-0.5">Completed Tasks</div>
-                    </div>
-                    <div>
-                      <div className="text-2xl font-extrabold text-stone-400 stat-number transition-all">
-                        {activeStats.unfulfilledRate}%
-                      </div>
-                      <div className="text-[10px] text-stone-400 font-sans mt-0.5">Unfulfilled Tasks</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bubble Chart Widget */}
-                <div className="p-4 rounded-2xl bg-[#181A22] border border-white/10 relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-xs font-bold text-white font-sans">Task Type Allocation</span>
-
-                    {/* Working Dropdown Selector */}
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAllocDropdownOpen(!allocDropdownOpen)
-                          setStatsDropdownOpen(false)
-                        }}
-                        className="text-[10px] font-mono text-stone-300 hover:text-white flex items-center gap-1 cursor-pointer bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded-lg border border-white/10 transition-colors"
-                      >
-                        <span>{activeAlloc.label} ▾</span>
-                      </button>
-
-                      {allocDropdownOpen && (
-                        <div className="absolute right-0 top-full mt-1 w-32 bg-[#1E2028] border border-white/15 rounded-xl shadow-2xl z-30 py-1 overflow-hidden">
-                          {Object.entries(allocPeriodsData).map(([key, item]) => (
-                            <button
-                              key={key}
-                              type="button"
-                              onClick={() => {
-                                setAllocPeriod(key)
-                                setAllocDropdownOpen(false)
-                                toast.success(`Allocation: ${item.label}`)
-                              }}
-                              className={`w-full text-left px-3 py-1.5 text-xs font-mono transition-colors flex items-center justify-between cursor-pointer ${
-                                allocPeriod === key
-                                  ? 'text-lime-400 bg-white/10 font-bold'
-                                  : 'text-stone-300 hover:bg-white/5'
-                              }`}
-                            >
-                              <span>{item.label}</span>
-                              {allocPeriod === key && <span className="text-[10px]">✓</span>}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Interactive Bubbles */}
-                  <div className="flex items-center justify-center gap-3 py-2">
-                    <div
-                      onClick={() => toast.success(activeAlloc.learningInfo, { icon: '💡' })}
-                      className="w-16 h-16 rounded-full bg-[#FEF08A] hover:scale-105 active:scale-95 transition-transform text-stone-950 flex flex-col items-center justify-center font-bold shadow-md cursor-pointer"
-                      title="Click for details"
-                    >
-                      <span className="text-sm font-extrabold stat-number leading-none">
-                        {activeAlloc.learning}%
-                      </span>
-                      <span className="text-[9px] font-sans">Learning</span>
-                    </div>
-
-                    <div
-                      onClick={() => toast.success(activeAlloc.designInfo, { icon: '🎨' })}
-                      className="w-12 h-12 rounded-full bg-[#C4B5FD] hover:scale-105 active:scale-95 transition-transform text-violet-950 flex flex-col items-center justify-center font-bold shadow-md -ml-4 cursor-pointer"
-                      title="Click for details"
-                    >
-                      <span className="text-xs font-extrabold stat-number leading-none">
-                        {activeAlloc.design}%
-                      </span>
-                      <span className="text-[8px] font-sans">Design</span>
-                    </div>
-
-                    <div
-                      onClick={() => toast.success(activeAlloc.bizInfo, { icon: '📈' })}
-                      className="w-10 h-10 rounded-full bg-[#A7F3D0] hover:scale-105 active:scale-95 transition-transform text-emerald-950 flex flex-col items-center justify-center font-bold shadow-md -ml-3 cursor-pointer"
-                      title="Click for details"
-                    >
-                      <span className="text-[10px] font-extrabold stat-number leading-none">
-                        {activeAlloc.biz}%
-                      </span>
-                      <span className="text-[7px] font-sans">Biz</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
+            {/* ── RIGHT DOCK: OBSIDIAN DELIVERABLES DOCK (4 cols) ── */}
+            <div className="xl:col-span-4">
+              <DeliverablesDock
+                activeUrgentTasks={activeUrgentTasks}
+                dockCategoryFilter={dockCategoryFilter}
+                setDockCategoryFilter={setDockCategoryFilter}
+                setNewUrgentModalOpen={setNewUrgentModalOpen}
+                setSelectedUrgentTask={setSelectedUrgentTask}
+                handleToggleUrgentTask={handleToggleUrgentTask}
+                handleJoinMeeting={handleJoinMeeting}
+                statsPeriod={statsPeriod}
+                setStatsPeriod={setStatsPeriod}
+                statsDropdownOpen={statsDropdownOpen}
+                setStatsDropdownOpen={setStatsDropdownOpen}
+                activeStats={activeStats}
+                allocPeriod={allocPeriod}
+                setAllocPeriod={setAllocPeriod}
+                allocDropdownOpen={allocDropdownOpen}
+                setAllocDropdownOpen={setAllocDropdownOpen}
+                activeAlloc={activeAlloc}
+                arcDashOffset={arcDashOffset}
+              />
             </div>
           </div>
+        )}
 
           {/* ══════════════════════════════════════════════════════════ */}
           {/* QUICK CREATE MEETING MODAL                                 */}

@@ -5,6 +5,7 @@ import { useOrg } from '@/context/OrgContext'
 import { verifyOrganizationCode, joinOrganization } from '@/Service/organization'
 import { BuildingIcon, CheckIcon, ShieldIcon } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
+import StripedLoader from './StripedLoader'
 
 export default function JoinOrgModal() {
   const { isJoinModalOpen, closeJoinModal } = useOrg()
@@ -54,6 +55,7 @@ export default function JoinOrgModal() {
 
   const handleVerify = async (e) => {
     e?.preventDefault()
+    if (verifying) return
     const fullCode = digits.join('')
     if (fullCode.length < 6) {
       setErrorMsg('Please enter all 6 digits of the organization code.')
@@ -71,13 +73,14 @@ export default function JoinOrgModal() {
         setErrorMsg(res?.message || 'Invalid organization code. Please check and try again.')
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Verification failed. Please try again.')
+      setErrorMsg(err?.message || 'Verification failed. Please try again.')
     } finally {
       setVerifying(false)
     }
   }
 
   const handleSendJoinRequest = async () => {
+    if (submitting) return
     if (!orgFound || !orgFound.id) return
 
     setSubmitting(true)
@@ -120,8 +123,8 @@ export default function JoinOrgModal() {
                 <BuildingIcon size={22} strokeWidth={2} />
               </div>
               <div>
-                <h2 className="text-2xl font-normal text-stone-950 font-serif tracking-tight">
-                  Join an <em className="italic font-serif font-normal text-stone-800">Organization</em>
+                <h2 className="text-[20px] font-extrabold tracking-tight text-stone-900 leading-tight">
+                  Join <span className="font-serif-italic font-normal text-violet-700">workspace</span>
                 </h2>
                 <p className="text-xs text-stone-500 font-medium">Enter your 6-digit code to connect with your team</p>
               </div>
@@ -159,6 +162,12 @@ export default function JoinOrgModal() {
                   </div>
                 )}
               </div>
+
+              {verifying && (
+                <div className="pt-3 animate-in fade-in duration-200">
+                  <StripedLoader color="sky" size="md" label="Verifying security code with organization..." />
+                </div>
+              )}
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
                 <button
@@ -221,6 +230,12 @@ export default function JoinOrgModal() {
                 After sending your request, it will remain <strong>Pending</strong> until the organization leader accepts it.
               </p>
             </div>
+
+            {submitting && (
+              <div className="mb-3 animate-in fade-in duration-200">
+                <StripedLoader color="purple" size="md" label="Sending join request to organization admin..." />
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
               <button

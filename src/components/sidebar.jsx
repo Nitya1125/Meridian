@@ -103,12 +103,12 @@ export default function Sidebar() {
             onClick={() => router.push('/dashboard')}
             className="flex items-center gap-3 cursor-pointer group"
           >
-            <div className="w-8 h-8 rounded-xl bg-[#111318] text-white flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-              <ZapIcon size={16} strokeWidth={2.5} className="text-lime-400" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-900 text-white shadow-sm group-hover:scale-105 transition-transform">
+              <span className="font-serif-italic text-lg leading-none">M</span>
             </div>
             <div>
-              <div className="font-bold text-lg tracking-tight text-stone-900 leading-none">
-                Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-[9px] font-sans font-bold px-1.5 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+              <div className="text-[15px] font-extrabold tracking-tight text-stone-900 leading-none">
+                Meridian <span className="font-serif-italic font-normal text-stone-500">Clarity</span> <span className="text-[9px] font-sans font-bold px-1.5 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
               </div>
               <div className="text-[11px] text-stone-400 font-medium mt-0.5">Workspace System</div>
             </div>
@@ -143,7 +143,7 @@ export default function Sidebar() {
               <SearchIcon size={14} className="text-stone-400" />
               <span className="font-medium text-stone-500">Quick Search...</span>
             </div>
-            <kbd className="px-1.5 py-0.5 text-[10px] font-sans font-semibold text-stone-400 bg-stone-100 rounded-md border border-stone-200">
+            <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-stone-500 bg-stone-100/90 rounded-md border border-stone-200/80 shadow-2xs">
               ⌘K
             </kbd>
           </button>
@@ -358,11 +358,11 @@ export default function Sidebar() {
             <MenuIcon size={18} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-[#111318] text-white flex items-center justify-center shadow-xs">
-              <ZapIcon size={14} strokeWidth={2.5} className="text-lime-400" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-stone-900 text-white shadow-xs">
+              <span className="font-serif-italic text-sm leading-none">M</span>
             </div>
-            <span className="font-bold text-base text-stone-900 tracking-tight">
-              Meridian <em className="font-serif italic font-normal text-stone-600">Clarity</em>
+            <span className="font-extrabold text-base text-stone-900 tracking-tight">
+              Meridian <span className="font-serif-italic font-normal text-stone-500">Clarity</span>
             </span>
           </div>
         </div>

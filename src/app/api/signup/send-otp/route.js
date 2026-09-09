@@ -3,6 +3,7 @@ import db from "@/Lib/db";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import { BrevoClient } from "@getbrevo/brevo";
+import { sendOtpRateLimit } from "@/Lib/rateLimit";
 
 const brevo = new BrevoClient({
   apiKey: process.env.BREVO_API_KEY,
@@ -11,6 +12,17 @@ const brevo = new BrevoClient({
 
 export async function POST(request) {
   try {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+
+    const {success} = await sendOtpRateLimit.limit(ip);
+
+    if(!success){
+      return NextResponse.json({
+        success:false,
+        message:"Too many requests, please try again later"
+      },{status:429});
+    }
+
     const { firstName, lastName, email } = await request.json();
 
     if (!firstName || !lastName || !email) {

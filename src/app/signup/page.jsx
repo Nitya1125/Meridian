@@ -6,6 +6,7 @@ import { sendOtp, verifyOtp, signup } from "@/Service/authService";
 import { ZapIcon, ShieldIcon, SparklesIcon } from '@/components/Icons';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
+import StripedLoader from '@/components/StripedLoader';
 
 const GoogleIcon = () => (
   <svg width={18} height={18} viewBox="0 0 24 24">
@@ -148,20 +149,20 @@ function LeftPanel() {
     <div className="hidden lg:flex flex-1 min-h-screen bg-gradient-to-br from-[#FAF8F5] via-[#F4F0E6] to-[#EBE5D8] relative p-12 lg:p-14 flex-col overflow-hidden justify-between border-r border-stone-200/80">
       <div>
         <div className="flex items-center gap-3 mb-10">
-          <div className="w-10 h-10 rounded-2xl bg-[#111318] flex items-center justify-center text-white shadow-md">
-            <ZapIcon size={20} strokeWidth={2.5} className="text-lime-400" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-900 text-white shadow-md">
+            <span className="font-serif-italic text-2xl leading-none">M</span>
           </div>
           <div>
             <span className="text-2xl font-extrabold text-stone-900 tracking-tight">
-              Meridian <em className="font-serif italic font-normal text-stone-700">Clarity</em> <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
+              Meridian <span className="font-serif-italic font-normal text-stone-500">Clarity</span> <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-full bg-lime-200 text-lime-900 ml-1">PRO</span>
             </span>
             <div className="text-xs text-stone-500 font-medium">Enterprise Workspace System</div>
           </div>
         </div>
 
-        <h1 className="font-serif text-5xl lg:text-6xl text-stone-950 font-normal leading-[1.08] tracking-tight mb-5">
-          Start your <em className="italic font-normal font-serif text-stone-900 underline decoration-lime-400 decoration-wavy decoration-2">creative journey</em><br />
-          with <em className="italic font-normal font-serif text-stone-900">Meridian Workspace</em>.
+        <h1 className="font-serif-italic text-5xl lg:text-6xl text-stone-950 font-normal leading-[1.08] tracking-tight mb-5">
+          Start your <span className="text-emerald-700">creative journey</span><br />
+          with <span className="text-violet-700">Meridian Workspace</span>.
         </h1>
         <p className="text-sm text-stone-600 leading-relaxed mb-10 max-w-md font-medium">
           Create high-velocity workflows for deliverables, sprint tracking, and team channels.
@@ -450,11 +451,14 @@ export default function SignupPage() {
         <div className="w-full max-w-[360px]">
 
           <div className="mb-6">
-            <h2 className="text-3xl font-normal font-serif text-stone-950 tracking-tight mb-1">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-stone-900 text-white mb-3 shadow-xs">
+              <span className="font-serif-italic text-xl leading-none">M</span>
+            </div>
+            <h2 className="text-[28px] sm:text-[32px] font-extrabold leading-tight tracking-tight text-stone-900 mb-1">
               {step === 3 ? (
-                <>Create your <em className="italic font-serif font-normal text-stone-900">password</em></>
+                <>Set your <span className="font-serif-italic font-normal text-violet-700">password</span></>
               ) : (
-                <>Create your <em className="italic font-serif font-normal text-stone-900">account</em></>
+                <>Build something <span className="font-serif-italic font-normal text-violet-700">iconic</span></>
               )}
             </h2>
             <p className="text-xs text-stone-500 font-medium">
@@ -559,6 +563,12 @@ export default function SignupPage() {
                 .
               </div>
 
+              {loading && (
+                <div className="mb-3 animate-in fade-in duration-200">
+                  <StripedLoader color="purple" size="md" label="Sending verification code..." />
+                </div>
+              )}
+
               <button
                 type="button"
                 disabled={loading}
@@ -605,6 +615,12 @@ export default function SignupPage() {
                 error={cPwErr}
                 icon={<LockIcon />}
               />
+
+              {loading && (
+                <div className="my-3 animate-in fade-in duration-200">
+                  <StripedLoader color="green" size="md" label="Setting up workspace account..." />
+                </div>
+              )}
 
               <button
                 type="button"

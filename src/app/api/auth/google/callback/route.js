@@ -48,13 +48,18 @@ export async function GET(request){
 
         const [user] = await db.query(`Select * from users where email = ?`,[email]);
 
+        let userId;
+
         if(user.length > 0){
-            await db.query(`update users set google_id = ? WHERE email = ?`, [googleId,email]);
+            userId = user[0].id;
+            await db.query(`UPDATE users SET google_id = ? WHERE email = ?`,[googleId, email]);
         }else{
-            await db.query(`Insert into users (google_id,email,first_name,last_name) values (?,?,?,?)`,[googleId,email,firstName,lastName]);
+            const [result] = await db.query(`INSERT INTO users (google_id,email,first_name,last_name) VALUES (?,?,?,?)`,
+            [googleId,email,firstName,lastName]);
+            userId = result.insertId;
         }
 
-        const token = jwt.sign({id:user[0].id,email:email},process.env.JWT_SECRET ,{expiresIn:"7d"});
+        const token = jwt.sign({id:userId,email:email},process.env.JWT_SECRET ,{expiresIn:"7d"});
 
         const response = NextResponse.redirect(new URL(`/dashboard?token=${token}`, request.url));
 

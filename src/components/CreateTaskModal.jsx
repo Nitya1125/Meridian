@@ -3,6 +3,9 @@
 import React, { useState } from 'react'
 import { PlusIcon, ClockIcon, CheckIcon, TagIcon, UsersIcon } from './Icons'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { addTask } from '@/Service/taskService'
+import { toast } from 'react-hot-toast'
+import StripedLoader from './StripedLoader'
 
 const ASSIGNEES = [
   { initials: 'AJ', name: 'Alex Johnson', color: '#8b5cf6' },
@@ -45,6 +48,7 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
   const [due, setDue] = useState('25 Sep')
   const [tags, setTags] = useState(['Design', 'Internal Tasks'])
   const [titleErr, setTitleErr] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const dynamicAssignees = ASSIGNEES.map((a, i) =>
     i === 0
@@ -56,17 +60,38 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
       : a
   )
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!title.trim()) {
       setTitleErr(true)
       return
     }
 
     const a = dynamicAssignees[assigneeIdx]
+    setLoading(true)
+    let backendResult = null
 
+    try {
+      backendResult = await addTask({
+        title: title.trim(),
+        description: description.trim() || 'Prepare and review deliverables for sprint milestones.',
+        status: columnId,
+        priority,
+        due_date: due || '25 Sep',
+        assigned_to: a.name || 'Team Member'
+      })
+      if (backendResult?.success) {
+        toast.success(backendResult.message || 'Task saved to workspace!')
+      }
+    } catch (err) {
+      console.warn('Backend task sync notice:', err?.message)
+    } finally {
+      setLoading(false)
+    }
+
+    const dbId = backendResult?.result?.insertId
     const task = {
-      id: generateId(),
-      taskId: generateTaskId(),
+      id: dbId ? `task-${dbId}` : generateId(),
+      taskId: dbId ? `MRD-${String(dbId).padStart(3, '0')}` : generateTaskId(),
       title: title.trim(),
       description: description.trim() || 'Prepare and review deliverables for sprint milestones.',
       priority,
@@ -118,8 +143,8 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
               <PlusIcon size={16} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-normal font-serif text-stone-900 leading-none">
-                Create New <em className="italic font-serif font-normal text-stone-800">Task</em>
+              <h3 className="text-[18px] font-extrabold tracking-tight text-stone-900 leading-none">
+                New <span className="font-serif-italic font-normal text-violet-700">task</span>
               </h3>
               <p className="text-xs text-stone-500 mt-1 font-medium">Add deliverables to your workspace kanban</p>
             </div>
@@ -262,6 +287,12 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
           </div>
         </div>
 
+        {loading && (
+          <div className="mt-3 animate-in fade-in duration-200">
+            <StripedLoader color="green" size="md" label="Syncing task with workspace..." />
+          </div>
+        )}
+
         {/* Footer Actions */}
         <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-stone-200/80">
           <button
@@ -274,10 +305,11 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
           <button
             type="button"
             onClick={handleAdd}
-            className="px-5 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5"
+            disabled={loading}
+            className="px-5 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
           >
             <PlusIcon size={14} strokeWidth={2.5} />
-            <span>Create Task</span>
+            <span>{loading ? 'Creating...' : 'Create Task'}</span>
           </button>
         </div>
 

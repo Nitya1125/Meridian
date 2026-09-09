@@ -3,6 +3,9 @@
 import React, { useState } from 'react'
 import { PlusIcon, UsersIcon, CheckIcon } from './Icons'
 import { toast } from 'react-hot-toast'
+import StripedLoader from './StripedLoader'
+import { useOrg } from '@/context/OrgContext'
+import { inviteOrganizationUser } from '@/Service/organization'
 
 const ROLES = [
   'Engineering Lead',
@@ -30,6 +33,7 @@ function getInitials(name) {
 }
 
 export default function InviteModal({ open, onClose, onInvite }) {
+  const { activeOrg } = useOrg() || {}
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState(ROLES[0])
@@ -41,39 +45,52 @@ export default function InviteModal({ open, onClose, onInvite }) {
 
   const validate = () => {
     let valid = true
-    if (!name.trim()) { setNameErr('Name is required'); valid = false }
-    else setNameErr('')
     if (!email.trim()) { setEmailErr('Email is required'); valid = false }
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setEmailErr('Enter a valid email'); valid = false }
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setEmailErr('Enter a valid email'); valid = false }
     else setEmailErr('')
     return valid
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return
+
+    if (!activeOrg || !activeOrg.id) {
+      toast.error('Please select an active organization first')
+      return
+    }
+
     setLoading(true)
-    setTimeout(() => {
-      const colorIdx = Math.floor(Math.random() * AVATAR_COLORS.length)
-      if (onInvite) {
-        onInvite({
-          name: name.trim(),
-          email: email.trim(),
-          role,
-          initials: getInitials(name.trim()),
-          color: AVATAR_COLORS[colorIdx],
-          status: 'online',
-          projects: 1,
-          tasks: 0,
-          timeLogged: '00:00:00',
-        })
+    try {
+      const response = await inviteOrganizationUser(email.trim(), activeOrg.id)
+
+      if (response && response.success) {
+        toast.success(response.message || `Invitation sent to ${email.trim()}!`)
+        const colorIdx = Math.floor(Math.random() * AVATAR_COLORS.length)
+        if (onInvite) {
+          onInvite({
+            name: name.trim() || email.trim(),
+            email: email.trim(),
+            role,
+            initials: getInitials(name.trim() || email.trim()),
+            color: AVATAR_COLORS[colorIdx],
+            status: 'online',
+            projects: 1,
+            tasks: 0,
+            timeLogged: '00:00:00',
+          })
+        }
+        setName('')
+        setEmail('')
+        setRole(ROLES[0])
+        onClose()
+      } else {
+        toast.error(response?.message || 'Failed to send invitation')
       }
+    } catch (err) {
+      toast.error(err?.message || 'Unable to send invitation. Please try again.')
+    } finally {
       setLoading(false)
-      toast.success(`Invitation sent to ${email.trim()}!`)
-      setName('')
-      setEmail('')
-      setRole(ROLES[0])
-      onClose()
-    }, 400)
+    }
   }
 
   return (
@@ -94,8 +111,8 @@ export default function InviteModal({ open, onClose, onInvite }) {
               <UsersIcon size={16} strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-xl sm:text-2xl font-normal font-serif text-stone-900 leading-none">
-                Invite <em className="italic font-serif font-normal text-stone-800">Teammate</em>
+              <h3 className="text-[18px] font-extrabold tracking-tight text-stone-900 leading-none">
+                Invite <span className="font-serif-italic font-normal text-violet-700">collaborator</span>
               </h3>
               <p className="text-xs text-stone-500 mt-1 font-medium">Send email invite with workspace permissions</p>
             </div>
@@ -154,18 +171,35 @@ export default function InviteModal({ open, onClose, onInvite }) {
             </select>
           </div>
 
-          {/* Quick link */}
+          {/* Quick link & Invite Code */}
           <div className="p-3 rounded-2xl bg-white border border-stone-200/60 flex items-center justify-between text-xs">
-            <span className="text-stone-400 font-mono text-[11px] truncate">https://meridian.io/join/ws_pro</span>
+            <span className="text-stone-500 font-mono text-[11px] truncate">
+              {activeOrg?.invite_code ? `Code: ${activeOrg.invite_code}` : 'https://meridian.io/join'}
+            </span>
             <button
               type="button"
-              onClick={() => toast.success('Invite link copied!')}
-              className="font-bold text-violet-700 hover:text-violet-900 shrink-0 ml-2"
+              onClick={() => {
+                const code = activeOrg?.invite_code || activeOrg?.code || ''
+                if (code) {
+                  navigator.clipboard?.writeText(String(code))
+                  toast.success(`Invite code ${code} copied!`)
+                } else {
+                  navigator.clipboard?.writeText('https://meridian.io/join')
+                  toast.success('Join link copied!')
+                }
+              }}
+              className="font-bold text-violet-700 hover:text-violet-900 shrink-0 ml-2 cursor-pointer"
             >
-              Copy Link
+              {activeOrg?.invite_code ? 'Copy Code' : 'Copy Link'}
             </button>
           </div>
         </div>
+
+        {loading && (
+          <div className="mt-4 animate-in fade-in duration-200">
+            <StripedLoader color="purple" size="md" label="Sending team invitation emails..." />
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2.5 mt-6 pt-4 border-t border-stone-200/80">

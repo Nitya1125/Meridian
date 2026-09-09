@@ -1,23 +1,38 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal from '@/components/CreateTaskModal'
 import { useOrg } from '@/context/OrgContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { acceptJoinRequest, rejectJoinRequest } from '@/Service/organization'
+import { acceptJoinRequest, rejectJoinRequest, handleOrganizationUsers, inviteOrganizationUser } from '@/Service/organization'
 import {
   BuildingIcon, UsersIcon, ShieldIcon, CopyIcon, CheckIcon,
   SendIcon, PlusIcon, SparklesIcon, CheckCircleIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
+import StripedLoader from '@/components/StripedLoader'
 
 export default function OrganizationPage() {
-  const { activeOrg, openCreateModal, openJoinModal } = useOrg()
-  const { fullName, initials } = useCurrentUser()
+  const { activeOrg, openCreateModal, openJoinModal, fetchNotifications, fetchPendingJoinRequests } = useOrg()
+  const { fullName, initials, user } = useCurrentUser()
   const [modalOpen, setModalOpen] = useState(false)
+
+  const isOwner = Boolean(
+    activeOrg && (
+      (activeOrg.created_by && user?.id && String(activeOrg.created_by) === String(user.id)) ||
+      activeOrg.role?.toUpperCase() === 'OWNER' ||
+      activeOrg.role?.toLowerCase().includes('owner') ||
+      activeOrg.role?.toLowerCase().includes('leader')
+    )
+  )
+
+  // Real members state fetched via Service
+  const [membersList, setMembersList] = useState([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [refreshCount, setRefreshCount] = useState(0)
 
   // Invite by email form
   const [inviteEmail, setInviteEmail] = useState('')
@@ -28,19 +43,76 @@ export default function OrganizationPage() {
   const [targetRequestId, setTargetRequestId] = useState('')
   const [actionLoading, setActionLoading] = useState(false)
 
-  const handleSendEmailInvite = (e) => {
-    e.preventDefault()
+  useEffect(() => {
+    let ignore = false
+    const fetchMemberData = async () => {
+      if (!activeOrg || !activeOrg.id) {
+        setMembersList([])
+        return
+      }
+
+      setMembersLoading(true)
+      try {
+        const res = await handleOrganizationUsers(activeOrg.id)
+        if (!ignore && res?.success && Array.isArray(res.members)) {
+          setMembersList(res.members.map(m => ({
+            ...m,
+            name: `${m.first_name || ''} ${m.last_name || ''}`.trim() || m.email,
+            initials: `${m.first_name?.[0] || m.email?.[0] || 'U'}${m.last_name?.[0] || ''}`.toUpperCase(),
+            role: m.role || 'Member',
+            avatarColor: '#8b5cf6'
+          })))
+        } else if (!ignore) {
+          setMembersList([])
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error('Error fetching org members via service:', err)
+          setMembersList([])
+        }
+      } finally {
+        if (!ignore) {
+          setMembersLoading(false)
+        }
+      }
+    }
+
+    fetchMemberData()
+
+    return () => {
+      ignore = true
+    }
+  }, [activeOrg, refreshCount])
+
+  const handleSendEmailInvite = async (e) => {
+    e?.preventDefault()
+    if (!isOwner) {
+      toast.error('Only workspace owners can send email invitations')
+      return
+    }
     if (!inviteEmail.trim()) {
       toast.error('Please enter an email address')
       return
     }
+    if (!activeOrg || !activeOrg.id) {
+      toast.error('Please select an active organization first')
+      return
+    }
 
-    setSendingInvite(true)
-    setTimeout(() => {
+    try {
+      setSendingInvite(true)
+      const res = await inviteOrganizationUser(inviteEmail.trim(), activeOrg.id)
+      if (res && res.success) {
+        toast.success(res.message || `Invitation sent to ${inviteEmail.trim()}`)
+        setInviteEmail('')
+      } else {
+        toast.error(res?.message || 'Failed to send invitation')
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Failed to send invitation')
+    } finally {
       setSendingInvite(false)
-      toast.success(`Invitation sent to ${inviteEmail}`)
-      setInviteEmail('')
-    }, 600)
+    }
   }
 
   const handleCopyInviteCode = () => {
@@ -68,6 +140,9 @@ export default function OrganizationPage() {
       if (res && res.success) {
         toast.success(res.message || 'Request accepted successfully')
         setTargetRequestId('')
+        setRefreshCount(c => c + 1)
+        fetchNotifications?.()
+        fetchPendingJoinRequests?.()
       } else {
         toast.error(res?.message || 'Failed to accept join request')
       }
@@ -90,6 +165,8 @@ export default function OrganizationPage() {
       if (res && res.success) {
         toast.success(res.message || 'Request rejected successfully')
         setTargetRequestId('')
+        fetchNotifications?.()
+        fetchPendingJoinRequests?.()
       } else {
         toast.error(res?.message || 'Failed to reject join request')
       }
@@ -100,7 +177,6 @@ export default function OrganizationPage() {
     }
   }
 
-  const membersList = activeOrg?.members || []
   const inviteCodeDisplay = activeOrg?.invite_code || activeOrg?.code || '—'
 
   return (
@@ -257,13 +333,17 @@ export default function OrganizationPage() {
                   </div>
                 </div>
 
-                {membersList.length === 0 ? (
+                {membersLoading ? (
+                  <div className="p-8 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center">
+                    <StripedLoader color="purple" size="md" label="Loading organization members..." />
+                  </div>
+                ) : membersList.length === 0 ? (
                   <div className="p-8 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 text-center space-y-1.5">
                     <p className="text-xs font-semibold text-stone-700">
-                      No member roster data available.
+                      No members joined yet.
                     </p>
                     <p className="text-[11px] text-stone-400">
-                      (The backend API to list organization members is currently not available)
+                      Share your organization invite code to onboard team members to this workspace.
                     </p>
                   </div>
                 ) : (
@@ -370,15 +450,24 @@ export default function OrganizationPage() {
                   {/* Option A: Invite by Email */}
                   <div className="p-6 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 flex flex-col justify-between">
                     <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#111318] text-lime-400 flex items-center justify-center">
-                          <SendIcon size={14} />
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-xl bg-[#111318] text-lime-400 flex items-center justify-center">
+                            <SendIcon size={14} />
+                          </div>
+                          <h3 className="text-sm font-bold text-stone-900">Invite by Email</h3>
                         </div>
-                        <h3 className="text-sm font-bold text-stone-900">Invite by Email</h3>
+                        <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${
+                          isOwner ? 'bg-lime-100 text-lime-800' : 'bg-stone-200 text-stone-600'
+                        }`}>
+                          {isOwner ? 'OWNER ACCESS' : 'OWNER ONLY'}
+                        </span>
                       </div>
 
                       <p className="text-xs text-stone-500 font-medium mb-4">
-                        Send a direct email invitation with workspace access link.
+                        {isOwner
+                          ? 'Send a direct email invitation with workspace access link.'
+                          : 'Direct email invitations can only be dispatched by the workspace owner.'}
                       </p>
 
                       <form onSubmit={handleSendEmailInvite} className="space-y-3">
@@ -388,19 +477,20 @@ export default function OrganizationPage() {
                           </label>
                           <input
                             type="email"
-                            placeholder="teammate@company.com"
+                            disabled={!isOwner || sendingInvite}
+                            placeholder={isOwner ? "teammate@company.com" : "Owner permission required"}
                             value={inviteEmail}
                             onChange={e => setInviteEmail(e.target.value)}
-                            className="w-full px-3.5 py-2.5 text-xs font-medium bg-white rounded-xl border border-stone-200 outline-none focus:border-stone-400 font-sans"
+                            className="w-full px-3.5 py-2.5 text-xs font-medium bg-white rounded-xl border border-stone-200 outline-none focus:border-stone-400 font-sans disabled:opacity-60 disabled:bg-stone-100/60"
                           />
                         </div>
 
                         <button
                           type="submit"
-                          disabled={sendingInvite}
-                          className="w-full py-2.5 rounded-xl bg-[#111318] hover:bg-stone-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+                          disabled={!isOwner || sendingInvite || !inviteEmail.trim()}
+                          className="w-full py-2.5 rounded-xl bg-[#111318] hover:bg-stone-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          {sendingInvite ? 'Sending...' : 'Send Invitation'}
+                          {sendingInvite ? 'Sending Invitation...' : 'Send Invitation'}
                         </button>
                       </form>
                     </div>
