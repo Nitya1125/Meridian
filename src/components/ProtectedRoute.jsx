@@ -19,7 +19,7 @@ if (typeof window !== 'undefined') {
 const emptySubscribe = () => () => {}
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading, demoLogin } = useAuth()
+  const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const isHydrated = useSyncExternalStore(emptySubscribe, () => true, () => false)
@@ -77,13 +77,6 @@ export default function ProtectedRoute({ children }) {
               className="w-full rounded-2xl bg-[#111318] hover:bg-black px-4 py-2.5 text-xs font-bold text-white shadow-md transition-all cursor-pointer"
             >
               Go to Sign In
-            </button>
-            <button
-              onClick={demoLogin}
-              className="w-full rounded-2xl bg-lime-400 hover:bg-lime-300 px-4 py-2.5 text-xs font-bold text-stone-950 shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
-            >
-              <ZapIcon size={14} strokeWidth={2.5} />
-              <span>Continue as Demo Alex Johnson</span>
             </button>
           </div>
         </div>

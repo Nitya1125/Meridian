@@ -12,10 +12,11 @@ import KineticMemberCard from '@/components/KineticMemberCard'
 import { handleOrganizationUsers } from '@/Service/organization'
 import {
   PlusIcon, SearchIcon, MoreHorizontalIcon, UsersIcon,
-  MessageIcon, CheckIcon, SettingsIcon, ClockIcon, ZapIcon, BarChartIcon
+  MessageIcon, CheckIcon, SettingsIcon, ClockIcon, ZapIcon, BarChartIcon, BuildingIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import StripedLoader from '@/components/StripedLoader'
 
 import { useOrg } from '@/context/OrgContext'
 import { useAuth } from '@/context/AuthContext'
@@ -23,7 +24,7 @@ import { useAuth } from '@/context/AuthContext'
 export default function TeamPage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { activeOrg } = useOrg()
+  const { activeOrg, openCreateModal, openJoinModal, orgsLoading } = useOrg()
   const { fullName, initials, email } = useCurrentUser()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -60,7 +61,7 @@ export default function TeamPage() {
 
   useEffect(() => {
     const fetchMember = async () => {
-      if (!activeOrg || !activeOrg.id) return
+      if (!activeOrg?.id) return
 
       try {
         const res = await handleOrganizationUsers(activeOrg.id)
@@ -94,16 +95,7 @@ export default function TeamPage() {
       }
     }
     fetchMember()
-  }, [activeOrg, user, fullName, initials, email])
-
-  const isOwner = Boolean(
-    activeOrg && (
-      (activeOrg.created_by && user?.id && String(activeOrg.created_by) === String(user.id)) ||
-      activeOrg.role?.toUpperCase() === 'OWNER' ||
-      activeOrg.role?.toLowerCase().includes('owner') ||
-      activeOrg.role?.toLowerCase().includes('leader')
-    )
-  )
+  }, [activeOrg?.id, user?.id, fullName, initials, email])
 
   const isOwner = Boolean(
     activeOrg && (
@@ -131,27 +123,61 @@ export default function TeamPage() {
             }}
           />
 
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
-            <div>
-              <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
-                The <span className="font-serif-italic font-normal text-violet-700">studio</span>
-              </h1>
-              <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
-                {members.length} members · {members.filter(m => m.status === 'online').length} active now
-              </p>
+          {orgsLoading && !activeOrg ? (
+            <div className="bg-white rounded-3xl p-12 border border-stone-200/80 shadow-2xs text-center max-w-xl mx-auto my-12">
+              <StripedLoader color="green" size="md" label="Loading workspace organizations..." />
             </div>
+          ) : !activeOrg ? (
+            <div className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200/80 shadow-2xs text-center max-w-xl mx-auto my-12 space-y-4">
+              <div className="w-14 h-14 rounded-2xl bg-[#111318] text-lime-400 flex items-center justify-center mx-auto shadow-md">
+                <UsersIcon size={26} strokeWidth={2} />
+              </div>
+              <h2 className="text-2xl font-normal text-stone-950 font-serif tracking-tight">
+                No Active <em className="italic font-serif font-normal text-stone-800">Organization</em>
+              </h2>
+              <p className="text-xs sm:text-sm text-stone-500 font-medium leading-relaxed">
+                You have not joined an organization yet. Create a workspace or join an existing team with an invite code.
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={openCreateModal}
+                  className="px-5 py-2.5 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                >
+                  Create Organization
+                </button>
+                <button
+                  type="button"
+                  onClick={openJoinModal}
+                  className="px-5 py-2.5 rounded-2xl border border-stone-200 text-stone-800 hover:bg-stone-50 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                >
+                  Join Organization
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-7">
+                <div>
+                  <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
+                    The <span className="font-serif-italic font-normal text-violet-700">studio</span>
+                  </h1>
+                  <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
+                    {members.length} members · {members.filter(m => m.status === 'online').length} active now
+                  </p>
+                </div>
 
-            {isOwner && (
-              <button
-                onClick={() => setInviteModalOpen(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md transition-all cursor-pointer"
-              >
-                <PlusIcon size={15} strokeWidth={2.5} />
-                <span>Invite Member</span>
-              </button>
-            )}
-          </div>
+                {isOwner && (
+                  <button
+                    onClick={() => setInviteModalOpen(true)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md transition-all cursor-pointer"
+                  >
+                    <PlusIcon size={15} strokeWidth={2.5} />
+                    <span>Invite Member</span>
+                  </button>
+                )}
+              </div>
 
           {/* Bento KPI Summary Row with Live Interactive Scrubbing */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -233,6 +259,8 @@ export default function TeamPage() {
               />
             ))}
           </div>
+            </>
+          )}
 
         </main>
       </div>

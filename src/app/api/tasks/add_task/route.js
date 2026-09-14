@@ -1,58 +1,72 @@
 import { NextResponse } from "next/server";
-import db from "@/Lib/db";
-import {cookies} from "next/headers";
-import jwt from "jsonwebtoken";
-
+import db from "@/Lib/db"
+import jwt from "jsonwebtoken"
 
 export async function POST(request){
     try{
-        const{title,description,status,priority,due_date,assigned_to} = await request.json();
 
-        if(!title|| !description ||!status || !priority || !due_date || !assigned_to){
+        const {title,description,status,priority,due_date,estimate_time_value,estimate_time_unit,assign_to,organization_id} = await request.json()
+
+
+        if(!title || !status ||!priority ||!due_date ||!estimate_time_value ||!estimate_time_unit ||!organization_id || !assign_to){
             return NextResponse.json({
-                success:false,
-                message:"Please fill all the fields"
-            },
-            {status:400})
+                message: "All Fields are required",
+                success: false
+            },{status: 400})
         }
 
-        const cookieStore = await cookies();
-        const token = cookieStore.get("token")?.value;
+        const token = request.cookies.get('token')?.value
 
         if(!token){
             return NextResponse.json({
-                success:false,
-                message:"Unauthorized"
-            },
-            {status:401})
+                message: "Unauthorize User",
+                success: false
+            }, {status:401})
         }
 
-        const decode = jwt.verify(token,process.env.JWT_SECRET);
-        console.log(decode.email);
+        const decoded = jwt.verify(token,process.env.JWT_SECRET)
 
-        const [user] = await db.query(`select id from users where email = ?`,[decode.email]);
+        const [users] = await db.query(`SELECT * FROM users where id =?`, [decoded.id])
 
-        if(user.length === 0){
+        if(users.length === 0){
             return NextResponse.json({
-                success:false,
-                message:"User not found"
-            },
-            {status:404})
+                message: "User Does Not Exist",
+                success: false
+            }, {status:400})
         }
 
-        const [result] = await db.query(`Insert into tasks(title,description,status,priority,due_date,assigned_to,created_by) values(?,?,?,?,?,?,?)`,[title,description,status,priority,due_date,assigned_to,user[0].id]);
+        const [organization] = await db.query(`SELECT * FROM organization_members where user_id =? AND organization_id =? `, [decoded.id,organization_id]) 
+        
+        if(organization.length === 0){
+            return NextResponse.json({
+                message: "User Is Not Member Of Organization",
+                success: false
+            }, {status:400})
+        }
+
+        const [assigneduser] = await db.query(`Select * FROM organization_members where user_id = ? AND organization_id = ?`,[assign_to,organization_id])
+
+        if(assigneduser.length === 0){
+            return NextResponse.json({
+                message: "User Is Not Member Of Organization",
+                success: false
+            }, {status:400})
+        }
+
+        await db.query(`INSERT INTO tasks (title, description, status, priority, due_date, estimated_time_value, estimated_time_unit, assigned_to, organization_id,created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)` , [title, description, status, priority, due_date, estimate_time_value, estimate_time_unit, assign_to, organization_id,decoded.id])
 
         return NextResponse.json({
-            success:true,
-            message:"Task added successfully",
-            result
-        },{status:200})
+            message: "Task Added Successfully",
+            success: true
+        }, {status:200})
+
 
     }catch(error){
+
+        console.log("Error : ",error)
         return NextResponse.json({
-            success:false,
-            message: "Something went wrong",
-        },
-            {status:400})
+            message: "Server Error",
+            success: false
+        },{status: 500})
     }
 }

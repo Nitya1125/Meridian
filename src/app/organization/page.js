@@ -16,7 +16,7 @@ import { toast } from 'react-hot-toast'
 import StripedLoader from '@/components/StripedLoader'
 
 export default function OrganizationPage() {
-  const { activeOrg, openCreateModal, openJoinModal, fetchNotifications, fetchPendingJoinRequests } = useOrg()
+  const { activeOrg, openCreateModal, openJoinModal, fetchNotifications, fetchPendingJoinRequests, orgsLoading } = useOrg()
   const { fullName, initials, user } = useCurrentUser()
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -46,12 +46,16 @@ export default function OrganizationPage() {
   useEffect(() => {
     let ignore = false
     const fetchMemberData = async () => {
-      if (!activeOrg || !activeOrg.id) {
+      if (!activeOrg?.id) {
         setMembersList([])
+        setMembersLoading(false)
         return
       }
 
-      setMembersLoading(true)
+      // Only show full loading bar if members have not been loaded yet to prevent flickering
+      if (membersList.length === 0) {
+        setMembersLoading(true)
+      }
       try {
         const res = await handleOrganizationUsers(activeOrg.id)
         if (!ignore && res?.success && Array.isArray(res.members)) {
@@ -82,7 +86,7 @@ export default function OrganizationPage() {
     return () => {
       ignore = true
     }
-  }, [activeOrg, refreshCount])
+  }, [activeOrg?.id, refreshCount])
 
   const handleSendEmailInvite = async (e) => {
     e?.preventDefault()
@@ -232,7 +236,11 @@ export default function OrganizationPage() {
             </div>
           </div>
 
-          {!activeOrg ? (
+          {orgsLoading && !activeOrg ? (
+            <div className="bg-white rounded-3xl p-12 border border-stone-200/80 shadow-2xs text-center max-w-xl mx-auto my-12">
+              <StripedLoader color="green" size="md" label="Loading workspace organizations..." />
+            </div>
+          ) : !activeOrg ? (
             /* Empty State when no organization is active */
             <div className="bg-white rounded-3xl p-8 sm:p-12 border border-stone-200/80 shadow-2xs text-center max-w-xl mx-auto my-12 space-y-4">
               <div className="w-14 h-14 rounded-2xl bg-[#111318] text-lime-400 flex items-center justify-center mx-auto shadow-md">
@@ -333,7 +341,7 @@ export default function OrganizationPage() {
                   </div>
                 </div>
 
-                {membersLoading ? (
+                {membersLoading && membersList.length === 0 ? (
                   <div className="p-8 rounded-2xl bg-[#FAF8F5] border border-stone-200/80 flex items-center justify-center">
                     <StripedLoader color="purple" size="md" label="Loading organization members..." />
                   </div>

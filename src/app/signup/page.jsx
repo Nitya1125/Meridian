@@ -352,7 +352,6 @@ function OtpModal({ email, onClose, onSuccess }) {
 
 export default function SignupPage() {
   const router = useRouter();
-  const { demoLogin } = useAuth();
   const [step, setStep] = useState(1);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -468,33 +467,6 @@ export default function SignupPage() {
 
           {step === 1 && (
             <>
-              {/* Instant Demo Sign-In Card for Testing */}
-              <div className="mb-4 p-3 rounded-2xl bg-gradient-to-r from-lime-50 via-emerald-50 to-lime-50 border border-lime-300/80 flex items-center justify-between gap-3 shadow-2xs">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-lime-500 animate-pulse" />
-                    <span className="text-xs font-bold text-stone-900">Demo Test Access</span>
-                    <span className="text-[9px] font-mono font-bold bg-lime-200 text-lime-900 px-1.5 py-0.5 rounded-md">
-                      1-CLICK
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-stone-600 font-medium truncate mt-0.5">
-                    Skip signup & test instantly as Alex Johnson
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    demoLogin();
-                    toast.success('Signed in with Demo Account!');
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-[#111318] hover:bg-black text-white text-xs font-bold shrink-0 shadow-xs hover:shadow-md transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                >
-                  <SparklesIcon size={13} className="text-lime-400" />
-                  <span>Demo Sign In</span>
-                </button>
-              </div>
-
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <button
                   type="button"

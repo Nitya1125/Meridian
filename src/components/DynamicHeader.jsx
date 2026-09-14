@@ -118,24 +118,24 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
 
         {/* Dynamic Island Capsule */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-[#111318] text-white rounded-full shadow-xl shadow-black/15 border border-white/12 hover:border-white/20 transition-all duration-300">
-          <div className="flex items-center gap-2.5">
+        <div className="flex flex-nowrap items-center justify-between gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2 bg-[#111318] text-white rounded-full shadow-xl shadow-black/15 border border-white/12 hover:border-white/20 transition-all duration-300 whitespace-nowrap">
+          <div className="flex items-center gap-2 shrink-0">
             <span className="relative flex h-2.5 w-2.5 shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500" />
             </span>
-            <div className="flex items-center gap-2 text-xs font-semibold tracking-wide">
-              <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30">
+            <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wide">
+              <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30 truncate max-w-[110px] sm:max-w-[140px]">
                 {activeOrg?.name ? activeOrg.name : 'Workspace'}
               </span>
-              <span className="text-stone-200 text-xs hidden sm:inline font-medium">
+              <span className="text-stone-200 text-xs hidden sm:inline font-medium truncate max-w-[80px] lg:max-w-[120px]">
                 {activeOrg?.company_name || activeOrg?.description || 'Active Workspace'}
               </span>
             </div>
           </div>
 
           {/* Real-time Sprint Ticker & Standup Beacon */}
-          <div className="hidden md:flex items-center gap-3 text-xs font-medium">
+          <div className="hidden md:flex items-center gap-2.5 lg:gap-3 text-xs font-medium shrink-0">
             <span className="h-3.5 w-px bg-white/15" />
             <div className="flex items-center gap-1.5 text-lime-400 font-bold">
               <ZapIcon size={12} className="fill-lime-400 text-lime-400" />
@@ -151,19 +151,19 @@ export default function DynamicHeader({ onOpenNewTask, onOpenSearch, title = "Wo
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 sm:gap-3">
+          <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
             {/* Dynamic User Avatar */}
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-violet-600 text-[10px] font-bold flex items-center justify-center text-white ring-2 ring-[#111318]">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="w-6 h-6 rounded-full bg-violet-600 text-[10px] font-bold flex items-center justify-center text-white ring-2 ring-[#111318] shrink-0">
                 {initials || 'U'}
               </div>
-              <span className="text-[11px] font-medium text-stone-300 hidden xl:inline truncate max-w-[100px]">
+              <span className="text-[11px] font-medium text-stone-300 hidden xl:inline truncate max-w-[90px]">
                 {fullName || 'User'}
               </span>
             </div>
 
             {/* Sync Badge */}
-            <div className="flex items-center gap-1.5 text-[11px] text-stone-300 font-sans bg-white/10 px-2.5 py-0.5 rounded-full border border-white/5">
+            <div className="flex items-center gap-1.5 text-[11px] text-stone-300 font-sans bg-white/10 px-2.5 py-0.5 rounded-full border border-white/5 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block animate-pulse" />
               <span>Online</span>
             </div>

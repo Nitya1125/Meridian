@@ -11,28 +11,20 @@ import { AlarmClock, MoonStar, Play, Pause, Clock } from 'lucide-react'
 import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-
-const ALL_TEAM_MEMBERS = [
-  { initials: 'AJ', name: 'Alex Johnson', color: '#8b5cf6', role: 'Product Lead' },
-  { initials: 'SC', name: 'Sarah Chen', color: '#6366f1', role: 'Frontend Architect' },
-  { initials: 'MW', name: 'Marcus Webb', color: '#10b981', role: 'Backend Engineer' },
-  { initials: 'KV', name: 'Kacie Velasquez', color: '#f43f5e', role: 'UI/UX Designer' },
-  { initials: 'PN', name: 'Priya Nair', color: '#f59e0b', role: 'Data Analyst' },
-  { initials: 'KO', name: 'Kai Okafor', color: '#ef4444', role: 'Security Lead' }
-]
+import { getMemberColor, getMemberInitials, getMemberFullName } from './CreateTaskModal'
 
 const ALL_STATUSES = [
-  { id: 'todo', label: 'To do', color: 'bg-stone-100 text-stone-700 border-stone-200' },
-  { id: 'inprogress', label: 'In progress', color: 'bg-sky-50 text-sky-700 border-sky-200' },
-  { id: 'review', label: 'Under review', color: 'bg-purple-50 text-purple-700 border-purple-200' },
-  { id: 'ready', label: 'Ready', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+  { id: 'TODO', label: 'To do', color: 'bg-stone-100 text-stone-700 border-stone-200' },
+  { id: 'IN_PROGRESS', label: 'In progress', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+  { id: 'REVIEW', label: 'Under review', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  { id: 'DONE', label: 'Done', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
 ]
 
 const ALL_PRIORITIES = [
-  { id: 'Critical', label: 'Critical', active: 'bg-rose-500 text-white', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
-  { id: 'High', label: 'High', active: 'bg-amber-500 text-white', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
-  { id: 'Medium', label: 'Medium', active: 'bg-indigo-600 text-white', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  { id: 'Low', label: 'Low', active: 'bg-stone-700 text-white', badge: 'bg-stone-100 text-stone-700 border-stone-200' }
+  { id: 'CRITICAL', label: 'Critical', active: 'bg-rose-500 text-white', badge: 'bg-rose-50 text-rose-700 border-rose-200' },
+  { id: 'HIGH', label: 'High', active: 'bg-amber-500 text-white', badge: 'bg-amber-50 text-amber-800 border-amber-200' },
+  { id: 'MEDIUM', label: 'Medium', active: 'bg-indigo-600 text-white', badge: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { id: 'LOW', label: 'Low', active: 'bg-stone-700 text-white', badge: 'bg-stone-100 text-stone-700 border-stone-200' }
 ]
 
 const REACTION_CONFIG = [
@@ -43,24 +35,51 @@ const REACTION_CONFIG = [
   { id: 'flame', label: 'Trending', Icon: FlameIcon, color: 'text-orange-500' }
 ]
 
-export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, onDeleteTask }) {
+const toDateInputString = (dateVal) => {
+  if (!dateVal) return ''
+  try {
+    const d = new Date(dateVal)
+    if (isNaN(d.getTime())) return dateVal
+    return d.toISOString().split('T')[0]
+  } catch {
+    return dateVal
+  }
+}
+
+export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, onDeleteTask, members = [] }) {
   const { fullName, initials } = useCurrentUser()
+  const taskId = task?.task_id || task?.id
+
   const [title, setTitle] = useState(task?.title || '')
   const [description, setDescription] = useState(task?.description || '')
-  const [status, setStatus] = useState(task?.status || 'todo')
-  const [priority, setPriority] = useState(task?.priority || 'Medium')
-  const [due, setDue] = useState(task?.due || 'Aug 25, 2026')
+  const [status, setStatus] = useState(task?.status || 'TODO')
+  const [priority, setPriority] = useState(task?.priority || 'MEDIUM')
+  const [due, setDue] = useState(toDateInputString(task?.due_date || task?.due))
   const [subtasks, setSubtasks] = useState(task?.subtasks || [])
   const [newSubtask, setNewSubtask] = useState('')
   const [tags, setTags] = useState(task?.tags || ['Design', 'Frontend'])
   const [newTagInput, setNewTagInput] = useState('')
   const [showTagInput, setShowTagInput] = useState(false)
-  const [assignees, setAssignees] = useState(
-    task?.assignees || (task?.assignee ? [{ initials: task.assignee, name: task.assigneeName || 'Alex Johnson', color: task.assigneeColor || '#8b5cf6' }] : [])
-  )
+  
   const [showAssigneePicker, setShowAssigneePicker] = useState(false)
   const [timing, setTiming] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  // Sync state with task prop
+  useEffect(() => {
+    if (task) {
+      setTitle(task.title || '')
+      setDescription(task.description || '')
+      setStatus(task.status || 'TODO')
+      setPriority(task.priority || 'MEDIUM')
+      setDue(toDateInputString(task.due_date || task.due))
+      setSubtasks(task.subtasks || [])
+      setTags(task.tags || ['Design', 'Frontend'])
+      setShowDeleteConfirm(false)
+    }
+  }, [task])
 
   useEffect(() => {
     if (!timing) return
@@ -70,32 +89,19 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
 
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
 
-  const [comments, setComments] = useState([
-    {
-      id: 'c1',
-      author: 'Sarah Chen',
-      initials: 'SC',
-      color: '#6366f1',
-      time: '1 hour ago',
-      text: 'Completed initial endpoint mocks for this task. Ready for review!',
-      reactions: { thumbsUp: 3, rocket: 2 }
-    },
-    {
-      id: 'c2',
-      author: 'Marcus Webb',
-      initials: 'MW',
-      color: '#10b981',
-      time: '30m ago',
-      text: 'Reviewed the specs. Left 2 minor comments on caching strategy.',
-      reactions: { heart: 1 }
-    }
-  ])
+  const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
 
   // Escape key to close
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') {
+        if (showDeleteConfirm) {
+          setShowDeleteConfirm(false)
+        } else {
+          onClose?.()
+        }
+      }
     }
     if (open) {
       window.addEventListener('keydown', handleKeyDown)
@@ -105,59 +111,73 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
       window.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = 'unset'
     }
-  }, [open, onClose])
+  }, [open, onClose, showDeleteConfirm])
 
   if (!open || !task) return null
 
-  // Propagate updates to parent
-  const handleFieldChange = (key, value) => {
-    const updated = { ...task, [key]: value }
-    onUpdateTask?.(updated)
-  }
+  // Find assigned member
+  const currentAssignedId = task.assigned_to
+  const assignedMember = members.find(m => String(m.id) === String(currentAssignedId))
 
-  const handleTitleBlur = () => {
-    if (title.trim() && title !== task.title) {
-      handleFieldChange('title', title.trim())
-      toast.success('Title updated')
+  const handleTitleBlur = async () => {
+    const trimmed = title.trim()
+    if (trimmed && trimmed !== task.title) {
+      await onUpdateTask?.({
+        task_id: taskId,
+        title: trimmed
+      })
     }
   }
 
-  const handleDescriptionBlur = () => {
-    if (description !== task.description) {
-      handleFieldChange('description', description.trim())
-      toast.success('Description updated')
+  const handleDescriptionBlur = async () => {
+    const trimmed = description.trim()
+    if (trimmed !== (task.description || '')) {
+      await onUpdateTask?.({
+        task_id: taskId,
+        description: trimmed
+      })
     }
   }
 
-  const handleStatusChange = (newStatus) => {
+  const handleStatusChange = async (newStatus) => {
     setStatus(newStatus)
-    const statusObj = ALL_STATUSES.find(s => s.id === newStatus)
-    const updated = {
-      ...task,
-      status: newStatus,
-      statusText: statusObj?.label || newStatus
-    }
-    onUpdateTask?.(updated)
-    toast.success(`Status moved to ${statusObj?.label || newStatus}`)
+    await onUpdateTask?.({
+      task_id: taskId,
+      status: newStatus
+    })
   }
 
-  const handlePriorityChange = (newPriority) => {
+  const handlePriorityChange = async (newPriority) => {
     setPriority(newPriority)
-    const banner = newPriority === 'Critical' ? 'URGENT' : newPriority === 'High' ? 'MODERATE PRIORITY' : newPriority === 'Low' ? 'LOW PRIORITY' : 'ON BOARDING'
-    const updated = {
-      ...task,
-      priority: newPriority,
-      banner
+    await onUpdateTask?.({
+      task_id: taskId,
+      priority: newPriority
+    })
+  }
+
+  const handleDueDateChange = async (e) => {
+    const newDueDate = e.target.value
+    setDue(newDueDate)
+    if (newDueDate) {
+      await onUpdateTask?.({
+        task_id: taskId,
+        due_date: newDueDate
+      })
     }
-    onUpdateTask?.(updated)
-    toast.success(`Priority set to ${newPriority}`)
+  }
+
+  const handleAssigneeSelect = async (memberId) => {
+    setShowAssigneePicker(false)
+    await onUpdateTask?.({
+      task_id: taskId,
+      assign_to: Number(memberId)
+    })
   }
 
   const toggleSubtask = (idx) => {
     const updated = [...subtasks]
     updated[idx].done = !updated[idx].done
     setSubtasks(updated)
-    onUpdateTask?.({ ...task, subtasks: updated })
     toast.success(updated[idx].done ? 'Subtask marked done' : 'Subtask marked pending')
   }
 
@@ -165,7 +185,6 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     e.stopPropagation()
     const updated = subtasks.filter((_, i) => i !== idx)
     setSubtasks(updated)
-    onUpdateTask?.({ ...task, subtasks: updated })
     toast.success('Subtask removed')
   }
 
@@ -175,36 +194,12 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     const updated = [...subtasks, { text: newSubtask.trim(), done: false }]
     setSubtasks(updated)
     setNewSubtask('')
-    onUpdateTask?.({ ...task, subtasks: updated })
     toast.success('Subtask added')
-  }
-
-  const toggleAssignee = (member) => {
-    let updated = []
-    if (assignees.some(a => a.initials === member.initials)) {
-      if (assignees.length === 1) {
-        toast.error('Task must have at least one assignee')
-        return
-      }
-      updated = assignees.filter(a => a.initials !== member.initials)
-    } else {
-      updated = [...assignees, member]
-    }
-    setAssignees(updated)
-    onUpdateTask?.({
-      ...task,
-      assignees: updated,
-      assignee: updated[0]?.initials,
-      assigneeName: updated[0]?.name,
-      assigneeColor: updated[0]?.color
-    })
-    toast.success('Assignees updated')
   }
 
   const removeTag = (tagToRemove) => {
     const updated = tags.filter(t => t !== tagToRemove)
     setTags(updated)
-    onUpdateTask?.({ ...task, tags: updated })
   }
 
   const addTag = (e) => {
@@ -214,7 +209,6 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     setTags(updated)
     setNewTagInput('')
     setShowTagInput(false)
-    onUpdateTask?.({ ...task, tags: updated })
     toast.success('Tag added')
   }
 
@@ -224,7 +218,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     const newComment = {
       id: `c_${Date.now()}`,
       author: fullName ? `${fullName} (You)` : 'You',
-      initials: initials || 'AJ',
+      initials: initials || 'ME',
       color: '#111318',
       time: 'Just now',
       text: commentInput.trim(),
@@ -247,15 +241,27 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
   }
 
   const copyTaskId = () => {
-    navigator.clipboard?.writeText(task.taskId || 'MRD-001')
+    navigator.clipboard?.writeText(task.taskId || `TSK-${taskId}`)
     toast.success('Task ID copied to clipboard!')
+  }
+
+  const handleDelete = async () => {
+    setIsDeleting(true)
+    try {
+      const ok = await onDeleteTask?.(taskId)
+      if (ok) {
+        onClose?.()
+      }
+    } finally {
+      setIsDeleting(false)
+      setShowDeleteConfirm(false)
+    }
   }
 
   const health = taskHealth(task)
   const completedCount = subtasks.filter(s => s.done).length
   const totalCount = subtasks.length
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
-
   const isAllCompleted = totalCount > 0 && completedCount === totalCount
 
   return (
@@ -278,16 +284,16 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
             <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-stone-400">
               <span>Meridian</span>
               <span>/</span>
-              <span className="text-stone-600">Sprint 14</span>
+              <span className="text-stone-600">Tasks</span>
             </div>
 
-            {/* Task ID chip with Streamline CopyIcon */}
+            {/* Task ID chip with CopyIcon */}
             <button
               onClick={copyTaskId}
               className="font-mono text-xs font-bold text-stone-700 bg-stone-100 hover:bg-stone-200/80 px-2.5 py-1 rounded-xl border border-stone-200 transition-colors flex items-center gap-1.5 cursor-pointer"
               title="Click to copy Task ID"
             >
-              <span>{task.taskId || 'MRD-001'}</span>
+              <span>{task.taskId || `TSK-${taskId}`}</span>
               <CopyIcon size={12} className="text-stone-400" />
             </button>
 
@@ -311,11 +317,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
             </button>
 
             <button
-              onClick={() => {
-                if (onDeleteTask) onDeleteTask(task.id)
-                toast.success('Task deleted')
-                onClose?.()
-              }}
+              onClick={() => setShowDeleteConfirm(true)}
               className="p-2 rounded-xl text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
               title="Delete task"
             >
@@ -336,6 +338,34 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
             </button>
           </div>
         </div>
+
+        {/* Delete Confirmation Alert Banner */}
+        {showDeleteConfirm && (
+          <div className="bg-rose-50 border-b border-rose-200 px-6 py-3 flex items-center justify-between text-xs text-rose-900 animate-in slide-in-from-top duration-150 shrink-0">
+            <div className="flex items-center gap-2 font-medium">
+              <AlertIcon size={15} className="text-rose-600 shrink-0" />
+              <span>Are you sure you want to delete this task? This cannot be undone.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isDeleting}
+                className="px-3 py-1 rounded-xl bg-white border border-stone-200 font-bold hover:bg-stone-50 transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="px-3.5 py-1 rounded-xl bg-rose-600 text-white font-bold hover:bg-rose-700 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+              >
+                {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Modal Body (2-Column Grid) ── */}
         <div className="flex-1 overflow-y-auto p-6 sm:p-8">
@@ -369,7 +399,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
               {/* Inline Editable Title */}
               <div>
                 <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 block mb-1">
-                  Task Title
+                  Task Title (Click to edit, blur to save)
                 </label>
                 <textarea
                   rows={2}
@@ -487,49 +517,52 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
 
                 {/* Comments List */}
                 <div className="space-y-3 mb-4">
-                  {comments.map((c) => (
-                    <div key={c.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-stone-200/60">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-5 h-5 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-2xs"
-                            style={{ backgroundColor: c.color }}
-                          >
-                            {c.initials}
-                          </div>
-                          <span className="text-xs font-bold text-stone-800">{c.author}</span>
-                        </div>
-                        <span className="text-[10px] text-stone-400 font-mono">{c.time}</span>
-                      </div>
-
-                      <p className="text-xs text-stone-600 pl-7 leading-relaxed mb-2.5">
-                        {c.text}
-                      </p>
-
-                      {/* Streamline Core Pop Vector Reaction Badges */}
-                      <div className="pl-7 flex items-center gap-1.5 flex-wrap">
-                        {REACTION_CONFIG.map(({ id, label, Icon, color }) => {
-                          const count = c.reactions?.[id] || 0
-                          return (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => toggleReaction(c.id, id)}
-                              title={label}
-                              className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all cursor-pointer select-none ${
-                                count > 0
-                                  ? `bg-stone-100 border-stone-300 font-bold ${color}`
-                                  : 'bg-white/80 border-stone-200/80 text-stone-400 hover:text-stone-700 hover:border-stone-300'
-                              }`}
+                  {comments.length === 0 ? (
+                    <div className="text-xs text-stone-400 py-3 text-center">No comments yet. Start a discussion below.</div>
+                  ) : (
+                    comments.map((c) => (
+                      <div key={c.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-stone-200/60">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className="w-5 h-5 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-2xs"
+                              style={{ backgroundColor: c.color }}
                             >
-                              <Icon size={12} strokeWidth={2} />
-                              {count > 0 && <span className="text-[10.5px] font-mono">{count}</span>}
-                            </button>
-                          )
-                        })}
+                              {c.initials}
+                            </div>
+                            <span className="text-xs font-bold text-stone-800">{c.author}</span>
+                          </div>
+                          <span className="text-[10px] text-stone-400 font-mono">{c.time}</span>
+                        </div>
+
+                        <p className="text-xs text-stone-600 pl-7 leading-relaxed mb-2.5">
+                          {c.text}
+                        </p>
+
+                        <div className="pl-7 flex items-center gap-1.5 flex-wrap">
+                          {REACTION_CONFIG.map(({ id, label, Icon, color }) => {
+                            const count = c.reactions?.[id] || 0
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => toggleReaction(c.id, id)}
+                                title={label}
+                                className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all cursor-pointer select-none ${
+                                  count > 0
+                                    ? `bg-stone-100 border-stone-300 font-bold ${color}`
+                                    : 'bg-white/80 border-stone-200/80 text-stone-400 hover:text-stone-700 hover:border-stone-300'
+                                }`}
+                              >
+                                <Icon size={12} strokeWidth={2} />
+                                {count > 0 && <span className="text-[10.5px] font-mono">{count}</span>}
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
 
                 {/* Comment Box */}
@@ -639,61 +672,67 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                   </div>
                 </div>
 
-                {/* 3. Assignees */}
+                {/* 3. Assignee */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">
-                      Assignees ({assignees.length})
+                      Assignee
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowAssigneePicker(!showAssigneePicker)}
                       className="text-[10px] font-bold text-violet-700 hover:text-violet-900 cursor-pointer"
                     >
-                      {showAssigneePicker ? 'Done' : '+ Edit'}
+                      {showAssigneePicker ? 'Done' : 'Change'}
                     </button>
                   </div>
 
-                  {/* Active assignees display */}
-                  <div className="space-y-1.5">
-                    {assignees.map((a, i) => (
-                      <div key={i} className="flex items-center justify-between p-2 rounded-xl bg-[#FAF8F5] border border-stone-200/50">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-5 h-5 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
-                            style={{ backgroundColor: a.color || '#6366f1' }}
-                          >
-                            {a.initials}
-                          </div>
-                          <span className="font-semibold text-stone-800 text-[11.5px]">{a.name}</span>
+                  {/* Current assignee display */}
+                  <div className="p-2.5 rounded-2xl bg-[#FAF8F5] border border-stone-200/60 flex items-center justify-between">
+                    {assignedMember ? (
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-6 h-6 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-2xs"
+                          style={{ backgroundColor: getMemberColor(assignedMember.id) }}
+                        >
+                          {getMemberInitials(assignedMember)}
                         </div>
-                        <span className="text-[10px] text-stone-400 font-mono">{a.role || 'Member'}</span>
+                        <div>
+                          <div className="font-semibold text-stone-800 text-xs">
+                            {getMemberFullName(assignedMember)}
+                          </div>
+                          <div className="text-[10px] text-stone-400 font-mono">
+                            {assignedMember.role || 'Member'}
+                          </div>
+                        </div>
                       </div>
-                    ))}
+                    ) : (
+                      <span className="text-stone-400 text-xs italic">Unassigned</span>
+                    )}
                   </div>
 
-                  {/* Assignee Team Picker */}
+                  {/* Assignee Selection List */}
                   {showAssigneePicker && (
-                    <div className="mt-2.5 p-2 rounded-2xl bg-stone-50 border border-stone-200 space-y-1 animate-in fade-in zoom-in-95 duration-150">
-                      <div className="text-[10px] font-bold text-stone-400 px-1 mb-1">Click to toggle:</div>
-                      {ALL_TEAM_MEMBERS.map((m) => {
-                        const isAssigned = assignees.some(a => a.initials === m.initials)
+                    <div className="mt-2.5 p-2 rounded-2xl bg-stone-50 border border-stone-200 space-y-1 animate-in fade-in zoom-in-95 duration-150 max-h-48 overflow-y-auto">
+                      <div className="text-[10px] font-bold text-stone-400 px-1 mb-1">Select member:</div>
+                      {members.map((m) => {
+                        const isAssigned = String(m.id) === String(currentAssignedId)
                         return (
                           <div
-                            key={m.initials}
-                            onClick={() => toggleAssignee(m)}
+                            key={m.id}
+                            onClick={() => handleAssigneeSelect(m.id)}
                             className={`flex items-center justify-between p-1.5 rounded-xl cursor-pointer transition-colors ${
                               isAssigned ? 'bg-violet-100/70 text-violet-900' : 'hover:bg-white text-stone-700'
                             }`}
                           >
                             <div className="flex items-center gap-2">
                               <div
-                                className="w-5 h-5 rounded-full text-[9px] font-bold text-white flex items-center justify-center"
-                                style={{ backgroundColor: m.color }}
+                                className="w-5 h-5 rounded-full text-[9px] font-bold text-white flex items-center justify-center shadow-2xs"
+                                style={{ backgroundColor: getMemberColor(m.id) }}
                               >
-                                {m.initials}
+                                {getMemberInitials(m)}
                               </div>
-                              <span className="text-xs font-medium">{m.name}</span>
+                              <span className="text-xs font-medium">{getMemberFullName(m)}</span>
                             </div>
                             {isAssigned && <CheckIcon size={12} className="text-violet-700" strokeWidth={2.5} />}
                           </div>
@@ -708,21 +747,30 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                   <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 block mb-1.5">
                     Due Date
                   </label>
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-[#FAF8F5] border border-stone-200/70">
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-[#FAF8F5] border border-stone-200/70">
                     <ClockIcon size={13} className="text-stone-400" />
                     <input
-                      type="text"
+                      type="date"
                       value={due}
-                      onChange={(e) => {
-                        setDue(e.target.value)
-                        handleFieldChange('due', e.target.value)
-                      }}
-                      className="bg-transparent text-xs font-semibold text-stone-800 outline-none w-full font-mono"
+                      onChange={handleDueDateChange}
+                      className="bg-transparent text-xs font-semibold text-stone-800 outline-none w-full font-mono cursor-pointer"
                     />
                   </div>
                 </div>
 
-                {/* 5. Tags */}
+                {/* 5. Estimated Time Info */}
+                {(task.estimated_time_value || task.estimate_time_value) && (
+                  <div>
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 block mb-1">
+                      Estimated Time
+                    </label>
+                    <div className="text-xs font-bold text-stone-700 bg-stone-50 border border-stone-200/60 px-3 py-2 rounded-xl">
+                      {task.estimated_time_value || task.estimate_time_value} {task.estimated_time_unit || task.estimate_time_unit || 'HOURS'}
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Tags */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">
@@ -747,7 +795,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                         <button
                           type="button"
                           onClick={() => removeTag(t)}
-                          className="hover:text-rose-600 transition-colors ml-0.5"
+                          className="hover:text-rose-600 transition-colors ml-0.5 cursor-pointer"
                         >
                           ✕
                         </button>
@@ -766,7 +814,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                       />
                       <button
                         type="submit"
-                        className="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-[11px] font-bold"
+                        className="px-2.5 py-1 rounded-lg bg-stone-900 text-white text-[11px] font-bold cursor-pointer"
                       >
                         Add
                       </button>
@@ -774,22 +822,22 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                   )}
                 </div>
 
-                {/* 6. Quick Complete Toggle */}
+                {/* 7. Quick Complete Toggle */}
                 <div className="pt-3 border-t border-stone-100">
                   <button
                     type="button"
                     onClick={() => {
-                      const nextStatus = status === 'ready' ? 'todo' : 'ready'
+                      const nextStatus = status === 'DONE' ? 'TODO' : 'DONE'
                       handleStatusChange(nextStatus)
                     }}
                     className={`w-full py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                      status === 'ready'
+                      status === 'DONE'
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                         : 'bg-[#111318] text-white hover:bg-black shadow-xs'
                     }`}
                   >
                     <CheckCircleIcon size={14} strokeWidth={2.5} />
-                    <span>{status === 'ready' ? 'Completed' : 'Mark as Complete'}</span>
+                    <span>{status === 'DONE' ? 'Completed' : 'Mark as Complete'}</span>
                   </button>
                 </div>
 
@@ -804,3 +852,4 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     </div>
   )
 }
+

@@ -22,10 +22,18 @@ export function OrgProvider({ children }) {
     const [notificationsLoading, setNotificationsLoading] = useState(false)
     const [pendingJoinRequests, setPendingJoinRequests] = useState([])
 
+    // Ref to hold the latest approvedOrgs for notification mapping without causing re-renders/infinite loops
+    const approvedOrgsRef = React.useRef(approvedOrgs)
+    useEffect(() => {
+        approvedOrgsRef.current = approvedOrgs
+    }, [approvedOrgs])
+
     // Fetch real organizations from backend
-    const fetchOrganizations = useCallback(async () => {
+    const fetchOrganizations = useCallback(async (isInitial = false) => {
         try {
-            setOrgsLoading(true)
+            if (isInitial) {
+                setOrgsLoading(true)
+            }
             const res = await getAllOrganization()
             if (res && res.success && Array.isArray(res.organizations)) {
                 setApprovedOrgs(res.organizations)
@@ -35,9 +43,14 @@ export function OrgProvider({ children }) {
                     }
                     return res.organizations[0]?.id || null
                 })
+            } else {
+                setApprovedOrgs([])
+                setActiveOrgId(null)
             }
         } catch (err) {
             console.error("Failed to fetch organizations:", err)
+            setApprovedOrgs([])
+            setActiveOrgId(null)
         } finally {
             setOrgsLoading(false)
         }
@@ -63,7 +76,7 @@ export function OrgProvider({ children }) {
                         last_name: n.last_name,
                         email: n.email,
                         organization_id: n.organization_id,
-                        organization_name: approvedOrgs.find(o => o.id === n.organization_id)?.name || 'Workspace',
+                        organization_name: approvedOrgsRef.current.find(o => o.id === n.organization_id)?.name || 'Workspace',
                         message: n.message,
                         created_at: n.created_at
                     }))
@@ -80,32 +93,36 @@ export function OrgProvider({ children }) {
         } finally {
             setNotificationsLoading(false)
         }
-    }, [approvedOrgs])
+    }, [])
 
     // Refresh pending join requests by syncing notifications
     const fetchPendingJoinRequests = useCallback(async () => {
         await fetchNotifications()
     }, [fetchNotifications])
 
+    // Load initial data once on mount
     useEffect(() => {
         let isMounted = true
         const init = async () => {
             if (!isMounted) return
-            await fetchOrganizations()
-            await fetchPendingJoinRequests()
+            await fetchOrganizations(true)
+            if (!isMounted) return
             await fetchNotifications()
         }
         init()
         return () => {
             isMounted = false
         }
-    }, [fetchOrganizations, fetchPendingJoinRequests, fetchNotifications])
+    }, [fetchOrganizations, fetchNotifications])
 
-    // Active organization
-    const activeOrg =
-        approvedOrgs.find((org) => org.id === activeOrgId || String(org.id) === String(activeOrgId)) ||
-        approvedOrgs[0] ||
-        null
+    // Active organization memoized to maintain stable object reference
+    const activeOrg = React.useMemo(() => {
+        return (
+            approvedOrgs.find((org) => org.id === activeOrgId || String(org.id) === String(activeOrgId)) ||
+            approvedOrgs[0] ||
+            null
+        )
+    }, [approvedOrgs, activeOrgId])
 
     // Organization state
     const hasApprovedOrg = approvedOrgs.length > 0

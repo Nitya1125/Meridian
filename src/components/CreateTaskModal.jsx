@@ -1,64 +1,148 @@
 "use client"
 
-import React, { useState } from 'react'
-import { PlusIcon, ClockIcon, CheckIcon, TagIcon, UsersIcon } from './Icons'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import React, { useState, useEffect } from 'react'
+import { PlusIcon } from './Icons'
+import { useOrg } from '@/context/OrgContext'
 import { addTask } from '@/Service/taskService'
+import { handleOrganizationUsers } from '@/Service/organization'
 import { toast } from 'react-hot-toast'
 import StripedLoader from './StripedLoader'
 
-const ASSIGNEES = [
-  { initials: 'AJ', name: 'Alex Johnson', color: '#8b5cf6' },
-  { initials: 'KV', name: 'Kacie Velasquez', color: '#f43f5e' },
-  { initials: 'SC', name: 'Sarah Chen', color: '#6366f1' },
-  { initials: 'MW', name: 'Marcus Webb', color: '#10b981' },
-  { initials: 'PN', name: 'Priya Nair', color: '#f59e0b' },
-  { initials: 'KO', name: 'Kai Okafor', color: '#ef4444' },
-  { initials: 'JL', name: 'Jordan Lee', color: '#0ea5e9' },
-]
-
-const ALL_TAGS = ['Design', 'Internal Tasks', 'Commercial', 'Dev', 'Auth', 'Backend', 'Payments', 'Mobile', 'Testing']
-
 const COLUMNS = [
-  { id: 'todo', title: 'To do' },
-  { id: 'inprogress', title: 'In progress' },
-  { id: 'review', title: 'Under review' },
-  { id: 'ready', title: 'Ready' },
+  { id: 'TODO', title: 'To do' },
+  { id: 'IN_PROGRESS', title: 'In progress' },
+  { id: 'REVIEW', title: 'Under review' },
+  { id: 'DONE', title: 'Done' },
 ]
 
-const PRIORITIES = ['Critical', 'High', 'Medium', 'Low']
+const PRIORITIES = [
+  { id: 'CRITICAL', label: 'Critical' },
+  { id: 'HIGH', label: 'High' },
+  { id: 'MEDIUM', label: 'Medium' },
+  { id: 'LOW', label: 'Low' },
+]
 
 const PRIORITY_STYLES = {
-  Critical: { bg: 'bg-rose-50 border-rose-200 text-rose-700', active: 'bg-rose-500 text-white' },
-  High:     { bg: 'bg-amber-50 border-amber-200 text-amber-800', active: 'bg-amber-500 text-white' },
-  Medium:   { bg: 'bg-indigo-50 border-indigo-200 text-indigo-700', active: 'bg-indigo-600 text-white' },
-  Low:      { bg: 'bg-stone-100 border-stone-200 text-stone-700', active: 'bg-stone-700 text-white' },
+  CRITICAL: { bg: 'bg-rose-50 border-rose-200 text-rose-700', active: 'bg-rose-500 text-white' },
+  HIGH:     { bg: 'bg-amber-50 border-amber-200 text-amber-800', active: 'bg-amber-500 text-white' },
+  MEDIUM:   { bg: 'bg-indigo-50 border-indigo-200 text-indigo-700', active: 'bg-indigo-600 text-white' },
+  LOW:      { bg: 'bg-stone-100 border-stone-200 text-stone-700', active: 'bg-stone-700 text-white' },
 }
 
-const generateId = () => `task-${Date.now()}`
-const generateTaskId = () => `MRD-0${Math.floor(Math.random() * 80) + 20}`
+const TIME_UNITS = [
+  { id: 'HOURS', label: 'Hours' },
+  { id: 'DAYS', label: 'Days' },
+  { id: 'MINUTES', label: 'Minutes' },
+]
 
-export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClose, onAdd }) {
-  const { fullName, initials } = useCurrentUser()
+const AVATAR_COLORS = [
+  '#8b5cf6', '#f43f5e', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#0ea5e9', '#ec4899', '#14b8a6'
+]
+
+export const getMemberColor = (id) => {
+  if (!id) return AVATAR_COLORS[0]
+  const num = typeof id === 'number' ? id : String(id).charCodeAt(0) || 0
+  return AVATAR_COLORS[Math.abs(num) % AVATAR_COLORS.length]
+}
+
+export const getMemberInitials = (member) => {
+  if (!member) return 'U'
+  const first = member.first_name?.[0] || ''
+  const last = member.last_name?.[0] || ''
+  if (first || last) return `${first}${last}`.toUpperCase()
+  return (member.email?.[0] || 'U').toUpperCase()
+}
+
+export const getMemberFullName = (member) => {
+  if (!member) return 'Unknown Member'
+  const name = `${member.first_name || ''} ${member.last_name || ''}`.trim()
+  return name || member.email || 'Member'
+}
+
+export default function CreateTaskModal({
+  open,
+  defaultColumnId = 'TODO',
+  onClose,
+  onAdd,
+  members: propMembers = [],
+  organizationId: propOrgId
+}) {
+  const { activeOrg, activeOrgId } = useOrg()
+  const currentOrgId = propOrgId || activeOrgId || activeOrg?.id
+
+  const [members, setMembers] = useState(propMembers)
+  const [membersLoading, setMembersLoading] = useState(false)
+
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [priority, setPriority] = useState('Medium')
+  const [priority, setPriority] = useState('MEDIUM')
   const [columnId, setColumnId] = useState(defaultColumnId)
-  const [assigneeIdx, setAssigneeIdx] = useState(0)
-  const [due, setDue] = useState('25 Sep')
-  const [tags, setTags] = useState(['Design', 'Internal Tasks'])
+  const [assigneeId, setAssigneeId] = useState('')
+  
+  // Format today + 3 days as default due date YYYY-MM-DD
+  const getDefaultDueDate = () => {
+    const d = new Date()
+    d.setDate(d.getDate() + 3)
+    return d.toISOString().split('T')[0]
+  }
+
+  const [due, setDue] = useState(getDefaultDueDate())
+  const [estimateValue, setEstimateValue] = useState(2)
+  const [estimateUnit, setEstimateUnit] = useState('HOURS')
   const [titleErr, setTitleErr] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const dynamicAssignees = ASSIGNEES.map((a, i) =>
-    i === 0
-      ? {
-          ...a,
-          name: fullName ? `${fullName} (You)` : a.name,
-          initials: initials || a.initials,
-        }
-      : a
-  )
+  // Sync default column when opened
+  useEffect(() => {
+    if (open) {
+      const normalized = (defaultColumnId || 'TODO').toUpperCase()
+      const valid = COLUMNS.some(c => c.id === normalized) ? normalized : 'TODO'
+      setColumnId(valid)
+      setTitleErr(false)
+    }
+  }, [open, defaultColumnId])
+
+  // Sync members from props or fetch if missing
+  useEffect(() => {
+    if (propMembers && propMembers.length > 0) {
+      setMembers(propMembers)
+      if (!assigneeId) {
+        setAssigneeId(propMembers[0].id)
+      }
+    } else if (open && currentOrgId) {
+      let isMounted = true
+      setMembersLoading(true)
+      handleOrganizationUsers(currentOrgId)
+        .then(res => {
+          if (isMounted && res?.success && Array.isArray(res.members)) {
+            setMembers(res.members)
+            if (res.members.length > 0) {
+              setAssigneeId(prev => prev || res.members[0].id)
+            }
+          }
+        })
+        .catch(err => {
+          console.error("Failed to load members for task assignment:", err)
+        })
+        .finally(() => {
+          if (isMounted) setMembersLoading(false)
+        })
+
+      return () => {
+        isMounted = false
+      }
+    }
+  }, [open, propMembers, currentOrgId])
+
+  // If members change and assigneeId is not in list, default to first member
+  useEffect(() => {
+    if (members.length > 0) {
+      const exists = members.some(m => String(m.id) === String(assigneeId))
+      if (!exists) {
+        setAssigneeId(members[0].id)
+      }
+    }
+  }, [members, assigneeId])
 
   const handleAdd = async () => {
     if (!title.trim()) {
@@ -66,75 +150,79 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
       return
     }
 
-    const a = dynamicAssignees[assigneeIdx]
+    if (!currentOrgId) {
+      toast.error('No organization selected. Please select a workspace first.')
+      return
+    }
+
+    if (!assigneeId) {
+      toast.error('Please select an assignee from the organization.')
+      return
+    }
+
+    if (!due) {
+      toast.error('Please specify a due date.')
+      return
+    }
+
+    if (!estimateValue || Number(estimateValue) <= 0) {
+      toast.error('Please enter a valid estimated time value.')
+      return
+    }
+
     setLoading(true)
-    let backendResult = null
 
     try {
-      backendResult = await addTask({
+      const payload = {
         title: title.trim(),
-        description: description.trim() || 'Prepare and review deliverables for sprint milestones.',
+        description: description.trim() || 'Deliverable for workspace sprint milestone.',
         status: columnId,
-        priority,
-        due_date: due || '25 Sep',
-        assigned_to: a.name || 'Team Member'
-      })
-      if (backendResult?.success) {
-        toast.success(backendResult.message || 'Task saved to workspace!')
+        priority: priority,
+        due_date: due,
+        estimate_time_value: Number(estimateValue),
+        estimate_time_unit: estimateUnit,
+        assign_to: Number(assigneeId),
+        organization_id: Number(currentOrgId)
+      }
+
+      const result = await addTask(payload)
+
+      if (result && result.success !== false) {
+        toast.success(result.message || 'Task created successfully!')
+        
+        // Reset form
+        setTitle('')
+        setDescription('')
+        setPriority('MEDIUM')
+        setDue(getDefaultDueDate())
+        setEstimateValue(2)
+        setEstimateUnit('HOURS')
+        setTitleErr(false)
+
+        onAdd?.(result, columnId)
+        onClose?.()
+      } else {
+        toast.error(result?.message || 'Failed to create task')
       }
     } catch (err) {
-      console.warn('Backend task sync notice:', err?.message)
+      toast.error(err.message || 'Failed to create task')
     } finally {
       setLoading(false)
     }
-
-    const dbId = backendResult?.result?.insertId
-    const task = {
-      id: dbId ? `task-${dbId}` : generateId(),
-      taskId: dbId ? `MRD-${String(dbId).padStart(3, '0')}` : generateTaskId(),
-      title: title.trim(),
-      description: description.trim() || 'Prepare and review deliverables for sprint milestones.',
-      priority,
-      status: columnId,
-      tags,
-      assignee: a.initials,
-      assigneeName: a.name,
-      assigneeColor: a.color,
-      due: due || '25 Sep',
-      subtasks: [
-        { text: 'Initial design review', done: false },
-        { text: 'Figma prototype sync', done: false }
-      ]
-    }
-
-    onAdd?.(task, columnId)
-
-    // Reset
-    setTitle('')
-    setDescription('')
-    setPriority('Medium')
-    setAssigneeIdx(0)
-    setTags(['Design', 'Internal Tasks'])
-    setTitleErr(false)
-    onClose?.()
   }
 
   if (!open) return null
-
-  const toggleTag = (t) => {
-    setTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
-  }
 
   return (
     <div className="fixed inset-0 z-[900] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        onClick={onClose}
+        onClick={loading ? undefined : onClose}
         className="fixed inset-0 bg-stone-950/40 backdrop-blur-xs transition-opacity animate-in fade-in"
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-lg rounded-3xl bg-[#FAF8F5] p-6 shadow-2xl border border-stone-200 animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg rounded-3xl bg-[#FAF8F5] p-6 shadow-2xl border border-stone-200 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-4 mb-4 border-b border-stone-200/80">
@@ -152,7 +240,8 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors"
+            disabled={loading}
+            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors disabled:opacity-50"
           >
             ✕
           </button>
@@ -165,7 +254,7 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
             <input
               type="text"
               autoFocus
-              placeholder="e.g. Fitness App UI Concept"
+              placeholder="e.g. Implement OAuth2 Authentication"
               value={title}
               onChange={e => {
                 setTitle(e.target.value)
@@ -185,7 +274,7 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
             <label className="block text-xs font-bold text-stone-700 mb-1">Description</label>
             <textarea
               rows={2}
-              placeholder="Describe requirements, acceptance criteria..."
+              placeholder="Describe requirements, deliverables, acceptance criteria..."
               value={description}
               onChange={e => setDescription(e.target.value)}
               className="w-full px-3.5 py-2 text-xs font-medium rounded-2xl bg-white border border-stone-200 focus:border-stone-400 focus:ring-2 focus:ring-stone-200 outline-none font-sans resize-none"
@@ -199,16 +288,16 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
               <div className="flex flex-wrap gap-1.5">
                 {PRIORITIES.map(p => (
                   <button
-                    key={p}
+                    key={p.id}
                     type="button"
-                    onClick={() => setPriority(p)}
+                    onClick={() => setPriority(p.id)}
                     className={`px-2.5 py-1 text-[11px] font-bold rounded-xl border transition-all cursor-pointer ${
-                      priority === p
-                        ? PRIORITY_STYLES[p].active
-                        : PRIORITY_STYLES[p].bg
+                      priority === p.id
+                        ? PRIORITY_STYLES[p.id].active
+                        : PRIORITY_STYLES[p.id].bg
                     }`}
                   >
-                    {p}
+                    {p.label}
                   </button>
                 ))}
               </div>
@@ -228,68 +317,91 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
             </div>
           </div>
 
-          {/* Assignee & Due Date */}
+          {/* Estimated Time (Value & Unit) */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1.5">Assignee</label>
-              <div className="flex items-center gap-2 overflow-x-auto py-1">
-                {dynamicAssignees.map((a, i) => (
-                  <button
-                    key={a.name}
-                    type="button"
-                    onClick={() => setAssigneeIdx(i)}
-                    className={`w-7 h-7 rounded-full text-[10px] font-bold flex items-center justify-center text-white transition-transform cursor-pointer ${
-                      assigneeIdx === i ? 'ring-2 ring-stone-900 ring-offset-2 scale-110' : 'opacity-70 hover:opacity-100'
-                    }`}
-                    style={{ backgroundColor: a.color }}
-                    title={a.name}
-                  >
-                    {a.initials}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1.5">Due Date</label>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">Estimated Time *</label>
               <input
-                type="text"
-                value={due}
-                onChange={e => setDue(e.target.value)}
-                placeholder="e.g. 25 Sep"
+                type="number"
+                min="1"
+                step="1"
+                value={estimateValue}
+                onChange={e => setEstimateValue(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-full px-3 py-2 text-xs font-medium rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none"
               />
             </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">Time Unit</label>
+              <select
+                value={estimateUnit}
+                onChange={e => setEstimateUnit(e.target.value)}
+                className="w-full px-3 py-2 text-xs font-semibold rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none cursor-pointer"
+              >
+                {TIME_UNITS.map(u => (
+                  <option key={u.id} value={u.id}>{u.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          {/* Tags */}
-          <div>
-            <label className="block text-xs font-bold text-stone-700 mb-1.5">Tags</label>
-            <div className="flex flex-wrap gap-1.5">
-              {ALL_TAGS.map(t => {
-                const selected = tags.includes(t)
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => toggleTag(t)}
-                    className={`px-2.5 py-0.5 text-[11px] font-semibold rounded-full border transition-all cursor-pointer ${
-                      selected
-                        ? 'bg-[#111318] text-white border-stone-900'
-                        : 'bg-white text-stone-600 border-stone-200 hover:border-stone-300'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                )
-              })}
+          {/* Assignee & Due Date */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">Assignee *</label>
+              {membersLoading ? (
+                <div className="text-xs text-stone-400 py-2">Loading members...</div>
+              ) : members.length === 0 ? (
+                <div className="text-[11px] text-amber-700 bg-amber-50 p-2 rounded-xl border border-amber-200">
+                  No members found in this workspace. Invite members first.
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  {members.map(m => {
+                    const isSelected = String(assigneeId) === String(m.id)
+                    const color = getMemberColor(m.id)
+                    const initials = getMemberInitials(m)
+                    const name = getMemberFullName(m)
+
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setAssigneeId(m.id)}
+                        className={`w-7 h-7 shrink-0 rounded-full text-[10px] font-bold flex items-center justify-center text-white transition-transform cursor-pointer ${
+                          isSelected ? 'ring-2 ring-stone-900 ring-offset-2 scale-110 shadow-xs' : 'opacity-70 hover:opacity-100'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={`${name} (${m.role || 'Member'})`}
+                      >
+                        {initials}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+              {members.length > 0 && (
+                <div className="mt-1 text-[10.5px] font-medium text-stone-500 truncate">
+                  Selected: {getMemberFullName(members.find(m => String(m.id) === String(assigneeId)))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-stone-700 mb-1.5">Due Date *</label>
+              <input
+                type="date"
+                value={due}
+                onChange={e => setDue(e.target.value)}
+                className="w-full px-3 py-2 text-xs font-medium rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none"
+              />
             </div>
           </div>
         </div>
 
         {loading && (
-          <div className="mt-3 animate-in fade-in duration-200">
-            <StripedLoader color="green" size="md" label="Syncing task with workspace..." />
+          <div className="mt-4 animate-in fade-in duration-200">
+            <StripedLoader color="green" size="md" label="Creating task in workspace..." />
           </div>
         )}
 
@@ -298,14 +410,15 @@ export default function CreateTaskModal({ open, defaultColumnId = 'todo', onClos
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-2xl text-xs font-bold text-stone-600 hover:bg-stone-200/60 transition-colors"
+            disabled={loading}
+            className="px-4 py-2 rounded-2xl text-xs font-bold text-stone-600 hover:bg-stone-200/60 transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleAdd}
-            disabled={loading}
+            disabled={loading || members.length === 0}
             className="px-5 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
           >
             <PlusIcon size={14} strokeWidth={2.5} />
