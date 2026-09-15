@@ -55,11 +55,10 @@ export default function OrgSwitcher({ compact = false }) {
         <button
           type="button"
           onClick={() => setDropdownOpen(prev => !prev)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white border shadow-2xs hover:border-stone-300 hover:bg-stone-50 transition-all cursor-pointer ${
-            compact
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-white border shadow-2xs hover:border-stone-300 hover:bg-stone-50 transition-all cursor-pointer ${compact
               ? "text-xs font-bold"
               : "text-xs sm:text-sm font-bold"
-          } text-stone-900 border-stone-200/90`}
+            } text-stone-900 border-stone-200/90`}
         >
           <div className="w-5 h-5 rounded-lg flex items-center justify-center shrink-0 bg-[#111318] text-lime-400">
             <BuildingIcon size={12} strokeWidth={2.5} />
@@ -71,9 +70,8 @@ export default function OrgSwitcher({ compact = false }) {
 
           <ChevronDownIcon
             size={14}
-            className={`text-stone-400 transition-transform duration-200 shrink-0 ${
-              dropdownOpen ? "rotate-180" : ""
-            }`}
+            className={`text-stone-400 transition-transform duration-200 shrink-0 ${dropdownOpen ? "rotate-180" : ""
+              }`}
           />
         </button>
 
@@ -95,11 +93,10 @@ export default function OrgSwitcher({ compact = false }) {
                     return (
                       <div
                         key={org.id}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold transition-all ${
-                          isActive
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl text-xs font-semibold transition-all ${isActive
                             ? "bg-[#111318] text-white shadow-xs"
                             : "text-stone-700 hover:bg-stone-100 hover:text-stone-900"
-                        }`}
+                          }`}
                       >
                         <button
                           type="button"
@@ -110,11 +107,10 @@ export default function OrgSwitcher({ compact = false }) {
                           className="flex items-center gap-2.5 truncate flex-1 text-left cursor-pointer"
                         >
                           <span
-                            className={`w-2 h-2 rounded-full shrink-0 ${
-                              isActive
+                            className={`w-2 h-2 rounded-full shrink-0 ${isActive
                                 ? "bg-lime-400"
                                 : "bg-stone-300"
-                            }`}
+                              }`}
                           />
 
                           <div className="truncate">
@@ -123,11 +119,10 @@ export default function OrgSwitcher({ compact = false }) {
                             </div>
 
                             <div
-                              className={`text-[10px] font-normal truncate ${
-                                isActive
+                              className={`text-[10px] font-normal truncate ${isActive
                                   ? "text-stone-300"
                                   : "text-stone-400"
-                              }`}
+                                }`}
                             >
                               {org.role || "Member"}
                             </div>
@@ -151,11 +146,10 @@ export default function OrgSwitcher({ compact = false }) {
                               setOrgToDelete(org)
                               setDeleteModalOpen(true)
                             }}
-                            className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                              isActive
+                            className={`p-1.5 rounded-xl transition-all cursor-pointer ${isActive
                                 ? "text-stone-400 hover:text-rose-400 hover:bg-white/10"
                                 : "text-stone-400 hover:text-rose-600 hover:bg-rose-50"
-                            }`}
+                              }`}
                             title={`Delete ${org.name}`}
                           >
                             <TrashIcon size={13} strokeWidth={2} />
@@ -192,7 +186,7 @@ export default function OrgSwitcher({ compact = false }) {
                   <PlusIcon size={13} strokeWidth={2.5} />
                 </div>
 
-                <span>+ Create Organization</span>
+                <span>Create Organization</span>
               </button>
 
               <button
@@ -207,7 +201,7 @@ export default function OrgSwitcher({ compact = false }) {
                   <UserPlusIcon size={13} strokeWidth={2} />
                 </div>
 
-                <span>+ Join Organization</span>
+                <span>Join Organization</span>
               </button>
 
               {activeOrg && (

@@ -1,0 +1,314 @@
+[
+  {
+    "id": 1396,
+    "name": "02 Clap",
+    "key": "02_clap",
+    "file": "/icons/iconly/02_clap_1396.json"
+  },
+  {
+    "id": 3151,
+    "name": "1 Repeat",
+    "key": "1_repeat",
+    "file": "/icons/iconly/1_repeat_3151.json"
+  },
+  {
+    "id": 2503,
+    "name": "2 users ai",
+    "key": "2_users_ai",
+    "file": "/icons/iconly/2_users_ai_2503.json"
+  },
+  {
+    "id": 1634,
+    "name": "24 days warranty",
+    "key": "24_days_warranty",
+    "file": "/icons/iconly/24_days_warranty_1634.json"
+  },
+  {
+    "id": 1635,
+    "name": "7 days warranty",
+    "key": "7_days_warranty",
+    "file": "/icons/iconly/7_days_warranty_1635.json"
+  },
+  {
+    "id": 1651,
+    "name": "add gift",
+    "key": "add_gift",
+    "file": "/icons/iconly/add_gift_1651.json"
+  },
+  {
+    "id": 2127,
+    "name": "Add like",
+    "key": "add_like",
+    "file": "/icons/iconly/add_like_2127.json"
+  },
+  {
+    "id": 1636,
+    "name": "Add tag",
+    "key": "add_tag",
+    "file": "/icons/iconly/add_tag_1636.json"
+  },
+  {
+    "id": 1637,
+    "name": "Bookmark",
+    "key": "bookmark",
+    "file": "/icons/iconly/bookmark_1637.json"
+  },
+  {
+    "id": 3536,
+    "name": "Circle SOng",
+    "key": "circle_song",
+    "file": "/icons/iconly/circle_song_3536.json"
+  },
+  {
+    "id": 1642,
+    "name": "Discount",
+    "key": "discount",
+    "file": "/icons/iconly/discount_1642.json"
+  },
+  {
+    "id": 1644,
+    "name": "Discount",
+    "key": "discount",
+    "file": "/icons/iconly/discount_1644.json"
+  },
+  {
+    "id": 1643,
+    "name": "Discount",
+    "key": "discount",
+    "file": "/icons/iconly/discount_1643.json"
+  },
+  {
+    "id": 1639,
+    "name": "Discount badge",
+    "key": "discount_badge",
+    "file": "/icons/iconly/discount_badge_1639.json"
+  },
+  {
+    "id": 1638,
+    "name": "Discount Bag ",
+    "key": "discount_bag",
+    "file": "/icons/iconly/discount_bag_1638.json"
+  },
+  {
+    "id": 1640,
+    "name": "Discount tag",
+    "key": "discount_tag",
+    "file": "/icons/iconly/discount_tag_1640.json"
+  },
+  {
+    "id": 1641,
+    "name": "Discount ticket",
+    "key": "discount_ticket",
+    "file": "/icons/iconly/discount_ticket_1641.json"
+  },
+  {
+    "id": 603,
+    "name": "Dollar Up",
+    "key": "dollar_up",
+    "file": "/icons/iconly/dollar_up_603.json"
+  },
+  {
+    "id": 2495,
+    "name": "Down",
+    "key": "down",
+    "file": "/icons/iconly/down_2495.json"
+  },
+  {
+    "id": 3505,
+    "name": "Elevator",
+    "key": "elevator",
+    "file": "/icons/iconly/elevator_3505.json"
+  },
+  {
+    "id": 1652,
+    "name": "Gift 3d",
+    "key": "gift_3d",
+    "file": "/icons/iconly/gift_3d_1652.json"
+  },
+  {
+    "id": 1648,
+    "name": "Gift 3d rotation",
+    "key": "gift_3d_rotation",
+    "file": "/icons/iconly/gift_3d_rotation_1648.json"
+  },
+  {
+    "id": 1649,
+    "name": "Gift 3d square",
+    "key": "gift_3d_square",
+    "file": "/icons/iconly/gift_3d_square_1649.json"
+  },
+  {
+    "id": 1645,
+    "name": "Gift expand",
+    "key": "gift_expand",
+    "file": "/icons/iconly/gift_expand_1645.json"
+  },
+  {
+    "id": 1653,
+    "name": "Gift lines",
+    "key": "gift_lines",
+    "file": "/icons/iconly/gift_lines_1653.json"
+  },
+  {
+    "id": 1654,
+    "name": "Gift mark down",
+    "key": "gift_mark_down",
+    "file": "/icons/iconly/gift_mark_down_1654.json"
+  },
+  {
+    "id": 1650,
+    "name": "Gift open",
+    "key": "gift_open",
+    "file": "/icons/iconly/gift_open_1650.json"
+  },
+  {
+    "id": 1646,
+    "name": "Gift rotation",
+    "key": "gift_rotation",
+    "file": "/icons/iconly/gift_rotation_1646.json"
+  },
+  {
+    "id": 1647,
+    "name": "Gift tiny lines",
+    "key": "gift_tiny_lines",
+    "file": "/icons/iconly/gift_tiny_lines_1647.json"
+  },
+  {
+    "id": 3645,
+    "name": "Google",
+    "key": "google",
+    "file": "/icons/iconly/google_3645.json"
+  },
+  {
+    "id": 2196,
+    "name": "Heart ",
+    "key": "heart",
+    "file": "/icons/iconly/heart_2196.json"
+  },
+  {
+    "id": 2498,
+    "name": "Left",
+    "key": "left",
+    "file": "/icons/iconly/left_2498.json"
+  },
+  {
+    "id": 2496,
+    "name": "Left Down",
+    "key": "left_down",
+    "file": "/icons/iconly/left_down_2496.json"
+  },
+  {
+    "id": 2497,
+    "name": "Left Up",
+    "key": "left_up",
+    "file": "/icons/iconly/left_up_2497.json"
+  },
+  {
+    "id": 3691,
+    "name": "Number 4",
+    "key": "number_4",
+    "file": "/icons/iconly/number_4_3691.json"
+  },
+  {
+    "id": 3743,
+    "name": "Number 9 Circle",
+    "key": "number_9_circle",
+    "file": "/icons/iconly/number_9_circle_3743.json"
+  },
+  {
+    "id": 1655,
+    "name": "Party",
+    "key": "party",
+    "file": "/icons/iconly/party_1655.json"
+  },
+  {
+    "id": 3480,
+    "name": "plane fly",
+    "key": "plane_fly",
+    "file": "/icons/iconly/plane_fly_3480.json"
+  },
+  {
+    "id": 1656,
+    "name": "Receipt bill check",
+    "key": "receipt_bill_check",
+    "file": "/icons/iconly/receipt_bill_check_1656.json"
+  },
+  {
+    "id": 2501,
+    "name": "Right",
+    "key": "right",
+    "file": "/icons/iconly/right_2501.json"
+  },
+  {
+    "id": 2499,
+    "name": "Right Down",
+    "key": "right_down",
+    "file": "/icons/iconly/right_down_2499.json"
+  },
+  {
+    "id": 2500,
+    "name": "Right Up",
+    "key": "right_up",
+    "file": "/icons/iconly/right_up_2500.json"
+  },
+  {
+    "id": 1659,
+    "name": "Shopping bag",
+    "key": "shopping_bag",
+    "file": "/icons/iconly/shopping_bag_1659.json"
+  },
+  {
+    "id": 1658,
+    "name": "Shopping bag",
+    "key": "shopping_bag",
+    "file": "/icons/iconly/shopping_bag_1658.json"
+  },
+  {
+    "id": 1657,
+    "name": "Shopping Cart remove",
+    "key": "shopping_cart_remove",
+    "file": "/icons/iconly/shopping_cart_remove_1657.json"
+  },
+  {
+    "id": 3618,
+    "name": "Song slide",
+    "key": "song_slide",
+    "file": "/icons/iconly/song_slide_3618.json"
+  },
+  {
+    "id": 1662,
+    "name": "star medal",
+    "key": "star_medal",
+    "file": "/icons/iconly/star_medal_1662.json"
+  },
+  {
+    "id": 1661,
+    "name": "Star Ticket",
+    "key": "star_ticket",
+    "file": "/icons/iconly/star_ticket_1661.json"
+  },
+  {
+    "id": 1663,
+    "name": "Tag",
+    "key": "tag",
+    "file": "/icons/iconly/tag_1663.json"
+  },
+  {
+    "id": 1660,
+    "name": "Tag",
+    "key": "tag",
+    "file": "/icons/iconly/tag_1660.json"
+  },
+  {
+    "id": 2502,
+    "name": "Up",
+    "key": "up",
+    "file": "/icons/iconly/up_2502.json"
+  },
+  {
+    "id": 3653,
+    "name": "X",
+    "key": "x",
+    "file": "/icons/iconly/x_3653.json"
+  }
+]

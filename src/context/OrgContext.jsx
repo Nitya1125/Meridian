@@ -1,11 +1,14 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
 import { getNotifications, getAllOrganization, getPendingJoinRequests } from "@/Service/organization"
+import { useAuth } from "@/context/AuthContext"
 
 const OrgContext = createContext(null)
 
 export function OrgProvider({ children }) {
+    const { user, isAuthenticated, loading: authLoading } = useAuth()
+
     // Real organization data directly from backend API
     const [approvedOrgs, setApprovedOrgs] = useState([])
     const [orgsLoading, setOrgsLoading] = useState(true)
@@ -22,8 +25,16 @@ export function OrgProvider({ children }) {
     const [notificationsLoading, setNotificationsLoading] = useState(false)
     const [pendingJoinRequests, setPendingJoinRequests] = useState([])
 
+    // Ref to avoid dependency cycle between approvedOrgs and fetchNotifications
+    const approvedOrgsRef = useRef(approvedOrgs)
+    approvedOrgsRef.current = approvedOrgs
+
     // Fetch real organizations from backend
     const fetchOrganizations = useCallback(async () => {
+        if (!isAuthenticated && !user) {
+            setOrgsLoading(false)
+            return
+        }
         try {
             setOrgsLoading(true)
             const res = await getAllOrganization()
@@ -35,16 +46,25 @@ export function OrgProvider({ children }) {
                     }
                     return res.organizations[0]?.id || null
                 })
+            } else {
+                setApprovedOrgs([])
+                setActiveOrgId(null)
             }
         } catch (err) {
             console.error("Failed to fetch organizations:", err)
+            setApprovedOrgs([])
+            setActiveOrgId(null)
         } finally {
             setOrgsLoading(false)
         }
-    }, [])
+    }, [isAuthenticated, user])
 
     // Fetch real notifications from backend & derive incoming join requests
     const fetchNotifications = useCallback(async () => {
+        if (!isAuthenticated && !user) {
+            setNotificationsLoading(false)
+            return
+        }
         try {
             setNotificationsLoading(true)
             const res = await getNotifications()
@@ -63,7 +83,7 @@ export function OrgProvider({ children }) {
                         last_name: n.last_name,
                         email: n.email,
                         organization_id: n.organization_id,
-                        organization_name: approvedOrgs.find(o => o.id === n.organization_id)?.name || 'Workspace',
+                        organization_name: approvedOrgsRef.current.find(o => o.id === n.organization_id)?.name || 'Workspace',
                         message: n.message,
                         created_at: n.created_at
                     }))
@@ -80,7 +100,7 @@ export function OrgProvider({ children }) {
         } finally {
             setNotificationsLoading(false)
         }
-    }, [approvedOrgs])
+    }, [isAuthenticated, user])
 
     // Refresh pending join requests by syncing notifications
     const fetchPendingJoinRequests = useCallback(async () => {
@@ -88,18 +108,28 @@ export function OrgProvider({ children }) {
     }, [fetchNotifications])
 
     useEffect(() => {
+        if (authLoading) return
+
+        if (!isAuthenticated || !user) {
+            setApprovedOrgs([])
+            setActiveOrgId(null)
+            setNotifications([])
+            setPendingJoinRequests([])
+            setOrgsLoading(false)
+            return
+        }
+
         let isMounted = true
         const init = async () => {
             if (!isMounted) return
             await fetchOrganizations()
-            await fetchPendingJoinRequests()
             await fetchNotifications()
         }
         init()
         return () => {
             isMounted = false
         }
-    }, [fetchOrganizations, fetchPendingJoinRequests, fetchNotifications])
+    }, [authLoading, isAuthenticated, user, fetchOrganizations, fetchNotifications])
 
     // Active organization
     const activeOrg =

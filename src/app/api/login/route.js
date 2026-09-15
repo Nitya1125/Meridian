@@ -45,7 +45,7 @@ export async function POST(request){
             },{status:400})
         }
 
-        const token = jwt.sign({userId:user[0].id,email:user[0].email},process.env.JWT_SECRET,{expiresIn:"7d"});
+        const token = jwt.sign({ id: user[0].id, userId: user[0].id, email: user[0].email }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
         const response = NextResponse.json({
             success:true,
