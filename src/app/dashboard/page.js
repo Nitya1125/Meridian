@@ -236,22 +236,19 @@ export default function Dashboard() {
   const toggleTaskDone = (e, id) => {
     e.stopPropagation()
 
-    setMyWork(prev =>
-      prev.map(t => {
-        if (t.id === id) {
-          const nextTab = t.tab === 'done' ? 'todo' : 'done'
+    let nextTab = 'done'
+    setMyWork(prev => {
+      const target = prev.find(t => t.id === id)
+      if (target) {
+        nextTab = target.tab === 'done' ? 'todo' : 'done'
+      }
+      return prev.map(t => (t.id === id ? { ...t, tab: nextTab } : t))
+    })
 
-          toast.success(
-            nextTab === 'done'
-              ? 'Task moved to Done'
-              : 'Task restored to Active'
-          )
-
-          return { ...t, tab: nextTab }
-        }
-
-        return t
-      })
+    toast.success(
+      nextTab === 'done'
+        ? 'Task moved to Done'
+        : 'Task restored to Active'
     )
   }
 

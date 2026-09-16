@@ -41,12 +41,24 @@ export function AuthProvider({ children }) {
     const checkUser = async()=>{
       try{
         const result = await getCurrentUser()
-        setUser(result.user)
-        setToken("authenticated")
-
+        if (result && result.user) {
+          setUser(result.user)
+          setToken("authenticated")
+        } else {
+          setUser(null)
+          setToken(null)
+          try {
+            localStorage.removeItem('meridian_token')
+            localStorage.removeItem('meridian_user')
+          } catch {}
+        }
       }catch(error){
         setUser(null)
         setToken(null)
+        try {
+          localStorage.removeItem('meridian_token')
+          localStorage.removeItem('meridian_user')
+        } catch {}
       }finally{
         setLoading(false)
       }

@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
+import { usePathname } from "next/navigation"
 import { getNotifications, getAllOrganization, getPendingJoinRequests } from "@/Service/organization"
 import { useAuth } from "@/context/AuthContext"
 
@@ -8,6 +9,8 @@ const OrgContext = createContext(null)
 
 export function OrgProvider({ children }) {
     const { user, isAuthenticated, loading: authLoading } = useAuth()
+    const pathname = usePathname()
+    const isPublicRoute = pathname === '/' || pathname === '/signup' || pathname === '/forgot-password'
 
     // Real organization data directly from backend API
     const [approvedOrgs, setApprovedOrgs] = useState([])
@@ -33,7 +36,7 @@ export function OrgProvider({ children }) {
 
     // Fetch real organizations from backend
     const fetchOrganizations = useCallback(async (isInitial = false) => {
-        if (!isAuthenticated && !user) {
+        if (isPublicRoute || authLoading || !isAuthenticated || !user) {
             setOrgsLoading(false)
             return
         }
@@ -61,11 +64,11 @@ export function OrgProvider({ children }) {
         } finally {
             setOrgsLoading(false)
         }
-    }, [isAuthenticated, user])
+    }, [isPublicRoute, authLoading, isAuthenticated, user])
 
     // Fetch real notifications from backend & derive incoming join requests
     const fetchNotifications = useCallback(async () => {
-        if (!isAuthenticated && !user) {
+        if (isPublicRoute || authLoading || !isAuthenticated || !user) {
             setNotificationsLoading(false)
             return
         }
@@ -104,7 +107,7 @@ export function OrgProvider({ children }) {
         } finally {
             setNotificationsLoading(false)
         }
-    }, [isAuthenticated, user])
+    }, [isPublicRoute, authLoading, isAuthenticated, user])
 
     // Refresh pending join requests by syncing notifications
     const fetchPendingJoinRequests = useCallback(async () => {
@@ -113,7 +116,7 @@ export function OrgProvider({ children }) {
 
     // Load initial data once on mount
     useEffect(() => {
-        if (authLoading) return
+        if (isPublicRoute || authLoading) return
 
         if (!isAuthenticated || !user) {
             setApprovedOrgs([])
@@ -135,7 +138,7 @@ export function OrgProvider({ children }) {
         return () => {
             isMounted = false
         }
-    }, [authLoading, isAuthenticated, user, fetchOrganizations, fetchNotifications])
+    }, [isPublicRoute, authLoading, isAuthenticated, user, fetchOrganizations, fetchNotifications])
 
     // Active organization memoized to maintain stable object reference
     const activeOrg = React.useMemo(() => {
