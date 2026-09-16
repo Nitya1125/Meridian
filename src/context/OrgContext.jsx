@@ -1,11 +1,14 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react"
 import { getNotifications, getAllOrganization, getPendingJoinRequests } from "@/Service/organization"
+import { useAuth } from "@/context/AuthContext"
 
 const OrgContext = createContext(null)
 
 export function OrgProvider({ children }) {
+    const { user, isAuthenticated, loading: authLoading } = useAuth()
+
     // Real organization data directly from backend API
     const [approvedOrgs, setApprovedOrgs] = useState([])
     const [orgsLoading, setOrgsLoading] = useState(true)
@@ -23,13 +26,17 @@ export function OrgProvider({ children }) {
     const [pendingJoinRequests, setPendingJoinRequests] = useState([])
 
     // Ref to hold the latest approvedOrgs for notification mapping without causing re-renders/infinite loops
-    const approvedOrgsRef = React.useRef(approvedOrgs)
+    const approvedOrgsRef = useRef(approvedOrgs)
     useEffect(() => {
         approvedOrgsRef.current = approvedOrgs
     }, [approvedOrgs])
 
     // Fetch real organizations from backend
     const fetchOrganizations = useCallback(async (isInitial = false) => {
+        if (!isAuthenticated && !user) {
+            setOrgsLoading(false)
+            return
+        }
         try {
             if (isInitial) {
                 setOrgsLoading(true)
@@ -54,10 +61,14 @@ export function OrgProvider({ children }) {
         } finally {
             setOrgsLoading(false)
         }
-    }, [])
+    }, [isAuthenticated, user])
 
     // Fetch real notifications from backend & derive incoming join requests
     const fetchNotifications = useCallback(async () => {
+        if (!isAuthenticated && !user) {
+            setNotificationsLoading(false)
+            return
+        }
         try {
             setNotificationsLoading(true)
             const res = await getNotifications()
@@ -93,7 +104,7 @@ export function OrgProvider({ children }) {
         } finally {
             setNotificationsLoading(false)
         }
-    }, [])
+    }, [isAuthenticated, user])
 
     // Refresh pending join requests by syncing notifications
     const fetchPendingJoinRequests = useCallback(async () => {
@@ -102,6 +113,17 @@ export function OrgProvider({ children }) {
 
     // Load initial data once on mount
     useEffect(() => {
+        if (authLoading) return
+
+        if (!isAuthenticated || !user) {
+            setApprovedOrgs([])
+            setActiveOrgId(null)
+            setNotifications([])
+            setPendingJoinRequests([])
+            setOrgsLoading(false)
+            return
+        }
+
         let isMounted = true
         const init = async () => {
             if (!isMounted) return
@@ -113,7 +135,7 @@ export function OrgProvider({ children }) {
         return () => {
             isMounted = false
         }
-    }, [fetchOrganizations, fetchNotifications])
+    }, [authLoading, isAuthenticated, user, fetchOrganizations, fetchNotifications])
 
     // Active organization memoized to maintain stable object reference
     const activeOrg = React.useMemo(() => {

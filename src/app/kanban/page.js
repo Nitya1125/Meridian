@@ -7,6 +7,7 @@ import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal, { getMemberColor, getMemberInitials, getMemberFullName } from '@/components/CreateTaskModal'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer'
 import MetricCard from '@/components/MetricCard'
+import SprintWorkflowCanvas from '@/components/SprintWorkflowCanvas'
 import StripedLoader from '@/components/StripedLoader'
 import {
   SearchIcon, PlusIcon, FilterIcon, SortIcon, ShareIcon,
@@ -14,7 +15,9 @@ import {
   CheckIcon, CheckDoubleIcon, ClockIcon, ArrowUpRightIcon,
   ClipboardIcon, TargetIcon, ZapIcon, GripVerticalIcon,
   ListIcon, KanbanBoardIcon, WorkflowIcon, LayersIcon, CheckCircleIcon,
-  RocketIcon
+  RocketIcon,
+  IconlyTasks, IconlyCalendar, IconlyActivity, IconlyWorkflow,
+  IconlySearch, IconlyPlus, IconlyChat
 } from '@/components/Icons'
 import { CalendarClock, BarChart3, AlarmClock, MoonStar, InboxIcon } from 'lucide-react'
 import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
@@ -550,6 +553,8 @@ export default function KanbanPage() {
 
           {/* Top Dynamic Header */}
           <DynamicHeader
+            columns={columns}
+            allTasks={allTasks}
             onOpenNewTask={() => {
               setTargetColId('TODO')
               setCreateModalOpen(true)
@@ -565,10 +570,23 @@ export default function KanbanPage() {
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div>
                 <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
-                  Sprint <span className="font-serif-italic font-normal text-violet-700">board</span>
+                  {viewMode === 'workflow' ? (
+                    <>
+                      Project <span className="font-serif-italic font-normal text-violet-700">architecture</span> & workflow
+                    </>
+                  ) : (
+                    <>
+                      Sprint{' '}
+                      <span className="font-serif-italic font-normal text-violet-700">
+                        {viewMode === 'timeline' ? 'timeline' : viewMode === 'analytics' ? 'analytics' : viewMode === 'list' ? 'list' : 'board'}
+                      </span>
+                    </>
+                  )}
                 </h1>
                 <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
-                  {activeOrg ? `${activeOrg.name} — drag cards to move them across the pipeline.` : 'Select an organization to manage tasks.'}
+                  {viewMode === 'workflow'
+                    ? 'Structural topology, module dependencies & CI/CD delivery pipelines.'
+                    : activeOrg ? `${activeOrg.name} — drag cards to move them across the pipeline.` : 'Select an organization to manage tasks.'}
                 </p>
               </div>
 
@@ -577,19 +595,19 @@ export default function KanbanPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode('board')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap group ${
                     viewMode === 'board'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  <KanbanBoardIcon size={13} />
+                  <IconlyTasks size={14} active={viewMode === 'board'} />
                   <span>Board</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('list')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap group ${
                     viewMode === 'list'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
@@ -601,38 +619,39 @@ export default function KanbanPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode('timeline')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap group ${
                     viewMode === 'timeline'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  <CalendarClock size={13} />
+                  <IconlyCalendar size={14} active={viewMode === 'timeline'} />
                   <span>Timeline</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('analytics')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap group ${
                     viewMode === 'analytics'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  <BarChart3 size={13} />
+                  <IconlyActivity size={14} active={viewMode === 'analytics'} />
                   <span>Analytics</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode('workflow')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap group ${
                     viewMode === 'workflow'
                       ? 'bg-[#111318] text-white shadow-xs'
                       : 'text-stone-600 hover:text-stone-900'
                   }`}
                 >
-                  <WorkflowIcon size={13} />
+                  <IconlyWorkflow size={14} active={viewMode === 'workflow'} />
                   <span>Workflow</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse ml-0.5" />
                 </button>
               </div>
             </div>
@@ -660,49 +679,54 @@ export default function KanbanPage() {
             </div>
           </div>
 
-          {/* ── Search Input ── */}
-          <div className="relative mb-6">
-            <SearchIcon size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search tasks by title, description, or priority..."
-              className="w-full pl-10 pr-4 py-2.5 text-xs font-medium bg-white rounded-2xl border border-stone-200/80 shadow-2xs outline-none focus:border-stone-400 font-sans"
-            />
-          </div>
+          {/* ── Search Input & Metric Banners (Hidden in full-flow workflow view) ── */}
+          {viewMode !== 'workflow' && (
+            <>
+              {/* ── Search Input ── */}
+              <div className="relative mb-6 group">
+                <IconlySearch size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 group-hover:text-stone-700 transition-colors" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search tasks by title, description, or priority..."
+                  className="w-full pl-10 pr-4 py-2.5 text-xs font-medium bg-white rounded-2xl border border-stone-200/80 shadow-2xs outline-none focus:border-stone-400 font-sans"
+                />
+              </div>
 
-          {/* ── Bento KPI Metric Banners ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
-            <MetricCard
-              icon={ClipboardIcon}
-              badge={`${totalTasksCount} Total Tasks`}
-              value={String(totalTasksCount)}
-              label="Active Tasks"
-              theme="purple"
-            />
-            <MetricCard
-              icon={ZapIcon}
-              badge={`${inProgressCount} In Flight`}
-              value={String(inProgressCount)}
-              label="In Progress"
-              theme="amber"
-            />
-            <MetricCard
-              icon={TargetIcon}
-              badge={`${completionPct}% Completed`}
-              value={`${completionPct}%`}
-              label="Sprint Progress"
-              theme="sky"
-            />
-            <MetricCard
-              icon={RocketIcon}
-              badge={`${highPriorityCount} Urgent`}
-              value={String(highPriorityCount)}
-              label="High Priority"
-              theme="lime"
-            />
-          </div>
+              {/* ── Bento KPI Metric Banners ── */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 mb-8">
+                <MetricCard
+                  icon={ClipboardIcon}
+                  badge={`${totalTasksCount} Total Tasks`}
+                  value={String(totalTasksCount)}
+                  label="Active Tasks"
+                  theme="purple"
+                />
+                <MetricCard
+                  icon={ZapIcon}
+                  badge={`${inProgressCount} In Flight`}
+                  value={String(inProgressCount)}
+                  label="In Progress"
+                  theme="amber"
+                />
+                <MetricCard
+                  icon={TargetIcon}
+                  badge={`${completionPct}% Completed`}
+                  value={`${completionPct}%`}
+                  label="Sprint Progress"
+                  theme="sky"
+                />
+                <MetricCard
+                  icon={RocketIcon}
+                  badge={`${highPriorityCount} Urgent`}
+                  value={String(highPriorityCount)}
+                  label="High Priority"
+                  theme="lime"
+                />
+              </div>
+            </>
+          )}
 
           {/* Loading Indicator */}
           {tasksLoading ? (
@@ -727,7 +751,7 @@ export default function KanbanPage() {
                 }}
                 className="px-5 py-2.5 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
               >
-                <PlusIcon size={14} strokeWidth={2.5} />
+                <IconlyPlus size={14} className="text-stone-400 group-hover:text-stone-800 transition-colors" />
                 <span>Create First Task</span>
               </button>
             </div>
@@ -737,7 +761,33 @@ export default function KanbanPage() {
               {/* VIEW 1: KANBAN BOARD                                      */}
               {/* ══════════════════════════════════════════════════════════ */}
               {viewMode === 'board' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start mb-12">
+                <>
+                  {/* Quick Prompt to Project Architecture & Structural Workflow */}
+                  <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:px-5 rounded-3xl bg-gradient-to-r from-white via-amber-50/30 to-violet-50/30 border border-stone-200/90 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-full bg-[#E5F722] border border-stone-300/80 shadow-xs flex items-center justify-center text-stone-900 font-bold text-xs shrink-0">
+                        <WorkflowIcon size={15} />
+                      </div>
+                      <div>
+                        <span className="text-xs font-extrabold text-stone-900 font-urbanist flex items-center gap-1.5">
+                          Project Architecture Pipeline Active
+                          <span className="w-1.5 h-1.5 rounded-full bg-lime-500 animate-pulse" />
+                        </span>
+                        <p className="text-[11px] text-stone-500 font-medium">
+                          Explore the live structural module tree, coupling waves & CI/CD build rhythm.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('workflow')}
+                      className="px-4 py-1.5 rounded-full bg-[#111318] text-white text-xs font-bold hover:bg-stone-800 transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap self-start sm:self-auto"
+                    >
+                      View Project Structure →
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start mb-12">
                   {columns.map(col => {
                     const isDragOver = dragOverColId === col.id
                     const filteredTasks = col.tasks.filter(t => {
@@ -866,7 +916,7 @@ export default function KanbanPage() {
                                 {/* Due Date & Assignee Footer */}
                                 <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-xs text-stone-500">
                                   <div className="flex items-center gap-1.5 text-[11px] text-stone-600 bg-stone-50 px-2 py-0.5 rounded-md border border-stone-200/50 font-mono">
-                                    <CalendarIcon size={12} className="text-stone-400" />
+                                    <IconlyCalendar size={12} className="text-stone-400" />
                                     <span>{task.due}</span>
                                   </div>
 
@@ -904,7 +954,7 @@ export default function KanbanPage() {
                             }}
                             className="w-full py-3 rounded-2xl border-2 border-dashed border-stone-200 hover:border-stone-400 text-stone-400 hover:text-stone-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                           >
-                            <PlusIcon size={14} />
+                            <IconlyPlus size={14} className="text-stone-400 group-hover:text-stone-700 transition-colors" />
                             <span>Add Task</span>
                           </button>
                         </div>
@@ -912,6 +962,7 @@ export default function KanbanPage() {
                     )
                   })}
                 </div>
+                </>
               )}
 
               {/* ══════════════════════════════════════════════════════════ */}
@@ -1055,79 +1106,16 @@ export default function KanbanPage() {
               {/* VIEW 5: WORKFLOW PIPELINE VIEW                            */}
               {/* ══════════════════════════════════════════════════════════ */}
               {viewMode === 'workflow' && (
-                <div className="space-y-6 mb-12">
-                  <div className="bg-white rounded-3xl border border-stone-200/80 shadow-2xs p-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-6 border-b border-stone-100">
-                      <div>
-                        <h2 className="text-2xl sm:text-3xl font-normal text-stone-950 font-serif">
-                          Workspace <em className="italic font-serif font-normal">Pipeline</em> & Milestones
-                        </h2>
-                        <p className="text-xs sm:text-sm text-stone-500 mt-1 font-medium">End-to-end design & engineering workflow stages with live completion rates</p>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold px-3 py-1 rounded-full bg-lime-100 text-lime-800 font-mono">
-                          Sprint Completion: {completionPct}%
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Workflow Stage Steps */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                      {workflowStagesWithUser.map((stage) => (
-                        <div
-                          key={stage.step}
-                          className="p-5 rounded-3xl bg-[#FAF8F5] border border-stone-200/80 shadow-2xs flex flex-col justify-between relative group hover:border-stone-400 transition-all"
-                        >
-                          <div>
-                            {/* Step Header */}
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-stone-900 text-white">
-                                Stage {stage.step}
-                              </span>
-                              <span className="text-2xl font-bold stat-number text-stone-900">
-                                {stage.progress}%
-                              </span>
-                            </div>
-
-                            {/* Stage Title */}
-                            <h3 className="text-base sm:text-lg font-bold text-stone-900 mb-1">
-                              {stage.name}
-                            </h3>
-                            <p className="text-[11px] text-stone-500 leading-relaxed mb-4">
-                              {stage.desc}
-                            </p>
-
-                            {/* Progress Meter */}
-                            <div className="w-full bg-stone-200 h-2 rounded-full overflow-hidden mb-4">
-                              <div
-                                className="h-full rounded-full transition-all duration-700"
-                                style={{ width: `${stage.progress}%`, backgroundColor: stage.color }}
-                              />
-                            </div>
-
-                            {/* Deliverables Sub-List */}
-                            <div className="space-y-1.5 mb-4">
-                              <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400">Deliverables</div>
-                              {stage.tasks.map((taskName, i) => (
-                                <div key={i} className="flex items-center gap-2 text-xs text-stone-700 bg-white p-2 rounded-xl border border-stone-200/50">
-                                  <span className="text-lime-600 font-bold">✓</span>
-                                  <span className="truncate">{taskName}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Lead */}
-                          <div className="pt-3 border-t border-stone-200/60 flex items-center justify-between text-xs">
-                            <span className="text-stone-400 text-[11px]">Owner</span>
-                            <span className="font-bold text-stone-800">{stage.owner}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <SprintWorkflowCanvas
+                  columns={columns}
+                  allTasks={allTasks}
+                  onSelectTask={setSelectedTask}
+                  onOpenNewTask={() => {
+                    setTargetColId('TODO')
+                    setCreateModalOpen(true)
+                  }}
+                  onBackToBoard={() => setViewMode('board')}
+                />
               )}
             </>
           )}

@@ -6,7 +6,10 @@ import {
   HomeIcon, GridIcon, BarChartIcon, UsersIcon, MessageIcon,
   CreditCardIcon, SettingsIcon, BellIcon, SearchIcon, ChevronDownIcon,
   ChevronRightIcon, ZapIcon, FolderIcon, CalendarIcon, PlusIcon,
-  SparklesIcon, BuildingIcon
+  SparklesIcon, BuildingIcon,
+  IconlyHome, IconlyBuilding, IconlyTasks, IconlyCalendar, IconlyActivity,
+  IconlyMembers, IconlyChat, IconlyBilling, IconlySettings, IconlySearch,
+  IconlyPlus
 } from './Icons'
 import toast from 'react-hot-toast'
 import CommandPalette from './CommandPalette'
@@ -33,15 +36,15 @@ const CloseIcon = ({ size = 20 }) => (
 )
 
 const navItems = [
-  { id: 'dashboard', label: 'Overview', href: '/dashboard', icon: <HomeIcon size={17} /> },
-  { id: 'organization', label: 'Organization', href: '/organization', icon: <BuildingIcon size={17} /> },
-  { id: 'kanban', label: 'Tasks Board', href: '/kanban', icon: <GridIcon size={17} /> },
-  { id: 'calendar', label: 'Schedule', href: '/calendar', icon: <CalendarIcon size={17} /> },
-  { id: 'analytics', label: 'Activity', href: '/Analytics', icon: <BarChartIcon size={17} /> },
-  { id: 'team', label: 'Members', href: '/team', icon: <UsersIcon size={17} /> },
-  { id: 'chat', label: 'Chat', href: '/messages', icon: <MessageIcon size={17} /> },
-  { id: 'billing', label: 'Billing', href: '/billing', icon: <CreditCardIcon size={17} /> },
-  { id: 'settings', label: 'Settings', href: '/settings', icon: <SettingsIcon size={17} /> },
+  { id: 'dashboard', label: 'Overview', href: '/dashboard', Icon: IconlyHome },
+  { id: 'organization', label: 'Organization', href: '/organization', Icon: IconlyBuilding },
+  { id: 'kanban', label: 'Tasks Board', href: '/kanban', Icon: IconlyTasks },
+  { id: 'calendar', label: 'Schedule', href: '/calendar', Icon: IconlyCalendar },
+  { id: 'analytics', label: 'Activity', href: '/Analytics', Icon: IconlyActivity },
+  { id: 'team', label: 'Members', href: '/team', Icon: IconlyMembers },
+  { id: 'chat', label: 'Chat', href: '/messages', Icon: IconlyChat },
+  { id: 'billing', label: 'Billing', href: '/billing', Icon: IconlyBilling },
+  { id: 'settings', label: 'Settings', href: '/settings', Icon: IconlySettings },
 ]
 
 const spaces = [
@@ -137,10 +140,10 @@ export default function Sidebar() {
         <div className="px-3 pt-3">
           <button
             onClick={() => setSearchOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-stone-200/80 text-stone-400 hover:text-stone-800 hover:border-stone-300 shadow-2xs text-xs transition-all cursor-pointer"
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-stone-200/80 text-stone-400 hover:text-stone-800 hover:border-stone-300 shadow-2xs text-xs transition-all cursor-pointer group"
           >
             <div className="flex items-center gap-2">
-              <SearchIcon size={14} className="text-stone-400" />
+              <IconlySearch size={15} className="text-stone-400 group-hover:text-stone-700 transition-colors" />
               <span className="font-medium text-stone-500">Quick Search...</span>
             </div>
             <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-stone-500 bg-stone-100/90 rounded-md border border-stone-200/80 shadow-2xs">
@@ -158,20 +161,21 @@ export default function Sidebar() {
 
         {navItems.map(item => {
           const active = pathname.toLowerCase() === item.href.toLowerCase() || (item.href === '/dashboard' && pathname === '/')
+          const ItemIcon = item.Icon
 
           return (
             <button
               key={item.id}
               onClick={() => handleNavClick(item.href)}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer ${active
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold transition-all duration-150 cursor-pointer group ${active
                 ? 'bg-[#111318] text-white shadow-sm'
                 : 'text-stone-600 hover:text-stone-900 hover:bg-stone-200/50'
                 } ${collapsed ? 'justify-center px-0' : 'justify-between'}`}
               title={collapsed ? item.label : ''}
             >
               <div className="flex items-center gap-2.5">
-                <span className={active ? 'text-lime-400' : 'text-stone-500'}>
-                  {item.icon}
+                <span className={active ? 'text-lime-400' : 'text-stone-500 group-hover:text-stone-900 transition-colors'}>
+                  <ItemIcon size={18} active={active} />
                 </span>
                 {!collapsed && <span>{item.label}</span>}
               </div>
@@ -193,10 +197,10 @@ export default function Sidebar() {
               <span>Spaces</span>
               <button
                 onClick={() => toast.success('New Project Space creation dialog')}
-                className="hover:text-stone-800 p-0.5 rounded hover:bg-stone-200 transition-colors"
+                className="hover:text-stone-800 p-1 rounded hover:bg-stone-200 transition-colors group cursor-pointer"
                 title="Add new space"
               >
-                <PlusIcon size={12} strokeWidth={2.5} />
+                <IconlyPlus size={13} className="text-stone-400 group-hover:text-stone-800 transition-colors" />
               </button>
             </div>
 
@@ -261,9 +265,9 @@ export default function Sidebar() {
               <span>Presence</span>
               <button
                 onClick={() => router.push('/team')}
-                className="hover:text-stone-800 p-0.5 rounded hover:bg-stone-200 transition-colors"
+                className="hover:text-stone-800 p-1 rounded hover:bg-stone-200 transition-colors group cursor-pointer"
               >
-                <PlusIcon size={12} strokeWidth={2.5} />
+                <IconlyPlus size={13} className="text-stone-400 group-hover:text-stone-800 transition-colors" />
               </button>
             </div>
 
@@ -369,9 +373,9 @@ export default function Sidebar() {
 
         <button
           onClick={() => setSearchOpen(true)}
-          className="p-2 rounded-xl bg-white border border-stone-200 text-stone-600 shadow-2xs cursor-pointer"
+          className="p-2 rounded-xl bg-white border border-stone-200 text-stone-600 shadow-2xs cursor-pointer group"
         >
-          <SearchIcon size={16} />
+          <IconlySearch size={16} />
         </button>
       </div>
 

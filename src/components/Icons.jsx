@@ -638,3 +638,30 @@ export const WaveformIcon = (p) => (
     <path d="M22 10v4" />
   </I>
 );
+
+// ────────────────────────────────────────────────────────────
+// ICONLY PRO ANIMATED SUITE RE-EXPORTS
+// ────────────────────────────────────────────────────────────
+export {
+  IconlyLottie,
+  IconlyHome,
+  IconlyTasks,
+  IconlyCalendar,
+  IconlyActivity,
+  IconlyMembers,
+  IconlyChat,
+  IconlyBilling,
+  IconlySettings,
+  IconlyBell,
+  IconlySearch,
+  IconlyPlus,
+  IconlyShield,
+  IconlyBuilding,
+  IconlyWorkflow,
+  IconlyBookmark,
+  IconlyStar,
+  IconlyHeart,
+  IconlyRepeat,
+  IconlyCheck,
+} from './IconlyAnimated';
+
