@@ -352,9 +352,15 @@ function OtpModal({ email, onClose, onSuccess }) {
 
 export default function SignupPage() {
   const router = useRouter();
+  const { demoLogin } = useAuth();
   const [step, setStep] = useState(1);
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const handleDemoSignIn = () => {
+    toast.success('Signed in with Demo Account!');
+    demoLogin();
+  };
   
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -550,6 +556,21 @@ export default function SignupPage() {
                 {loading ? 'Sending OTP code...' : 'Continue with Email'}
                 {!loading && <span>→</span>}
               </button>
+
+              {/* Quick Demo Sign In for Instant Testing */}
+              <div className="mt-3 pt-3 border-t border-stone-100">
+                <button
+                  type="button"
+                  onClick={handleDemoSignIn}
+                  className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-violet-50 via-purple-50 to-amber-50 hover:from-violet-100 hover:to-amber-100 border border-violet-200/90 text-violet-950 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-98 group"
+                >
+                  <SparklesIcon size={14} className="text-violet-600 group-hover:rotate-12 transition-transform" />
+                  <span>One-Click Demo Sign In</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-200/70 text-violet-800 uppercase font-extrabold tracking-wide">
+                    Testing
+                  </span>
+                </button>
+              </div>
             </>
           )}
 

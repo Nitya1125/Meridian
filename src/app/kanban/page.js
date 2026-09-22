@@ -24,6 +24,7 @@ import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrg } from '@/context/OrgContext'
+import { useTasks } from '@/context/TaskContext'
 import { getTasks, updateTask, deleteTask } from '@/Service/taskService'
 import { handleOrganizationUsers } from '@/Service/organization'
 
@@ -283,9 +284,15 @@ export default function KanbanPage() {
   const { fullName, initials } = useCurrentUser()
   const { activeOrg, activeOrgId } = useOrg()
 
-  const [rawTasks, setRawTasks] = useState([])
-  const [members, setMembers] = useState([])
-  const [tasksLoading, setTasksLoading] = useState(true)
+  // Centralized Tasks Context (Shared live across Calendar, Dashboard, Kanban, and DynamicHeader)
+  const {
+    tasks: rawTasks = [],
+    members = [],
+    loading: tasksLoading,
+    refreshTasks,
+    updateTask: updateTaskInContext,
+    deleteTask: deleteTaskInContext
+  } = useTasks()
 
   const [viewMode, setViewMode] = useState('board') // 'list' | 'board' | 'timeline' | 'analytics' | 'workflow'
   const [searchQuery, setSearchQuery] = useState('')
@@ -295,47 +302,6 @@ export default function KanbanPage() {
   const [draggedTask, setDraggedTask] = useState(null)
   const [dragSourceColId, setDragSourceColId] = useState(null)
   const [dragOverColId, setDragOverColId] = useState(null)
-
-  // Fetch tasks and members for active organization
-  const fetchWorkspaceData = useCallback(async () => {
-    if (!activeOrgId) {
-      setRawTasks([])
-      setMembers([])
-      setTasksLoading(false)
-      return
-    }
-
-    setTasksLoading(true)
-    try {
-      const [tasksRes, membersRes] = await Promise.all([
-        getTasks({ organization_id: activeOrgId }),
-        handleOrganizationUsers(activeOrgId)
-      ])
-
-      if (tasksRes?.success && Array.isArray(tasksRes.result)) {
-        setRawTasks(tasksRes.result)
-      } else {
-        setRawTasks([])
-      }
-
-      if (membersRes?.success && Array.isArray(membersRes.members)) {
-        setMembers(membersRes.members)
-      } else {
-        setMembers([])
-      }
-    } catch (err) {
-      console.error("Failed to load workspace data:", err)
-      toast.error(err.message || "Failed to load tasks")
-      setRawTasks([])
-      setMembers([])
-    } finally {
-      setTasksLoading(false)
-    }
-  }, [activeOrgId])
-
-  useEffect(() => {
-    fetchWorkspaceData()
-  }, [fetchWorkspaceData])
 
   // Map raw tasks with real assignees and format
   const mappedTasks = useMemo(() => {
@@ -400,73 +366,38 @@ export default function KanbanPage() {
     i === 0 ? { ...s, owner: fullName || s.owner } : s
   )
 
-  // ── Task Mutations (Connect to updateTask, deleteTask) ──
+  // ── Task Mutations (Connect to TaskContext for instant cross-app synchronization) ──
 
   const handleMoveTask = async (taskToMove, fromColId, toColId) => {
     if (fromColId === toColId) return
     const tid = taskToMove.task_id || taskToMove.id
 
-    // Optimistic UI update
-    setRawTasks(prev => prev.map(t => {
-      const currId = t.task_id || t.id
-      if (String(currId) === String(tid)) {
-        return { ...t, status: toColId }
-      }
-      return t
-    }))
-
     try {
-      const res = await updateTask({
+      await updateTaskInContext({
         task_id: tid,
         status: toColId
       })
-
-      if (res && res.success !== false) {
-        const targetTitle = COLUMNS_CONFIG.find(c => c.id === toColId)?.title || toColId
-        toast.success(`Task moved to ${targetTitle}`)
-      } else {
-        throw new Error(res?.message || 'Failed to move task')
-      }
+      const targetTitle = COLUMNS_CONFIG.find(c => c.id === toColId)?.title || toColId
+      toast.success(`Task moved to ${targetTitle}`)
     } catch (err) {
-      // Revert optimistic update
-      setRawTasks(prev => prev.map(t => {
-        const currId = t.task_id || t.id
-        if (String(currId) === String(tid)) {
-          return { ...t, status: fromColId }
-        }
-        return t
-      }))
       toast.error(err.message || 'Failed to move task')
     }
   }
 
   const handleUpdateTask = async (partialData) => {
     try {
-      const res = await updateTask(partialData)
-      if (res && res.success !== false) {
-        toast.success(res.message || 'Task updated successfully')
-        setRawTasks(prev => prev.map(t => {
-          const tid = t.task_id || t.id
-          if (String(tid) === String(partialData.task_id)) {
-            return { ...t, ...partialData }
-          }
-          return t
-        }))
-
-        // Keep selected task in sync
-        setSelectedTask(prev => {
-          if (!prev) return null
-          const currId = prev.task_id || prev.id
-          if (String(currId) === String(partialData.task_id)) {
-            return { ...prev, ...partialData }
-          }
-          return prev
-        })
-        return true
-      } else {
-        toast.error(res?.message || 'Failed to update task')
-        return false
-      }
+      await updateTaskInContext(partialData)
+      toast.success('Task updated successfully')
+      // Keep selected task in sync
+      setSelectedTask(prev => {
+        if (!prev) return null
+        const currId = prev.task_id || prev.id
+        if (String(currId) === String(partialData.task_id)) {
+          return { ...prev, ...partialData }
+        }
+        return prev
+      })
+      return true
     } catch (err) {
       toast.error(err.message || 'Failed to update task')
       return false
@@ -475,18 +406,12 @@ export default function KanbanPage() {
 
   const handleDeleteTask = async (taskId) => {
     try {
-      const res = await deleteTask({ task_id: taskId })
-      if (res && res.success !== false) {
-        toast.success(res.message || 'Task deleted successfully')
-        setRawTasks(prev => prev.filter(t => String(t.task_id || t.id) !== String(taskId)))
-        if (selectedTask && String(selectedTask.task_id || selectedTask.id) === String(taskId)) {
-          setSelectedTask(null)
-        }
-        return true
-      } else {
-        toast.error(res?.message || 'Failed to delete task')
-        return false
+      await deleteTaskInContext(taskId)
+      toast.success('Task deleted successfully')
+      if (selectedTask && String(selectedTask.task_id || selectedTask.id) === String(taskId)) {
+        setSelectedTask(null)
       }
+      return true
     } catch (err) {
       toast.error(err.message || 'Failed to delete task')
       return false
@@ -835,6 +760,12 @@ export default function KanbanPage() {
 
                         {/* Tasks Container */}
                         <div className="space-y-3.5 min-h-[220px]">
+                          {isDragOver && (
+                            <div className="p-3.5 rounded-2xl border-2 border-dashed border-lime-500/60 bg-lime-400/10 text-center text-xs font-mono font-bold text-lime-900 transition-all flex items-center justify-center gap-2 animate-in fade-in duration-150">
+                              <span>Drop to move to {col.title}</span>
+                              <span className="text-lime-600 font-bold">↓</span>
+                            </div>
+                          )}
                           {filteredTasks.map(task => {
                             const isBeingDragged = draggedTask?.task_id === task.task_id
                             return (
@@ -845,11 +776,11 @@ export default function KanbanPage() {
                                 onDragEnd={handleDragEnd}
                                 onClick={() => setSelectedTask(task)}
                                 className={`bg-white rounded-3xl p-5 border border-stone-200/80 shadow-xs hover:shadow-md bento-card-interactive cursor-grab active:cursor-grabbing group relative transition-all ${
-                                  isBeingDragged ? 'card-dragging' : ''
+                                  isBeingDragged ? 'card-dragging shadow-xl rotate-1 opacity-60 ring-2 ring-lime-400/60' : ''
                                 }`}
                               >
-                                {/* Drag Handle Indicator */}
-                                <div className="absolute top-4 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-stone-300 hover:text-stone-600">
+                                {/* Drag Handle Indicator (Audit Item 4: Kanban Affordance) */}
+                                <div className="absolute top-4 right-3 opacity-40 group-hover:opacity-100 transition-opacity text-stone-400 hover:text-stone-700" title="Drag to move">
                                   <GripVerticalIcon size={14} />
                                 </div>
 
@@ -1129,7 +1060,7 @@ export default function KanbanPage() {
         defaultColumnId={targetColId}
         onClose={() => setCreateModalOpen(false)}
         onAdd={() => {
-          fetchWorkspaceData()
+          refreshTasks()
           setCreateModalOpen(false)
         }}
         members={members}
@@ -1150,4 +1081,4 @@ export default function KanbanPage() {
       )}
     </ProtectedRoute>
   )
-}
+}

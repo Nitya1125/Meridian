@@ -36,10 +36,19 @@ export function AuthProvider({ children }) {
   // React 19 hydrated check
   const isHydrated = useSyncExternalStore(emptySubscribe, () => true, () => false)
   
-  useEffect(()=>{
+  useEffect(() => {
     if (!isHydrated) return 
-    const checkUser = async()=>{
-      try{
+    const checkUser = async () => {
+      try {
+        const localToken = getInitialToken()
+        const localUser = getInitialUser()
+        if (localToken && localToken.startsWith('demo_') && localUser) {
+          setUser(localUser)
+          setToken(localToken)
+          setLoading(false)
+          return
+        }
+
         const result = await getCurrentUser()
         if (result && result.user) {
           setUser(result.user)
@@ -52,19 +61,19 @@ export function AuthProvider({ children }) {
             localStorage.removeItem('meridian_user')
           } catch {}
         }
-      }catch(error){
+      } catch (error) {
         setUser(null)
         setToken(null)
         try {
           localStorage.removeItem('meridian_token')
           localStorage.removeItem('meridian_user')
         } catch {}
-      }finally{
+      } finally {
         setLoading(false)
       }
     }
     checkUser()
-  },[isHydrated])
+  }, [isHydrated])
 
   const login = (userData, jwtToken) => {
     setUser(userData)

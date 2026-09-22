@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -14,6 +14,7 @@ import MetricBars from '@/components/MetricBars'
 import CapacityDial from '@/components/CapacityDial'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrg } from '@/context/OrgContext'
+import { useTasks } from '@/context/TaskContext'
 import {
   CheckIcon, ClockIcon, UsersIcon, BarChartIcon,
   ChevronRightIcon, PlusIcon, MoreHorizontalIcon, FilterIcon,
@@ -196,15 +197,49 @@ export default function Dashboard() {
 
   const { fullName } = useCurrentUser()
   const { userState, activeOrg } = useOrg()
+  const { tasks: liveTasks = [], refreshTasks, updateTask: updateLiveTask, members: orgMembers = [] } = useTasks()
+
+  // Real-time synchronization: Map liveTasks into myWork whenever database tasks update
+  useEffect(() => {
+    if (liveTasks && liveTasks.length > 0) {
+      const mapped = liveTasks.map((t, idx) => ({
+        id: t.task_id || t.id || `tsk-${idx}`,
+        taskId: `MRD-${String(idx + 1).padStart(3, '0')}`,
+        path: t.category || 'Workspace / Deliverables',
+        title: t.title || 'Untitled Task',
+        priority: t.priority || 'MEDIUM',
+        tab: t.status === 'DONE' ? 'done' : 'todo',
+        status: t.status || 'TODO',
+        due_date: t.due_date,
+        due: t.due_date ? String(t.due_date).split('T')[0] : 'In 3 days',
+        dueOffsetDays: 0,
+        updatedOffsetDays: 0,
+        subtasksCompleted: (t.subtasks || []).filter(s => s.done).length,
+        subtasksTotal: (t.subtasks || []).length || 2,
+        description: t.description || '',
+        subtasks: t.subtasks || [],
+        assignees: t.assigned_to ? [{ initials: 'U', color: '#8b5cf6' }] : []
+      }))
+      setMyWork(mapped)
+    }
+  }, [liveTasks])
 
   const handleReschedule = (taskId, days) => {
     setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, dueOffsetDays: days, updatedOffsetDays: 0 } : t))
     toast.success(days === 1 ? 'Rescheduled to tomorrow' : `Rescheduled to +${days} days`)
   }
 
-  const handleMarkDone = (taskId) => {
-    setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, tab: 'done', updatedOffsetDays: 0 } : t))
+  const handleMarkDone = async (taskId) => {
+    setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, tab: 'done', status: 'DONE', updatedOffsetDays: 0 } : t))
     toast.success('Marked as done — nice work!')
+
+    if (taskId && !String(taskId).startsWith('tsk-f') && !String(taskId).startsWith('lu-')) {
+      try {
+        await updateLiveTask({ task_id: taskId, status: 'DONE' })
+      } catch (err) {
+        console.error("Dashboard mark done error:", err)
+      }
+    }
   }
 
   const handleCaughtUp = (taskId) => {
@@ -233,23 +268,31 @@ export default function Dashboard() {
       )
     })
 
-  const toggleTaskDone = (e, id) => {
+  const toggleTaskDone = async (e, id) => {
     e.stopPropagation()
 
     let nextTab = 'done'
-    setMyWork(prev => {
-      const target = prev.find(t => t.id === id)
-      if (target) {
-        nextTab = target.tab === 'done' ? 'todo' : 'done'
-      }
-      return prev.map(t => (t.id === id ? { ...t, tab: nextTab } : t))
-    })
+    const target = myWork.find(t => t.id === id)
+    if (target) {
+      nextTab = target.tab === 'done' ? 'todo' : 'done'
+    }
+    const nextStatus = nextTab === 'done' ? 'DONE' : 'TODO'
+
+    setMyWork(prev => prev.map(t => (t.id === id ? { ...t, tab: nextTab, status: nextStatus } : t)))
 
     toast.success(
       nextTab === 'done'
-        ? 'Task moved to Done'
+        ? 'Task moved to Done 🎯'
         : 'Task restored to Active'
     )
+
+    if (id && !String(id).startsWith('tsk-f') && !String(id).startsWith('lu-')) {
+      try {
+        await updateLiveTask({ task_id: id, status: nextStatus })
+      } catch (err) {
+        console.error("Dashboard toggleTaskDone error:", err)
+      }
+    }
   }
 
   return (
@@ -813,30 +856,10 @@ export default function Dashboard() {
       <CreateTaskModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
+        organizationId={activeOrg?.id}
+        members={orgMembers}
         onAdd={(newTask) => {
-          setMyWork(prev => [
-            {
-              id: newTask.id,
-              taskId: newTask.taskId,
-              path: 'Internal / Tasks',
-              title: newTask.title,
-              subtasksCompleted: 0,
-              subtasksTotal: 2,
-              due: newTask.due,
-              tab: 'todo',
-              priority: newTask.priority,
-              assignees: [
-                {
-                  initials: newTask.assignee,
-                  color: newTask.assigneeColor
-                }
-              ],
-              description: newTask.description,
-              subtasks: newTask.subtasks
-            },
-            ...prev
-          ])
-
+          refreshTasks()
           toast.success('Task created successfully!')
         }}
       />
@@ -848,11 +871,14 @@ export default function Dashboard() {
           task={selectedTask}
           open={Boolean(selectedTask)}
           onClose={() => setSelectedTask(null)}
+          members={orgMembers}
           onUpdateTask={(updated) => {
             setMyWork(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
+            refreshTasks()
           }}
           onDeleteTask={(id) => {
             setMyWork(prev => prev.filter(t => t.id !== id))
+            refreshTasks()
           }}
         />
       )}
