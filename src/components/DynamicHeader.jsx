@@ -190,7 +190,6 @@ export default function DynamicHeader({
   }, [activeOrg, user, fullName, initials])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchOrgMembers()
   }, [fetchOrgMembers])
 
