@@ -43,48 +43,6 @@ const tagPills = {
   Mobile: 'bg-[#FEF9C3] text-[#A16207] border-[#FEF08A]'
 }
 
-const workflowStages = [
-  {
-    step: '01',
-    name: 'Discovery & Spec',
-    desc: 'Product scope, user stories & token definitions',
-    status: 'completed',
-    progress: 100,
-    owner: 'Alex Johnson',
-    tasks: ['Design Tokens 2.0', 'Information Architecture', 'User Journey Maps'],
-    color: '#8b5cf6'
-  },
-  {
-    step: '02',
-    name: 'UI/UX Prototyping',
-    desc: 'High-fidelity Figma mockups and micro-interactions',
-    status: 'in-progress',
-    progress: 75,
-    owner: 'Kacie Velasquez',
-    tasks: ['Kanban Drag & Drop', 'Dynamic Schedule Island', 'Dark Command Dock'],
-    color: '#f43f5e'
-  },
-  {
-    step: '03',
-    name: 'Production Engineering',
-    desc: 'Next.js 16 App Router implementation & state sync',
-    status: 'in-progress',
-    progress: 60,
-    owner: 'Sarah Chen',
-    tasks: ['OAuth2 Integration', 'Throughput Charts', 'Touch Gestures'],
-    color: '#0ea5e9'
-  },
-  {
-    step: '04',
-    name: 'Audit & Release',
-    desc: 'Automated verification, accessibility & production deploy',
-    status: 'upcoming',
-    progress: 25,
-    owner: 'Marcus Webb',
-    tasks: ['Security Penetration', 'Cross-browser Verification', 'Staging Deploy'],
-    color: '#10b981'
-  }
-]
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -395,10 +353,6 @@ export default function KanbanPage() {
     return columns.flatMap(c => c.tasks.map(t => ({ ...t, columnTitle: c.title, columnId: c.id })))
   }, [columns])
 
-  // Inject real user name into workflow stage 1
-  const workflowStagesWithUser = workflowStages.map((s, i) =>
-    i === 0 ? { ...s, owner: fullName || s.owner } : s
-  )
 
   // ── Task Mutations (Connect to updateTask, deleteTask) ──
 
@@ -1109,9 +1063,11 @@ export default function KanbanPage() {
                 <SprintWorkflowCanvas
                   columns={columns}
                   allTasks={allTasks}
+                  activeOrg={activeOrg}
+                  members={members}
                   onSelectTask={setSelectedTask}
-                  onOpenNewTask={() => {
-                    setTargetColId('TODO')
+                  onOpenNewTask={(colId = 'TODO') => {
+                    setTargetColId(typeof colId === 'string' ? colId : 'TODO')
                     setCreateModalOpen(true)
                   }}
                   onBackToBoard={() => setViewMode('board')}
