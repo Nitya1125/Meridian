@@ -2,6 +2,7 @@ import { Plus_Jakarta_Sans, Manrope, Inter, Instrument_Serif, League_Spartan, Je
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { OrgProvider } from "@/context/OrgContext";
+import { TaskProvider } from "@/context/TaskContext";
 import CreateOrgModal from "@/components/CreateOrgModal";
 import JoinOrgModal from "@/components/JoinOrgModal";
 import { Toaster } from "react-hot-toast";
@@ -70,37 +71,39 @@ export default function RootLayout({ children }) {
       <body className="min-h-full flex flex-col font-sans">
         <AuthProvider>
           <OrgProvider>
-            <Toaster
-              position="top-center"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#111318',
-                  color: '#fff',
-                  borderRadius: '16px',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  padding: '12px 16px',
-                  boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                },
-                success: {
-                  iconTheme: {
-                    primary: '#a3e635',
-                    secondary: '#111318',
+            <TaskProvider>
+              <Toaster
+                position="top-center"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#111318',
+                    color: '#fff',
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    padding: '12px 16px',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.2)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: '#f43f5e',
-                    secondary: '#fff',
+                  success: {
+                    iconTheme: {
+                      primary: '#a3e635',
+                      secondary: '#111318',
+                    },
                   },
-                },
-              }}
-            />
-            {children}
-            <CreateOrgModal />
-            <JoinOrgModal />
+                  error: {
+                    iconTheme: {
+                      primary: '#f43f5e',
+                      secondary: '#fff',
+                    },
+                  },
+                }}
+              />
+              {children}
+              <CreateOrgModal />
+              <JoinOrgModal />
+            </TaskProvider>
           </OrgProvider>
         </AuthProvider>
       </body>

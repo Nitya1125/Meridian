@@ -62,6 +62,7 @@ export const getMemberFullName = (member) => {
 export default function CreateTaskModal({
   open,
   defaultColumnId = 'TODO',
+  defaultDueDate,
   onClose,
   onAdd,
   members: propMembers = [],
@@ -81,26 +82,32 @@ export default function CreateTaskModal({
   
   // Format today + 3 days as default due date YYYY-MM-DD
   const getDefaultDueDate = () => {
+    if (defaultDueDate) return defaultDueDate
     const d = new Date()
     d.setDate(d.getDate() + 3)
     return d.toISOString().split('T')[0]
   }
 
-  const [due, setDue] = useState(getDefaultDueDate())
+  const [due, setDue] = useState(defaultDueDate || getDefaultDueDate())
   const [estimateValue, setEstimateValue] = useState(2)
   const [estimateUnit, setEstimateUnit] = useState('HOURS')
   const [titleErr, setTitleErr] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  // Sync default column when opened
+  // Sync default column and due date when opened
   useEffect(() => {
     if (open) {
       const normalized = (defaultColumnId || 'TODO').toUpperCase()
       const valid = COLUMNS.some(c => c.id === normalized) ? normalized : 'TODO'
       setColumnId(valid)
+      if (defaultDueDate) {
+        setDue(defaultDueDate)
+      } else {
+        setDue(getDefaultDueDate())
+      }
       setTitleErr(false)
     }
-  }, [open, defaultColumnId])
+  }, [open, defaultColumnId, defaultDueDate])
 
   // Sync members from props or fetch if missing
   useEffect(() => {

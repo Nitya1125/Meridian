@@ -103,86 +103,38 @@ export default function DynamicHeader({
           status: 'online'
         }))
         setRealMembers(formatted)
-      } else {
+      } else if (user) {
         setRealMembers([
           {
             id: `mem_${user?.id || 'me'}`,
-            name: fullName ? `${fullName} (You)` : 'Alex Johnson (You)',
-            email: user?.email || 'alex.johnson@meridian.io',
+            name: fullName ? `${fullName} (You)` : (user?.email || 'You'),
+            email: user?.email || '',
             role: activeOrg?.role || 'Owner',
-            initials: initials || 'AJ',
+            initials: initials || 'U',
             color: '#8b5cf6',
-            status: 'online'
-          },
-          {
-            id: 'mem_sarah',
-            name: 'Sarah Chen',
-            email: 'sarah.c@meridian.io',
-            role: 'Lead Designer',
-            initials: 'SC',
-            color: '#10b981',
-            status: 'online'
-          },
-          {
-            id: 'mem_marcus',
-            name: 'Marcus Vance',
-            email: 'm.vance@meridian.io',
-            role: 'Staff Engineer',
-            initials: 'MV',
-            color: '#f59e0b',
-            status: 'online'
-          },
-          {
-            id: 'mem_elena',
-            name: 'Elena Rostova',
-            email: 'elena.r@meridian.io',
-            role: 'DevOps Lead',
-            initials: 'ER',
-            color: '#0ea5e9',
             status: 'online'
           }
         ])
+      } else {
+        setRealMembers([])
       }
     } catch (err) {
       console.error("Failed to fetch header org members:", err)
-      setRealMembers([
-        {
-          id: `mem_${user?.id || 'me'}`,
-          name: fullName ? `${fullName} (You)` : 'Alex Johnson (You)',
-          email: user?.email || 'alex.johnson@meridian.io',
-          role: activeOrg?.role || 'Owner',
-          initials: initials || 'AJ',
-          color: '#8b5cf6',
-          status: 'online'
-        },
-        {
-          id: 'mem_sarah',
-          name: 'Sarah Chen',
-          email: 'sarah.c@meridian.io',
-          role: 'Lead Designer',
-          initials: 'SC',
-          color: '#10b981',
-          status: 'online'
-        },
-        {
-          id: 'mem_marcus',
-          name: 'Marcus Vance',
-          email: 'm.vance@meridian.io',
-          role: 'Staff Engineer',
-          initials: 'MV',
-          color: '#f59e0b',
-          status: 'online'
-        },
-        {
-          id: 'mem_elena',
-          name: 'Elena Rostova',
-          email: 'elena.r@meridian.io',
-          role: 'DevOps Lead',
-          initials: 'ER',
-          color: '#0ea5e9',
-          status: 'online'
-        }
-      ])
+      if (user) {
+        setRealMembers([
+          {
+            id: `mem_${user?.id || 'me'}`,
+            name: fullName ? `${fullName} (You)` : (user?.email || 'You'),
+            email: user?.email || '',
+            role: activeOrg?.role || 'Owner',
+            initials: initials || 'U',
+            color: '#8b5cf6',
+            status: 'online'
+          }
+        ])
+      } else {
+        setRealMembers([])
+      }
     } finally {
       setMembersLoading(false)
     }
@@ -192,7 +144,7 @@ export default function DynamicHeader({
     fetchOrgMembers()
   }, [fetchOrgMembers])
 
-  const activeMembersList = realMembers.length > 0 ? realMembers : [
+  const activeMembersList = realMembers.length > 0 ? realMembers : (user ? [
     {
       id: 'self',
       name: fullName || user?.email?.split('@')[0] || 'You',
@@ -202,25 +154,37 @@ export default function DynamicHeader({
       color: '#8b5cf6',
       status: 'online'
     }
-  ]
+  ] : [])
 
   // Live Sprint Assurance Calculations (The #1 Thing in Project Management)
-  const totalTasks = allTasks?.length || 137
+  const totalTasks = allTasks ? allTasks.length : 0
   const doneTasks = columns
-    ? (columns.find(c => c.id === 'ready' || c.id === 'done')?.tasks?.length ?? 102)
-    : 102
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'READY' || id === 'DONE'
+      })?.tasks?.length ?? 0)
+    : 0
   const inProgressTasks = columns
-    ? (columns.find(c => c.id === 'inprogress')?.tasks?.length ?? 12)
-    : 12
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'INPROGRESS' || id === 'IN_PROGRESS'
+      })?.tasks?.length ?? 0)
+    : 0
   const reviewTasks = columns
-    ? (columns.find(c => c.id === 'review' || c.id === 'under-review')?.tasks?.length ?? 3)
-    : 3
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'REVIEW' || id === 'UNDER_REVIEW'
+      })?.tasks?.length ?? 0)
+    : 0
   const todoTasks = columns
-    ? (columns.find(c => c.id === 'todo')?.tasks?.length ?? 20)
-    : 20
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'TODO'
+      })?.tasks?.length ?? 0)
+    : 0
 
-  const completionPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 74
-  const confidenceScore = Math.min(99, Math.max(88, completionPct + 16))
+  const completionPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
+  const confidenceScore = totalTasks > 0 ? Math.min(99, Math.max(50, completionPct + 16)) : 100
 
   // Notification handlers
   const handleAcceptRequest = async (requestId) => {
