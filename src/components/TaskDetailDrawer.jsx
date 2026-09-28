@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   CheckIcon, ClockIcon, UsersIcon, TagIcon, PlusIcon,
   SmileIcon, AttachIcon, SendIcon, TrashIcon, AlertIcon,
@@ -12,6 +12,10 @@ import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { getMemberColor, getMemberInitials, getMemberFullName } from './CreateTaskModal'
+import {
+  getSubtasks, addSubtask as apiAddSubtask, updateSubtask as apiUpdateSubtask, deleteSubtask as apiDeleteSubtask,
+  getTaskComments, addTaskComment, editTaskComment, deleteTaskComment
+} from '@/Service/taskService'
 
 const ALL_STATUSES = [
   { id: 'TODO', label: 'To do', color: 'bg-stone-100 text-stone-700 border-stone-200' },
@@ -55,31 +59,98 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
   const [status, setStatus] = useState(task?.status || 'TODO')
   const [priority, setPriority] = useState(task?.priority || 'MEDIUM')
   const [due, setDue] = useState(toDateInputString(task?.due_date || task?.due))
-  const [subtasks, setSubtasks] = useState(task?.subtasks || [])
-  const [newSubtask, setNewSubtask] = useState('')
   const [tags, setTags] = useState(task?.tags || ['Design', 'Frontend'])
   const [newTagInput, setNewTagInput] = useState('')
   const [showTagInput, setShowTagInput] = useState(false)
-  
+
   const [showAssigneePicker, setShowAssigneePicker] = useState(false)
   const [timing, setTiming] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  // Sync state with task prop
+  // ── Real subtask state ────────────────────────────────────────
+  const [subtasks, setSubtasks] = useState([])
+  const [subtasksLoading, setSubtasksLoading] = useState(false)
+  const [newSubtask, setNewSubtask] = useState('')
+  const [addingSubtask, setAddingSubtask] = useState(false)
+
+  // ── Real comment state ────────────────────────────────────────
+  const [comments, setComments] = useState([])
+  const [commentsLoading, setCommentsLoading] = useState(false)
+  const [commentInput, setCommentInput] = useState('')
+  const [sendingComment, setSendingComment] = useState(false)
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editingCommentText, setEditingCommentText] = useState('')
+
+  // Ref to track the current task_id for stale closure protection
+  const currentTaskIdRef = useRef(taskId)
+
+  // ── Fetch subtasks ────────────────────────────────────────────
+  const fetchSubtasks = useCallback(async (tid) => {
+    if (!tid) return
+    setSubtasksLoading(true)
+    try {
+      const res = await getSubtasks(tid)
+      // Guard: only update if the task_id hasn't changed while fetching
+      if (currentTaskIdRef.current === tid) {
+        setSubtasks(res.data || [])
+      }
+    } catch (err) {
+      if (currentTaskIdRef.current === tid) {
+        toast.error(err.message || 'Failed to load subtasks')
+      }
+    } finally {
+      if (currentTaskIdRef.current === tid) {
+        setSubtasksLoading(false)
+      }
+    }
+  }, [])
+
+  // ── Fetch comments ────────────────────────────────────────────
+  const fetchComments = useCallback(async (tid) => {
+    if (!tid) return
+    setCommentsLoading(true)
+    try {
+      const res = await getTaskComments(tid)
+      if (currentTaskIdRef.current === tid) {
+        setComments(res.data || [])
+      }
+    } catch (err) {
+      if (currentTaskIdRef.current === tid) {
+        toast.error(err.message || 'Failed to load comments')
+      }
+    } finally {
+      if (currentTaskIdRef.current === tid) {
+        setCommentsLoading(false)
+      }
+    }
+  }, [])
+
+  // ── Load data when drawer opens or task changes ───────────────
   useEffect(() => {
     if (task) {
+      const tid = task.task_id || task.id
+      currentTaskIdRef.current = tid
       setTitle(task.title || '')
       setDescription(task.description || '')
       setStatus(task.status || 'TODO')
       setPriority(task.priority || 'MEDIUM')
       setDue(toDateInputString(task.due_date || task.due))
-      setSubtasks(task.subtasks || [])
       setTags(task.tags || ['Design', 'Frontend'])
       setShowDeleteConfirm(false)
+      setEditingCommentId(null)
+      setEditingCommentText('')
+      setNewSubtask('')
+      // Reset then fetch fresh data
+      setSubtasks([])
+      setComments([])
+      if (open && tid) {
+        fetchSubtasks(tid)
+        fetchComments(tid)
+      }
     }
-  }, [task])
+  }, [task, open, fetchSubtasks, fetchComments])
 
   useEffect(() => {
     if (!timing) return
@@ -88,9 +159,6 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
   }, [timing])
 
   const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`
-
-  const [comments, setComments] = useState([])
-  const [commentInput, setCommentInput] = useState('')
 
   // Escape key to close
   useEffect(() => {
@@ -174,27 +242,47 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     })
   }
 
-  const toggleSubtask = (idx) => {
-    const updated = [...subtasks]
-    updated[idx].done = !updated[idx].done
-    setSubtasks(updated)
-    toast.success(updated[idx].done ? 'Subtask marked done' : 'Subtask marked pending')
+  // ── Subtask handlers ──────────────────────────────────────────
+  const handleToggleSubtask = async (subtask) => {
+    const tid = currentTaskIdRef.current
+    try {
+      await apiUpdateSubtask(subtask.subtask_id)
+      await fetchSubtasks(tid)
+      toast.success(subtask.is_completed ? 'Subtask marked pending' : 'Subtask marked done')
+    } catch (err) {
+      toast.error(err.message || 'Failed to update subtask')
+    }
   }
 
-  const deleteSubtask = (idx, e) => {
+  const handleDeleteSubtask = async (subtask, e) => {
     e.stopPropagation()
-    const updated = subtasks.filter((_, i) => i !== idx)
-    setSubtasks(updated)
-    toast.success('Subtask removed')
+    const tid = currentTaskIdRef.current
+    try {
+      await apiDeleteSubtask({ subtaskId: subtask.subtask_id })
+      await fetchSubtasks(tid)
+      toast.success('Subtask removed')
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete subtask')
+    }
   }
 
-  const addSubtask = (e) => {
+  const handleAddSubtask = async (e) => {
     e.preventDefault()
-    if (!newSubtask.trim()) return
-    const updated = [...subtasks, { text: newSubtask.trim(), done: false }]
-    setSubtasks(updated)
-    setNewSubtask('')
-    toast.success('Subtask added')
+    const trimmed = newSubtask.trim()
+    if (!trimmed) return
+    if (addingSubtask) return
+    const tid = currentTaskIdRef.current
+    setAddingSubtask(true)
+    try {
+      await apiAddSubtask({ task_id: tid, title: trimmed })
+      setNewSubtask('')
+      await fetchSubtasks(tid)
+      toast.success('Subtask added')
+    } catch (err) {
+      toast.error(err.message || 'Failed to add subtask')
+    } finally {
+      setAddingSubtask(false)
+    }
   }
 
   const removeTag = (tagToRemove) => {
@@ -212,26 +300,55 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
     toast.success('Tag added')
   }
 
-  const handleSendComment = (e) => {
+  // ── Comment handlers ──────────────────────────────────────────
+  const handleSendComment = async (e) => {
     e.preventDefault()
-    if (!commentInput.trim()) return
-    const newComment = {
-      id: `c_${Date.now()}`,
-      author: fullName ? `${fullName} (You)` : 'You',
-      initials: initials || 'ME',
-      color: '#111318',
-      time: 'Just now',
-      text: commentInput.trim(),
-      reactions: {}
+    const trimmed = commentInput.trim()
+    if (!trimmed) return
+    if (sendingComment) return
+    const tid = currentTaskIdRef.current
+    setSendingComment(true)
+    try {
+      await addTaskComment({ task_id: tid, content: trimmed })
+      setCommentInput('')
+      await fetchComments(tid)
+      toast.success('Comment posted')
+    } catch (err) {
+      toast.error(err.message || 'Failed to post comment')
+    } finally {
+      setSendingComment(false)
     }
-    setComments(prev => [newComment, ...prev])
-    setCommentInput('')
-    toast.success('Comment posted')
+  }
+
+  const handleDeleteComment = async (comment_id) => {
+    const tid = currentTaskIdRef.current
+    try {
+      await deleteTaskComment({ comment_id })
+      await fetchComments(tid)
+      toast.success('Comment deleted')
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete comment')
+    }
+  }
+
+  const handleEditCommentSave = async (comment_id) => {
+    const trimmed = editingCommentText.trim()
+    if (!trimmed) return
+    const tid = currentTaskIdRef.current
+    try {
+      await editTaskComment({ comment_id, content: trimmed })
+      setEditingCommentId(null)
+      setEditingCommentText('')
+      await fetchComments(tid)
+      toast.success('Comment updated')
+    } catch (err) {
+      toast.error(err.message || 'Failed to update comment')
+    }
   }
 
   const toggleReaction = (commentId, reactionKey) => {
     setComments(prev => prev.map(c => {
-      if (c.id === commentId) {
+      if ((c.comment_id || c.id) === commentId) {
         const reactions = { ...(c.reactions || {}) }
         reactions[reactionKey] = (reactions[reactionKey] || 0) + 1
         return { ...c, reactions }
@@ -259,7 +376,8 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
   }
 
   const health = taskHealth(task)
-  const completedCount = subtasks.filter(s => s.done).length
+  // Use DB field is_completed (boolean/0/1) for real subtasks from API
+  const completedCount = subtasks.filter(s => s.is_completed).length
   const totalCount = subtasks.length
   const progressPct = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
   const isAllCompleted = totalCount > 0 && completedCount === totalCount
@@ -455,55 +573,63 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
 
                 {/* Subtask Items */}
                 <div className="space-y-2 mb-3.5">
-                  {subtasks.map((st, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => toggleSubtask(idx)}
-                      className={`group flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
-                        st.done
-                          ? 'bg-lime-50/50 border-lime-200/80 text-stone-400'
-                          : 'bg-[#FAF8F5]/80 hover:bg-[#FAF8F5] border-stone-200/70 text-stone-800'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 select-none">
-                        <div
-                          className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
-                            st.done ? 'bg-lime-500 border-lime-600 text-white' : 'border-stone-300 bg-white'
-                          }`}
-                        >
-                          {st.done && <CheckIcon size={11} strokeWidth={3} />}
-                        </div>
-                        <span className={`text-xs font-medium ${st.done ? 'line-through text-stone-400' : 'text-stone-800'}`}>
-                          {st.text}
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={(e) => deleteSubtask(idx, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-rose-600 transition-opacity"
-                        title="Delete subtask"
+                  {subtasksLoading ? (
+                    <div className="text-xs text-stone-400 py-3 text-center">Loading subtasks...</div>
+                  ) : subtasks.length === 0 ? (
+                    <div className="text-xs text-stone-400 py-3 text-center">No subtasks yet. Add one below.</div>
+                  ) : (
+                    subtasks.map((st) => (
+                      <div
+                        key={st.subtask_id}
+                        onClick={() => handleToggleSubtask(st)}
+                        className={`group flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
+                          st.is_completed
+                            ? 'bg-lime-50/50 border-lime-200/80 text-stone-400'
+                            : 'bg-[#FAF8F5]/80 hover:bg-[#FAF8F5] border-stone-200/70 text-stone-800'
+                        }`}
                       >
-                        <TrashIcon size={13} />
-                      </button>
-                    </div>
-                  ))}
+                        <div className="flex items-center gap-3 select-none">
+                          <div
+                            className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
+                              st.is_completed ? 'bg-lime-500 border-lime-600 text-white' : 'border-stone-300 bg-white'
+                            }`}
+                          >
+                            {st.is_completed && <CheckIcon size={11} strokeWidth={3} />}
+                          </div>
+                          <span className={`text-xs font-medium ${st.is_completed ? 'line-through text-stone-400' : 'text-stone-800'}`}>
+                            {st.title}
+                          </span>
+                        </div>
+
+                        <button
+                          onClick={(e) => handleDeleteSubtask(st, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-rose-600 transition-opacity"
+                          title="Delete subtask"
+                        >
+                          <TrashIcon size={13} />
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 {/* Add Subtask Input */}
-                <form onSubmit={addSubtask} className="flex items-center gap-2">
+                <form onSubmit={handleAddSubtask} className="flex items-center gap-2">
                   <input
                     type="text"
                     placeholder="Add a new deliverable or subtask..."
                     value={newSubtask}
                     onChange={(e) => setNewSubtask(e.target.value)}
                     className="flex-1 px-3.5 py-2 text-xs rounded-xl bg-[#FAF8F5] border border-stone-200/80 focus:outline-none focus:border-stone-400 font-sans"
+                    disabled={addingSubtask}
                   />
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#111318] text-white text-xs font-bold hover:bg-black transition-colors cursor-pointer flex items-center gap-1"
+                    disabled={addingSubtask}
+                    className="px-4 py-2 rounded-xl bg-[#111318] text-white text-xs font-bold hover:bg-black transition-colors cursor-pointer flex items-center gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <PlusIcon size={13} strokeWidth={2.5} />
-                    <span>Add</span>
+                    <span>{addingSubtask ? 'Adding...' : 'Add'}</span>
                   </button>
                 </form>
               </div>
@@ -517,51 +643,113 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
 
                 {/* Comments List */}
                 <div className="space-y-3 mb-4">
-                  {comments.length === 0 ? (
+                  {commentsLoading ? (
+                    <div className="text-xs text-stone-400 py-3 text-center">Loading comments...</div>
+                  ) : comments.length === 0 ? (
                     <div className="text-xs text-stone-400 py-3 text-center">No comments yet. Start a discussion below.</div>
                   ) : (
-                    comments.map((c) => (
-                      <div key={c.id} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-stone-200/60">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-5 h-5 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-2xs"
-                              style={{ backgroundColor: c.color }}
-                            >
-                              {c.initials}
-                            </div>
-                            <span className="text-xs font-bold text-stone-800">{c.author}</span>
-                          </div>
-                          <span className="text-[10px] text-stone-400 font-mono">{c.time}</span>
-                        </div>
+                    comments.map((c) => {
+                      const commentKey = c.comment_id || c.id
+                      const authorName = c.first_name || c.last_name
+                        ? `${c.first_name || ''} ${c.last_name || ''}`.trim()
+                        : (c.author || c.email || 'Unknown')
+                      const authorInitials = (c.first_name?.[0] || '') + (c.last_name?.[0] || '') || (c.email?.[0] || 'U').toUpperCase()
+                      const authorColor = getMemberColor(c.user_id)
+                      const timeDisplay = c.created_at
+                        ? new Date(c.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                        : 'Just now'
+                      const isEditing = editingCommentId === commentKey
 
-                        <p className="text-xs text-stone-600 pl-7 leading-relaxed mb-2.5">
-                          {c.text}
-                        </p>
-
-                        <div className="pl-7 flex items-center gap-1.5 flex-wrap">
-                          {REACTION_CONFIG.map(({ id, label, Icon, color }) => {
-                            const count = c.reactions?.[id] || 0
-                            return (
-                              <button
-                                key={id}
-                                type="button"
-                                onClick={() => toggleReaction(c.id, id)}
-                                title={label}
-                                className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all cursor-pointer select-none ${
-                                  count > 0
-                                    ? `bg-stone-100 border-stone-300 font-bold ${color}`
-                                    : 'bg-white/80 border-stone-200/80 text-stone-400 hover:text-stone-700 hover:border-stone-300'
-                                }`}
+                      return (
+                        <div key={commentKey} className="p-3.5 rounded-2xl bg-[#FAF8F5] border border-stone-200/60">
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-5 h-5 rounded-full text-[10px] font-bold text-white flex items-center justify-center shadow-2xs"
+                                style={{ backgroundColor: authorColor }}
                               >
-                                <Icon size={12} strokeWidth={2} />
-                                {count > 0 && <span className="text-[10.5px] font-mono">{count}</span>}
+                                {authorInitials.substring(0, 2).toUpperCase()}
+                              </div>
+                              <span className="text-xs font-bold text-stone-800">{authorName}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[10px] text-stone-400 font-mono">{timeDisplay}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingCommentId(commentKey)
+                                  setEditingCommentText(c.content)
+                                }}
+                                className="text-[10px] text-stone-400 hover:text-stone-700 px-1.5 py-0.5 rounded-md hover:bg-stone-100 transition-colors cursor-pointer"
+                                title="Edit comment"
+                              >
+                                Edit
                               </button>
-                            )
-                          })}
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteComment(commentKey)}
+                                className="text-[10px] text-rose-400 hover:text-rose-600 px-1.5 py-0.5 rounded-md hover:bg-rose-50 transition-colors cursor-pointer"
+                                title="Delete comment"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+
+                          {isEditing ? (
+                            <div className="pl-7 flex items-center gap-2">
+                              <input
+                                type="text"
+                                value={editingCommentText}
+                                onChange={(e) => setEditingCommentText(e.target.value)}
+                                className="flex-1 px-2.5 py-1 text-xs rounded-lg bg-white border border-stone-300 focus:outline-none focus:border-stone-500"
+                                autoFocus
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleEditCommentSave(commentKey)}
+                                className="text-[10px] font-bold text-white bg-stone-900 px-2.5 py-1 rounded-lg hover:bg-black cursor-pointer"
+                              >
+                                Save
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setEditingCommentId(null); setEditingCommentText('') }}
+                                className="text-[10px] text-stone-500 hover:text-stone-800 px-1.5 py-1 rounded-lg cursor-pointer"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-stone-600 pl-7 leading-relaxed mb-2.5">
+                              {c.content}
+                            </p>
+                          )}
+
+                          <div className="pl-7 flex items-center gap-1.5 flex-wrap">
+                            {REACTION_CONFIG.map(({ id, label, Icon, color }) => {
+                              const count = c.reactions?.[id] || 0
+                              return (
+                                <button
+                                  key={id}
+                                  type="button"
+                                  onClick={() => toggleReaction(commentKey, id)}
+                                  title={label}
+                                  className={`flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs border transition-all cursor-pointer select-none ${
+                                    count > 0
+                                      ? `bg-stone-100 border-stone-300 font-bold ${color}`
+                                      : 'bg-white/80 border-stone-200/80 text-stone-400 hover:text-stone-700 hover:border-stone-300'
+                                  }`}
+                                >
+                                  <Icon size={12} strokeWidth={2} />
+                                  {count > 0 && <span className="text-[10.5px] font-mono">{count}</span>}
+                                </button>
+                              )
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      )
+                    })
                   )}
                 </div>
 
@@ -573,10 +761,12 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                     value={commentInput}
                     onChange={(e) => setCommentInput(e.target.value)}
                     className="flex-1 px-3 py-1.5 text-xs text-stone-800 focus:outline-none bg-transparent"
+                    disabled={sendingComment}
                   />
                   <button
                     type="submit"
-                    className="p-2 rounded-xl bg-[#111318] text-white hover:bg-black transition-colors cursor-pointer"
+                    disabled={sendingComment}
+                    className="p-2 rounded-xl bg-[#111318] text-white hover:bg-black transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <SendIcon size={13} />
                   </button>
