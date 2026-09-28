@@ -8,7 +8,7 @@ import DynamicHeader from '@/components/DynamicHeader'
 import { useAuth } from '@/context/AuthContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  UsersIcon, SettingsIcon, MessageIcon,
+  UsersIcon, SettingsIcon, CreditCardIcon, MessageIcon,
   CheckIcon, GridIcon, CalendarIcon, ZapIcon, ShieldIcon,
   BellIcon, ClockIcon, ArrowUpRightIcon, RocketIcon,
   PaletteIcon, PackageIcon
