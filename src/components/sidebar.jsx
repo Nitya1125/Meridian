@@ -135,24 +135,6 @@ export default function Sidebar() {
         </button>
       </div>
 
-      {/* ── Search Bar Trigger ── */}
-      {!collapsed && (
-        <div className="px-3 pt-3">
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-stone-200/80 text-stone-400 hover:text-stone-800 hover:border-stone-300 shadow-2xs text-xs transition-all cursor-pointer group"
-          >
-            <div className="flex items-center gap-2">
-              <IconlySearch size={15} className="text-stone-400 group-hover:text-stone-700 transition-colors" />
-              <span className="font-medium text-stone-500">Quick Search...</span>
-            </div>
-            <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-stone-500 bg-stone-100/90 rounded-md border border-stone-200/80 shadow-2xs">
-              ⌘K
-            </kbd>
-          </button>
-        </div>
-      )}
-
       {/* ── Main Navigation List ── */}
       <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1">
         <div className="text-[10px] font-bold uppercase tracking-wider text-stone-400 px-3 py-1">
@@ -204,7 +186,7 @@ export default function Sidebar() {
               </button>
             </div>
 
-            <div className="mt-1 space-y-0.5">
+            <div className="mt-1 space-y-1">
               {spaceList.map(s => (
                 <div key={s.id}>
                   <div
@@ -212,13 +194,13 @@ export default function Sidebar() {
                       setSelectedSpace(s.name)
                       router.push('/kanban')
                     }}
-                    className={`flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium cursor-pointer transition-colors ${selectedSpace === s.name
+                    className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${selectedSpace === s.name
                       ? 'bg-rose-50 text-rose-800 font-semibold'
-                      : 'text-stone-600 hover:bg-stone-200/40 hover:text-stone-900'
+                      : 'text-stone-600 hover:bg-stone-200/50 hover:text-stone-900'
                       }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
                       <span className="truncate">{s.name}</span>
                     </div>
 

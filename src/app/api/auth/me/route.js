@@ -23,7 +23,7 @@ export async function GET(request){
             return NextResponse.json({
                 success: false,
                 message: "User not found",
-            },{status:404});
+            },{status:401});
         }
 
         return NextResponse.json({
@@ -36,6 +36,6 @@ export async function GET(request){
         return NextResponse.json({
             success:false,
             message: "Invalid or expired token"
-        },{status:500});
+        },{status:401});
     }
 }

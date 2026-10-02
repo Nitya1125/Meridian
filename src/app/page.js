@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginApi, googleLogin, githubLogin } from '../Service/authService';
@@ -139,12 +139,31 @@ function LeftPanel() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login,isAuthenticated ,loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailErr, setEmailErr] = useState('');
   const [pwErr, setPwErr] = useState('');
+
+  useEffect(()=> {
+    if(!authLoading && isAuthenticated){
+      router.replace('/dashboard')
+    }
+  },[isAuthenticated,authLoading,router])
+
+  if(authLoading){
+    return(
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">
+        <StripedLoader
+          variant="page"
+          color="green"
+          size="md"
+          label="Checking your session..."
+        />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e?.preventDefault();

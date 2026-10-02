@@ -12,9 +12,11 @@ import OrgOnboarding from '@/components/OrgOnboarding'
 import AttentionCenter from '@/components/AttentionCenter'
 import MetricBars from '@/components/MetricBars'
 import CapacityDial from '@/components/CapacityDial'
+import StripedLoader from '@/components/StripedLoader'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrg } from '@/context/OrgContext'
 import { useTasks } from '@/context/TaskContext'
+import { getDashboardOverview, getLineUp } from '@/Service/dashboardService'
 import {
   CheckIcon, ClockIcon, UsersIcon, BarChartIcon,
   ChevronRightIcon, PlusIcon, MoreHorizontalIcon, FilterIcon,
@@ -24,205 +26,267 @@ import {
 import { toast } from 'react-hot-toast'
 
 
-const bentoKPIs = [
-  {
-    id: 'tasks',
-    label: 'Total Tasks',
-    value: '137',
-    delta: '+20% vs last month',
-    bg: 'bg-[#EDE9FE]',
-    text: 'text-[#6D28D9]',
-    border: 'border-[#DDD6FE]',
-    icon: <ClipboardIcon size={18} className="text-[#6D28D9]" />,
-    sparkline: [30, 45, 60, 55, 80, 95, 137]
-  },
-  {
-    id: 'efficiency',
-    label: 'Efficiency Score',
-    value: '8.6',
-    delta: '+0.5 vs last month',
-    bg: 'bg-[#FFEDD5]',
-    text: 'text-[#C2410C]',
-    border: 'border-[#FDBA74]',
-    icon: <ZapIcon size={18} className="text-[#C2410C]" />,
-    sparkline: [6.8, 7.2, 7.5, 7.9, 8.1, 8.4, 8.6]
-  },
-  {
-    id: 'completion',
-    label: 'Sprint Completion',
-    value: '74%',
-    delta: '+10% vs last month',
-    bg: 'bg-[#E0F2FE]',
-    text: 'text-[#0369A1]',
-    border: 'border-[#BAE6FD]',
-    icon: <TargetIcon size={18} className="text-[#0369A1]" />,
-    sparkline: [40, 52, 58, 62, 68, 70, 74]
-  },
-  {
-    id: 'velocity',
-    label: 'Team Velocity',
-    value: '94%',
-    delta: 'Top 5% speed',
-    bg: 'bg-[#ECFCCB]',
-    text: 'text-[#3F6212]',
-    border: 'border-[#D9F99D]',
-    icon: <RocketIcon size={18} className="text-[#3F6212]" />,
-    sparkline: [50, 60, 75, 80, 88, 91, 94]
-  },
-]
-
-const initialLineUp = [
-  {
-    id: 'lu-1',
-    taskId: 'MRD-012',
-    category: 'Commercial',
-    title: 'Financial Mobile Banking App UI Kit',
-    pct: 68,
-    timeSpent: '14:20:00',
-    color: '#f97316',
-    border: 'border-orange-200',
-    bg: 'bg-orange-50/50',
-    assignees: []
-  },
-  {
-    id: 'lu-2',
-    taskId: 'MRD-014',
-    category: 'Publications',
-    title: 'Design System 2.0 Typography & Tokens',
-    pct: 92,
-    timeSpent: '28:45:10',
-    color: '#8b5cf6',
-    border: 'border-violet-200',
-    bg: 'bg-violet-50/50',
-    assignees: []
-  }
-]
-
-const myWorkInitial = [
-  {
-    id: 'mw-1',
-    taskId: 'MRD-021',
-    path: 'Publications / Shots',
-    title: 'Design 3 variations for iOS widget card mockup',
-    subtasksCompleted: 3,
-    subtasksTotal: 5,
-    due: 'Today 5pm',
-    dueOffsetDays: 0,
-    updatedOffsetDays: 1,
-    tab: 'todo',
-    priority: 'High',
-    assigneeName: 'Kacie Velasquez',
-    assignees: [],
-    description: 'Deliverable required for marketing hero shots on Dribbble and social publication channels.',
-    subtasks: [
-      { text: 'Dark mode contrast audit', done: true },
-      { text: 'Export PNG assets @2x and @3x', done: true },
-      { text: 'Create motion preview in AfterEffects', done: true },
-      { text: 'Figma review with team lead', done: false },
-      { text: 'Client signoff', done: false }
-    ]
-  },
-  {
-    id: 'mw-2',
-    taskId: 'MRD-022',
-    path: 'Commercial / Portals',
-    title: 'Implement OAuth2 token refresh & user session handler',
-    subtasksCompleted: 4,
-    subtasksTotal: 5,
-    due: '2 days ago',
-    dueOffsetDays: -2,
-    updatedOffsetDays: 0,
-    tab: 'todo',
-    priority: 'Critical',
-    assigneeName: 'Marcus Chen',
-    assignees: [],
-    description: 'Secure JWT rotation with Redis distributed cache for fast token validation.',
-    subtasks: [
-      { text: 'Write Redis session adapter', done: true },
-      { text: 'Setup cookie encryption', done: true },
-      { text: 'Write unit tests for token expiration', done: true },
-      { text: 'Security penetration test', done: true },
-      { text: 'Deploy to staging cluster', done: false }
-    ]
-  },
-  {
-    id: 'mw-3',
-    taskId: 'MRD-038',
-    path: 'Design Internal / Exploration',
-    title: 'Explore responsive tablet layouts for task board view',
-    subtasksCompleted: 1,
-    subtasksTotal: 2,
-    due: 'July 30',
-    dueOffsetDays: 4,
-    updatedOffsetDays: 6,
-    tab: 'todo',
-    priority: 'Medium',
-    assigneeName: 'Sophia Aris',
-    assignees: [],
-    description: 'Provide seamless touch gestures and drag-and-drop column handling for iPad Pro and Galaxy Tab.',
-    subtasks: [
-      { text: 'Touch drag gesture prototypes', done: true },
-      { text: 'Test on Safari Mobile', done: false }
-    ]
-  },
-  {
-    id: 'mw-4',
-    taskId: 'MRD-044',
-    path: 'Commercial / Portals',
-    title: 'Client Review & Feedback on v2 redesign',
-    subtasksCompleted: 1,
-    subtasksTotal: 1,
-    due: 'July 28',
-    dueOffsetDays: -5,
-    updatedOffsetDays: 0,
-    tab: 'done',
-    priority: 'Low',
-    assigneeName: 'Elena Vance',
-    assignees: [],
-    description: 'Signed off by enterprise stakeholder committee.',
-    subtasks: [
-      { text: 'Final client signoff', done: true }
-    ]
-  }
-]
-
 export default function Dashboard() {
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState(null)
   const [workTab, setWorkTab] = useState('todo')
   const [searchQuery, setSearchQuery] = useState('')
-  const [myWork, setMyWork] = useState(myWorkInitial)
+  const [myWork, setMyWork] = useState([])
   const [hoveredBar, setHoveredBar] = useState(null)
 
+  // Real Dashboard Overview State
+  const [overview, setOverview] = useState(null)
+  const [overviewLoading, setOverviewLoading] = useState(true)
+
+  // Real Active Lineup State
+  const [lineup, setLineup] = useState([])
+  const [lineupLoading, setLineupLoading] = useState(true)
+  const [lineupActiveCount, setLineupActiveCount] = useState(0)
+
   const { fullName } = useCurrentUser()
-  const { userState, activeOrg } = useOrg()
+  const { userState, activeOrg, orgsLoading } = useOrg()
   const { tasks: liveTasks = [], refreshTasks, updateTask: updateLiveTask, members: orgMembers = [] } = useTasks()
+
+  // Fetch real dashboard overview whenever active organization changes
+  const fetchOverview = useCallback(async () => {
+    if (!activeOrg?.id) return
+    try {
+      setOverviewLoading(true)
+      const data = await getDashboardOverview(activeOrg.id)
+      if (data && data.success) {
+        setOverview(data)
+      } else {
+        toast.error(data?.message || 'Failed to fetch dashboard overview')
+      }
+    } catch (err) {
+      console.error("Dashboard overview error:", err)
+      toast.error(err.message || 'Failed to fetch dashboard overview')
+    } finally {
+      setOverviewLoading(false)
+    }
+  }, [activeOrg?.id])
+
+  // Fetch real active lineup deliverables
+  const fetchLineup = useCallback(async () => {
+    if (!activeOrg?.id) return
+    try {
+      setLineupLoading(true)
+      const res = await getLineUp(activeOrg.id)
+      if (res && res.success) {
+        const rawItems = res.data?.items || res.activeTask || []
+        const count = res.data?.activeCount ?? res.activeCount ?? rawItems.length
+        setLineupActiveCount(count)
+
+        const colors = ['#f97316', '#8b5cf6', '#10b981', '#0ea5e9']
+        const borders = ['border-orange-200', 'border-violet-200', 'border-emerald-200', 'border-sky-200']
+        const bgs = ['bg-orange-50/50', 'bg-violet-50/50', 'bg-emerald-50/50', 'bg-sky-50/50']
+
+        const mapped = rawItems.map((item, idx) => {
+          const progress = typeof item.progress === 'number' ? item.progress : (item.pct ?? 0)
+          const timeVal = item.estimatedTimeValue ?? item.estimated_time_value
+          const timeUnit = item.estimatedTimeUnit ?? item.estimated_time_unit
+          const timeDisplay = timeVal ? `${timeVal} ${timeUnit || 'HOURS'}` : '0 HOURS'
+
+          return {
+            id: item.id || `lu-${idx}`,
+            taskId: `MRD-${String(idx + 1).padStart(3, '0')}`,
+            category: item.category || 'Commercial',
+            title: item.title || 'Untitled Deliverable',
+            progress: progress,
+            pct: progress,
+            timeSpent: timeDisplay,
+            priority: item.priority || 'High',
+            due: item.due_date ? String(item.due_date).split('T')[0] : 'In flight',
+            color: colors[idx % colors.length],
+            border: borders[idx % borders.length],
+            bg: bgs[idx % bgs.length],
+            assignees: item.assignees || []
+          }
+        })
+        setLineup(mapped)
+      }
+    } catch (err) {
+      console.error("Failed to fetch active lineup:", err)
+    } finally {
+      setLineupLoading(false)
+    }
+  }, [activeOrg?.id])
+
+  useEffect(() => {
+    if (activeOrg?.id) {
+      fetchOverview()
+      fetchLineup()
+    } else {
+      setOverviewLoading(false)
+      setOverview(null)
+      setLineupLoading(false)
+      setLineup([])
+    }
+  }, [activeOrg?.id, fetchOverview, fetchLineup])
+
+  // Transform weeklyTrend for the last 7 days ending today, filling missing dates with 0
+  const last7Days = useMemo(() => {
+    const trendMap = new Map()
+    if (overview?.weeklyTrend && Array.isArray(overview.weeklyTrend)) {
+      overview.weeklyTrend.forEach(item => {
+        if (!item) return
+        let dStr = ''
+        if (typeof item.date === 'string') {
+          dStr = item.date.split('T')[0]
+        } else if (item.date instanceof Date) {
+          dStr = item.date.toISOString().split('T')[0]
+        } else if (item.date) {
+          dStr = String(item.date).split('T')[0]
+        }
+        if (dStr) {
+          trendMap.set(dStr, Number(item.completedTasks) || 0)
+        }
+      })
+    }
+
+    const days = []
+    const today = new Date()
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(today.getDate() - i)
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const dateKey = `${year}-${month}-${day}`
+
+      const count = trendMap.get(dateKey) || 0
+      const dayName = dayNames[d.getDay()]
+      const monthName = monthNames[d.getMonth()]
+      const dayNum = d.getDate()
+
+      days.push({
+        dateKey,
+        day: dayName,
+        label: `${monthName} ${dayNum}`,
+        dayNum,
+        v: count,
+        completedTasks: count
+      })
+    }
+    return days
+  }, [overview?.weeklyTrend])
+
+  const weeklyTrendSeries = useMemo(() => {
+    const max = Math.max(...last7Days.map(d => d.v), 1)
+    return last7Days.map(d => ({
+      day: d.day,
+      val: `${d.v}`,
+      heightPercent: Math.min(100, Math.max(28, Math.round((d.v / max) * 100)))
+    }))
+  }, [last7Days])
+
+  const weeklyTrendBars = useMemo(() => {
+    return last7Days.map(d => ({
+      day: d.day,
+      v: d.v
+    }))
+  }, [last7Days])
+
+  const dateRangeLabel = useMemo(() => {
+    if (last7Days.length === 0) return ''
+    return `${last7Days[0].label} – ${last7Days[last7Days.length - 1].label}`
+  }, [last7Days])
+
+  // Derive real trending initiatives dynamically from workspace tasks
+  const trendingInitiatives = useMemo(() => {
+    if (!myWork || myWork.length === 0) return []
+    const groups = {}
+    myWork.forEach(t => {
+      const cat = t.path?.split('/')[0]?.trim() || t.path || 'Workspace'
+      if (!groups[cat]) {
+        groups[cat] = { category: cat, total: 0, done: 0, latestTitle: t.title }
+      }
+      groups[cat].total += 1
+      if (t.tab === 'done' || t.status === 'DONE') {
+        groups[cat].done += 1
+      }
+    })
+    return Object.values(groups).slice(0, 3).map(g => ({
+      category: g.category,
+      title: g.latestTitle,
+      pct: g.total > 0 ? Math.round((g.done / g.total) * 100) : 0
+    }))
+  }, [myWork])
 
   // Real-time synchronization: Map liveTasks into myWork whenever database tasks update
   useEffect(() => {
     if (liveTasks && liveTasks.length > 0) {
-      const mapped = liveTasks.map((t, idx) => ({
-        id: t.task_id || t.id || `tsk-${idx}`,
-        taskId: `MRD-${String(idx + 1).padStart(3, '0')}`,
-        path: t.category || 'Workspace / Deliverables',
-        title: t.title || 'Untitled Task',
-        priority: t.priority || 'MEDIUM',
-        tab: t.status === 'DONE' ? 'done' : 'todo',
-        status: t.status || 'TODO',
-        due_date: t.due_date,
-        due: t.due_date ? String(t.due_date).split('T')[0] : 'In 3 days',
-        dueOffsetDays: 0,
-        updatedOffsetDays: 0,
-        subtasksCompleted: (t.subtasks || []).filter(s => s.done).length,
-        subtasksTotal: (t.subtasks || []).length || 2,
-        description: t.description || '',
-        subtasks: t.subtasks || [],
-        assignees: t.assigned_to ? [{ initials: 'U', color: '#8b5cf6' }] : []
-      }))
+      const mapped = liveTasks.map((t, idx) => {
+        const subtasks = Array.isArray(t.subtasks) ? t.subtasks : []
+        const subtasksCompleted = subtasks.filter(s => s.done || s.is_completed || s.status === 'DONE').length
+        const subtasksTotal = subtasks.length
+
+        // Find assigned member from organization members list
+        let assignedMember = null
+        if (t.assigned_to && orgMembers && orgMembers.length > 0) {
+          assignedMember = orgMembers.find(m => 
+            String(m.user_id || m.id) === String(t.assigned_to) || 
+            m.email === t.assigned_to || 
+            m.full_name === t.assigned_to
+          )
+        }
+
+        const assigneeName = assignedMember?.full_name || (typeof t.assigned_to === 'string' ? t.assigned_to : '') || (t.assigned_to ? 'Assigned' : '')
+        const assigneeInitial = assigneeName ? assigneeName.charAt(0).toUpperCase() : ''
+        const assigneeColor = assignedMember?.color || '#8b5cf6'
+
+        // Calculate dueOffsetDays
+        let dueOffset = null
+        if (t.due_date) {
+          const parsed = new Date(t.due_date)
+          if (!isNaN(parsed.getTime())) {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            parsed.setHours(0, 0, 0, 0)
+            dueOffset = Math.round((parsed.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          }
+        }
+
+        // Calculate updatedOffsetDays
+        let updatedOffset = 0
+        const dateUpdated = t.updated_at || t.updatedAt || t.created_at || t.createdAt
+        if (dateUpdated) {
+          const parsed = new Date(dateUpdated)
+          if (!isNaN(parsed.getTime())) {
+            const diffMs = Date.now() - parsed.getTime()
+            updatedOffset = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)))
+          }
+        }
+
+        return {
+          id: t.task_id || t.id || `tsk-${idx}`,
+          taskId: t.task_code || `MRD-${String(idx + 1).padStart(3, '0')}`,
+          path: t.category || t.path || 'Workspace / Deliverables',
+          title: t.title || 'Untitled Task',
+          priority: t.priority || 'MEDIUM',
+          tab: (t.status === 'DONE' || t.status === 'done') ? 'done' : 'todo',
+          status: t.status || 'TODO',
+          due_date: t.due_date,
+          due: t.due_date ? String(t.due_date).split('T')[0] : 'No date',
+          dueOffsetDays: dueOffset,
+          updatedOffsetDays: updatedOffset,
+          subtasksCompleted,
+          subtasksTotal,
+          description: t.description || '',
+          subtasks,
+          assigneeName,
+          assignees: t.assigned_to ? [{ initials: assigneeInitial || 'U', name: assigneeName, color: assigneeColor }] : []
+        }
+      })
       setMyWork(mapped)
+    } else {
+      setMyWork([])
     }
-  }, [liveTasks])
+  }, [liveTasks, orgMembers, fullName])
 
   const handleReschedule = (taskId, days) => {
     setMyWork(prev => prev.map(t => t.id === taskId ? { ...t, dueOffsetDays: days, updatedOffsetDays: 0 } : t))
@@ -236,6 +300,8 @@ export default function Dashboard() {
     if (taskId && !String(taskId).startsWith('tsk-f') && !String(taskId).startsWith('lu-')) {
       try {
         await updateLiveTask({ task_id: taskId, status: 'DONE' })
+        fetchOverview()
+        fetchLineup()
       } catch (err) {
         console.error("Dashboard mark done error:", err)
       }
@@ -289,6 +355,8 @@ export default function Dashboard() {
     if (id && !String(id).startsWith('tsk-f') && !String(id).startsWith('lu-')) {
       try {
         await updateLiveTask({ task_id: id, status: nextStatus })
+        fetchOverview()
+        fetchLineup()
       } catch (err) {
         console.error("Dashboard toggleTaskDone error:", err)
       }
@@ -339,7 +407,7 @@ export default function Dashboard() {
                   </div>
 
                   <p className="mt-2 text-[14px] font-medium text-stone-500">
-                    Here&apos;s what&apos;s moving across your workspace today — Sprint 24 is 74% complete.
+                    Here&apos;s what&apos;s moving across your workspace today — Sprint is {overviewLoading ? '...' : `${overview?.sprintCompletion ?? 0}%`} complete.
                   </p>
                 </div>
 
@@ -350,7 +418,7 @@ export default function Dashboard() {
                     </span>
 
                     <span className="text-lg font-extrabold text-stone-950 stat-number">
-                      {myWork.filter(w => w.tab === 'done').length}
+                      {overviewLoading ? '...' : (overview?.completeTask ?? 0)}
                     </span>
                   </div>
 
@@ -369,7 +437,7 @@ export default function Dashboard() {
                   onMarkDone={handleMarkDone}
                   onCaughtUp={handleCaughtUp}
                   onNudge={handleNudge}
-                  sprintName={activeOrg?.name ? `${activeOrg.name} Sprint 24` : "Sprint 24"}
+                  sprintName={activeOrg?.name ? `${activeOrg.name} Sprint` : "Sprint"}
                   sprintDaysLeft={4}
                 />
               </div>
@@ -378,32 +446,34 @@ export default function Dashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <MetricCard
                   icon={ClipboardIcon}
-                  badge={`${myWork.filter(w => w.tab === 'todo').length} to do`}
-                  value={String(myWork.length)}
+                  badge={overviewLoading ? '...' : `${overview?.TodoTask ?? 0} to do`}
+                  value={overviewLoading ? '...' : String(overview?.totaltask ?? 0)}
                   label="Total Tasks"
                   theme="purple"
+                  series={weeklyTrendSeries}
                   onClick={() => router.push('/kanban')}
                 />
                 <MetricCard
                   icon={ZapIcon}
                   badge="Live calculated"
-                  value={myWork.length > 0 ? (myWork.filter(w => w.tab === 'done').length / myWork.length * 10).toFixed(1) : '10.0'}
+                  value={overviewLoading ? '...' : (overview?.efficiencyScore !== undefined ? String(overview.efficiencyScore) : '0.0')}
                   label="Efficiency Score"
                   theme="amber"
                   onClick={() => router.push('/Analytics')}
                 />
                 <MetricCard
                   icon={TargetIcon}
-                  badge={`${myWork.filter(w => w.tab === 'done').length} of ${myWork.length} done`}
-                  value={`${myWork.length > 0 ? Math.round((myWork.filter(w => w.tab === 'done').length / myWork.length) * 100) : 0}%`}
+                  badge={overviewLoading ? '...' : `${overview?.completeTask ?? 0} of ${overview?.totaltask ?? 0} done`}
+                  value={overviewLoading ? '...' : `${overview?.sprintCompletion ?? 0}%`}
                   label="Sprint Completion"
                   theme="sky"
+                  series={weeklyTrendSeries}
                   onClick={() => router.push('/kanban')}
                 />
                 <MetricCard
                   icon={RocketIcon}
-                  badge={activeOrg?.role || 'Member'}
-                  value={activeOrg?.name || 'Standard'}
+                  badge={overview?.role || activeOrg?.role || 'Member'}
+                  value={activeOrg?.name || 'Workspace'}
                   label="Active Workspace"
                   theme="lime"
                   onClick={() => router.push('/organization')}
@@ -417,40 +487,51 @@ export default function Dashboard() {
                   <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs">
                     <div className="flex items-center justify-between mb-5">
                       <div className="flex items-center gap-3">
-                        <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                        <h2 className="text-base sm:text-[17px] font-extrabold tracking-tight text-stone-900">
                           Active <span className="font-serif-italic font-normal text-stone-500">lineup</span>
                         </h2>
 
-                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-400">
-                          In flight
+                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-500 font-mono">
+                          {lineupLoading ? '...' : `${lineupActiveCount} IN FLIGHT`}
                         </span>
-                      </div>
 
-                      <button
-                        onClick={() => router.push('/kanban')}
-                        className="text-xs sm:text-sm font-bold text-stone-600 hover:text-stone-950 flex items-center gap-1.5 transition-colors cursor-pointer"
-                      >
-                        <span>View all board</span>
-                        <ArrowUpRightIcon size={14} />
-                      </button>
+                        <button
+                          onClick={() => router.push('/kanban')}
+                          className="text-xs font-bold text-violet-700 hover:text-violet-900 flex items-center gap-1 transition-colors cursor-pointer ml-1"
+                          aria-label="View all kanban board tasks"
+                        >
+                          <span>View board</span>
+                          <ArrowUpRightIcon size={13} />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {initialLineUp.map(item => (
+                      {lineup.length === 0 && !lineupLoading && (
+                        <div className="sm:col-span-2 p-6 text-center text-xs font-medium text-stone-400 bg-stone-50 rounded-2xl border border-stone-200/60">
+                          No active in-flight deliverables found.
+                        </div>
+                      )}
+                      {lineup.map((item, idx) => (
                         <div
-                          key={item.id}
+                          key={item.id || idx}
                           onClick={() => {
-                            setSelectedTask({
-                              id: item.id,
-                              taskId: item.taskId,
-                              title: item.title,
-                              priority: 'High',
-                              due: 'Today 5pm',
-                              assigneeName: fullName || 'Team Lead',
-                              assigneeColor: item.color,
-                              tags: ['Design', item.category],
-                              description: 'Active sprint focal point deliverable with live timer sync.'
-                            })
+                            const matchingTask = myWork.find(t => String(t.id) === String(item.id)) || liveTasks.find(t => String(t.task_id || t.id) === String(item.id))
+                            if (matchingTask) {
+                              setSelectedTask(matchingTask)
+                            } else {
+                              setSelectedTask({
+                                id: item.id,
+                                taskId: item.taskId,
+                                title: item.title,
+                                priority: item.priority || 'High',
+                                due: item.due || 'In flight',
+                                assigneeName: item.assignees?.[0]?.name || fullName || 'Unassigned',
+                                assigneeColor: item.color,
+                                tags: ['Deliverable', item.category],
+                                description: item.description || ''
+                              })
+                            }
                           }}
                           className={`p-5 rounded-2xl border ${item.border} ${item.bg} hover:shadow-xs transition-all cursor-pointer group`}
                         >
@@ -460,7 +541,7 @@ export default function Dashboard() {
                             </span>
 
                             <span className="text-2xl font-extrabold text-stone-900 stat-number">
-                              {item.pct}%
+                              {item.progress}%
                             </span>
                           </div>
 
@@ -470,8 +551,8 @@ export default function Dashboard() {
 
                           <div className="w-full h-1.5 rounded-full bg-stone-200/60 overflow-hidden mb-3">
                             <div
-                              className={`h-full rounded-full striped-anim ${item.category === 'Commercial' ? 'striped-bar-orange' : 'striped-bar-purple'}`}
-                              style={{ width: `${item.pct}%` }}
+                              className={`h-full rounded-full striped-anim ${item.color === '#f97316' ? 'striped-bar-orange' : 'striped-bar-purple'}`}
+                              style={{ width: `${item.progress}%` }}
                             />
                           </div>
 
@@ -484,15 +565,24 @@ export default function Dashboard() {
                             </div>
 
                             <div className="flex -space-x-1.5 overflow-hidden">
-                              {item.assignees.map((a, i) => (
+                              {item.assignees && item.assignees.length > 0 ? (
+                                item.assignees.map((a, i) => (
+                                  <div
+                                    key={i}
+                                    className="w-6 h-6 rounded-full ring-1 ring-white text-[10px] font-bold text-white flex items-center justify-center"
+                                    style={{ backgroundColor: a.color || item.color }}
+                                  >
+                                    {a.name?.[0] || 'U'}
+                                  </div>
+                                ))
+                              ) : (
                                 <div
-                                  key={i}
                                   className="w-6 h-6 rounded-full ring-1 ring-white text-[10px] font-bold text-white flex items-center justify-center"
-                                  style={{ backgroundColor: a.color }}
+                                  style={{ backgroundColor: item.color }}
                                 >
-                                  {a.name[0]}
+                                  {fullName?.[0] || 'U'}
                                 </div>
-                              ))}
+                              )}
                             </div>
                           </div>
                         </div>
@@ -507,50 +597,32 @@ export default function Dashboard() {
                           Trending <span className="font-serif-italic font-normal text-stone-500">initiatives</span>
                         </h3>
 
-                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-400">
-                          3 total
+                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-500 font-mono">
+                          {trendingInitiatives.length} active
                         </span>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 text-xs">
-
-                      <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/60">
-                        <div className="text-[10px] text-stone-400 font-bold uppercase font-mono">
-                          Dribbble
+                      {trendingInitiatives.length === 0 ? (
+                        <div className="sm:col-span-3 p-5 rounded-2xl bg-stone-50 border border-stone-200/60 text-center text-xs text-stone-400 font-medium">
+                          No active space initiatives yet. Create tasks to track space velocity.
                         </div>
-                        <div className="text-xs sm:text-sm font-bold text-stone-800 truncate mt-1">
-                          Banking App Animation
-                        </div>
-                        <div className="text-xl font-extrabold text-stone-900 stat-number mt-1.5">
-                          12%
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/60">
-                        <div className="text-[10px] text-stone-400 font-bold uppercase font-mono">
-                          Behance
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-stone-800 truncate mt-1">
-                          AI chat app case study
-                        </div>
-                        <div className="text-xl font-extrabold text-stone-900 stat-number mt-1.5">
-                          36%
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200/60">
-                        <div className="text-[10px] text-stone-400 font-bold uppercase font-mono">
-                          Design Internal
-                        </div>
-                        <div className="text-xs sm:text-sm font-bold text-stone-800 truncate mt-1">
-                          Logotype & Token Specs
-                        </div>
-                        <div className="text-xl font-extrabold text-stone-900 stat-number mt-1.5">
-                          98%
-                        </div>
-                      </div>
-
+                      ) : (
+                        trendingInitiatives.map((item, idx) => (
+                          <div key={idx} className="p-4 rounded-2xl bg-stone-50 border border-stone-200/60">
+                            <div className="text-[10px] text-stone-400 font-bold uppercase font-mono truncate">
+                              {item.category}
+                            </div>
+                            <div className="text-xs sm:text-sm font-bold text-stone-800 truncate mt-1">
+                              {item.title}
+                            </div>
+                            <div className="text-xl font-extrabold text-stone-900 stat-number mt-1.5">
+                              {item.pct}%
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
 
@@ -565,97 +637,61 @@ export default function Dashboard() {
                       </h2>
 
                       <span className="text-[11px] font-bold text-stone-500 font-mono bg-stone-100 px-2.5 py-0.5 rounded-md">
-                        July 24 – 28
+                        {dateRangeLabel}
                       </span>
                     </div>
 
                     <p className="text-xs sm:text-sm text-stone-500 mb-6 font-medium">
-                      Sprint hours logged across active days
+                      Daily tasks completed past 7 days
                     </p>
 
-                    <div className="grid grid-cols-5 text-center text-xs font-bold text-stone-600 mb-3">
-                      <div>
-                        Wed
-                        <span className="block text-stone-400 stat-number text-[11px] mt-0.5">
-                          24
-                        </span>
-                      </div>
-
-                      <div>
-                        Thu
-                        <span className="block text-stone-400 stat-number text-[11px] mt-0.5">
-                          25
-                        </span>
-                      </div>
-
-                      <div className="text-stone-900">
-                        Fri
-                        <span className="block text-rose-600 font-bold stat-number text-[11px] mt-0.5">
-                          26
-                        </span>
-                      </div>
-
-                      <div>
-                        Sat
-                        <span className="block text-stone-400 stat-number text-[11px] mt-0.5">
-                          27
-                        </span>
-                      </div>
-
-                      <div>
-                        Sun
-                        <span className="block text-stone-400 stat-number text-[11px] mt-0.5">
-                          28
-                        </span>
-                      </div>
+                    <div className="grid grid-cols-7 text-center text-xs font-bold text-stone-600 mb-3">
+                      {last7Days.map((d, i) => (
+                        <div key={d.dateKey} className={i === 6 ? "text-stone-900" : ""}>
+                          {d.day}
+                          <span className={`block stat-number text-[11px] mt-0.5 ${i === 6 ? "text-rose-600 font-bold" : "text-stone-400"}`}>
+                            {d.dayNum}
+                          </span>
+                        </div>
+                      ))}
                     </div>
 
-                    <div className="grid grid-cols-5 gap-2.5 h-44 items-end relative py-2 border-b border-stone-100">
+                    <div className="grid grid-cols-7 gap-2 h-44 items-end relative py-2 border-b border-stone-100">
+                      {last7Days.map((d, i) => {
+                        const maxV = Math.max(...last7Days.map(item => item.v), 1)
+                        const heightPct = Math.min(100, Math.max(12, Math.round((d.v / maxV) * 100)))
+                        const isToday = i === 6
+                        return (
+                          <div
+                            key={d.dateKey}
+                            className="flex flex-col gap-1.5 h-full justify-end relative cursor-pointer group"
+                            onMouseEnter={() => setHoveredBar(i)}
+                            onMouseLeave={() => setHoveredBar(null)}
+                          >
+                            {hoveredBar === i && (
+                              <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#111318] text-white text-xs font-mono px-3 py-1 rounded-xl shadow-lg whitespace-nowrap z-20">
+                                {d.v} tasks ({d.label})
+                              </div>
+                            )}
 
-                      <div className="flex flex-col gap-1.5 h-full justify-end">
-                        <div className="w-full h-8 bg-rose-200 rounded-lg" />
-                        <div className="w-full h-14 bg-orange-400 rounded-lg" />
-                      </div>
-
-                      <div className="flex flex-col gap-1.5 h-full justify-end">
-                        <div className="w-full h-12 bg-lime-400 rounded-lg" />
-                        <div className="w-full h-16 bg-orange-500 rounded-lg" />
-                      </div>
-
-                      <div
-                        className="flex flex-col gap-1.5 h-full justify-end relative cursor-pointer group"
-                        onMouseEnter={() => setHoveredBar('fri')}
-                        onMouseLeave={() => setHoveredBar(null)}
-                      >
-                        {hoveredBar === 'fri' && (
-                          <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-[#111318] text-white text-xs font-mono px-3 py-1 rounded-xl shadow-lg whitespace-nowrap z-20">
-                            10:59:16 Banking App
+                            <div
+                              className={`w-full rounded-lg transition-all duration-200 ${
+                                isToday
+                                  ? 'striped-bar-orange shadow-xs ring-2 ring-stone-900'
+                                  : i % 2 === 0 ? 'bg-violet-300' : 'bg-lime-400'
+                              }`}
+                              style={{ height: `${heightPct}%` }}
+                            />
                           </div>
-                        )}
-
-                        <div className="w-full h-6 bg-pink-400 rounded-lg" />
-                        <div className="w-full h-16 striped-bar-orange rounded-lg shadow-xs ring-2 ring-stone-900" />
-                        <div className="w-full h-8 bg-lime-300 rounded-lg" />
-                      </div>
-
-                      <div className="flex flex-col gap-1.5 h-full justify-end">
-                        <div className="w-full h-10 bg-lime-400 rounded-lg" />
-                        <div className="w-full h-6 bg-violet-300 rounded-lg" />
-                      </div>
-
-                      <div className="flex flex-col gap-1.5 h-full justify-end">
-                        <div className="w-full h-8 bg-pink-300 rounded-lg" />
-                        <div className="w-full h-14 bg-orange-400 rounded-lg" />
-                        <div className="w-full h-6 bg-lime-400 rounded-lg" />
-                      </div>
-
+                        )
+                      })}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between pt-4 text-xs sm:text-sm font-semibold text-stone-600">
-                    <span>Total sprint logged:</span>
+                    <span>Completed past 7 days:</span>
                     <span className="text-stone-950 font-bold stat-number text-base sm:text-lg">
-                      24.5 hours
+                      {overviewLoading ? '...' : `${last7Days.reduce((acc, d) => acc + d.v, 0)} tasks`}
                     </span>
                   </div>
 
@@ -687,7 +723,7 @@ export default function Dashboard() {
                           : 'text-stone-500 hover:text-stone-800'
                       }`}
                     >
-                      To do ({myWork.filter(w => w.tab === 'todo').length})
+                      To do ({overviewLoading ? myWork.filter(w => w.tab === 'todo').length : (overview?.TodoTask ?? myWork.filter(w => w.tab === 'todo').length)})
                     </button>
 
                     <button
@@ -698,7 +734,7 @@ export default function Dashboard() {
                           : 'text-stone-500 hover:text-stone-800'
                       }`}
                     >
-                      Done ({myWork.filter(w => w.tab === 'done').length})
+                      Done ({overviewLoading ? myWork.filter(w => w.tab === 'done').length : (overview?.completeTask ?? myWork.filter(w => w.tab === 'done').length)})
                     </button>
 
                   </div>
@@ -706,102 +742,111 @@ export default function Dashboard() {
                 </div>
 
                 <div className="space-y-2">
+                  {filteredWork.length === 0 ? (
+                    <div className="p-8 text-center text-xs font-medium text-stone-400 bg-stone-50/50 rounded-2xl border border-stone-200/50">
+                      {searchQuery ? `No tasks match "${searchQuery}"` : workTab === 'done' ? 'No completed tasks yet.' : 'No active tasks to do. Create a new task to get started!'}
+                    </div>
+                  ) : (
+                    filteredWork.map(task => (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedTask(task)}
+                        className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50/70 hover:bg-stone-100/80 border border-stone-200/50 transition-all cursor-pointer group"
+                      >
 
-                  {filteredWork.map(task => (
-                    <div
-                      key={task.id}
-                      onClick={() => setSelectedTask(task)}
-                      className="flex items-center justify-between p-3.5 rounded-2xl bg-stone-50/70 hover:bg-stone-100/80 border border-stone-200/50 transition-all cursor-pointer group"
-                    >
+                        <div className="flex items-center gap-3 min-w-0">
 
-                      <div className="flex items-center gap-3 min-w-0">
-
-                        <button
-                          type="button"
-                          onClick={(e) => toggleTaskDone(e, task.id)}
-                          className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
-                            task.tab === 'done'
-                              ? 'bg-lime-500 border-lime-600 text-white'
-                              : 'border-stone-300 bg-white hover:border-stone-400'
-                          }`}
-                        >
-                          {task.tab === 'done' && (
-                            <CheckIcon size={12} strokeWidth={3} />
-                          )}
-                        </button>
-
-                        <div className="min-w-0">
-                          <div className="text-[10px] text-stone-400 font-mono tracking-tight">
-                            {task.path}
-                          </div>
-
-                          <div
-                            className={`text-xs font-bold text-stone-900 group-hover:text-stone-700 truncate ${
+                          <button
+                            type="button"
+                            onClick={(e) => toggleTaskDone(e, task.id)}
+                            className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-colors shrink-0 ${
                               task.tab === 'done'
-                                ? 'line-through text-stone-400'
-                                : ''
+                                ? 'bg-lime-500 border-lime-600 text-white'
+                                : 'border-stone-300 bg-white hover:border-stone-400'
                             }`}
                           >
-                            {task.title}
-                          </div>
-                        </div>
+                            {task.tab === 'done' && (
+                              <CheckIcon size={12} strokeWidth={3} />
+                            )}
+                          </button>
 
-                      </div>
-
-                      <div className="flex items-center gap-4 shrink-0">
-
-                        <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-stone-500 bg-white px-2 py-0.5 rounded-md border border-stone-200/60">
-                          <span>✓</span>
-                          <span className="stat-number">
-                            {task.subtasksCompleted}/{task.subtasksTotal}
-                          </span>
-                        </div>
-
-                        <div className="flex -space-x-1.5 overflow-hidden">
-                          {task.assignees.map((a, i) => (
-                            <div
-                              key={i}
-                              className="w-5 h-5 rounded-full ring-1 ring-white text-[9px] font-bold text-white flex items-center justify-center"
-                              style={{ backgroundColor: a.color }}
-                            >
-                              {a.initials}
+                          <div className="min-w-0">
+                            <div className="text-[10px] text-stone-400 font-mono tracking-tight">
+                              {task.path}
                             </div>
-                          ))}
+
+                            <div
+                              className={`text-xs font-bold text-stone-900 group-hover:text-stone-700 truncate ${
+                                task.tab === 'done'
+                                  ? 'line-through text-stone-400'
+                                  : ''
+                              }`}
+                            >
+                              {task.title}
+                            </div>
+                          </div>
+
                         </div>
 
-                        <span className="text-[11px] text-stone-400 font-mono hidden md:inline">
-                          {task.due}
-                        </span>
+                        <div className="flex items-center gap-4 shrink-0">
 
-                        <button className="text-stone-400 hover:text-stone-700 p-1 cursor-pointer">
-                          <MoreHorizontalIcon size={16} />
-                        </button>
+                          {task.subtasksTotal > 0 && (
+                            <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-stone-500 bg-white px-2 py-0.5 rounded-md border border-stone-200/60">
+                              <span>✓</span>
+                              <span className="stat-number">
+                                {task.subtasksCompleted}/{task.subtasksTotal}
+                              </span>
+                            </div>
+                          )}
+
+                          {task.assignees && task.assignees.length > 0 && (
+                            <div className="flex -space-x-1.5 overflow-hidden">
+                              {task.assignees.map((a, i) => (
+                                <div
+                                  key={i}
+                                  className="w-5 h-5 rounded-full ring-1 ring-white text-[9px] font-bold text-white flex items-center justify-center"
+                                  style={{ backgroundColor: a.color }}
+                                  title={a.name}
+                                >
+                                  {a.initials}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <span className="text-[11px] text-stone-400 font-mono hidden md:inline">
+                            {task.due}
+                          </span>
+
+                          <button className="text-stone-400 hover:text-stone-700 p-1 cursor-pointer">
+                            <MoreHorizontalIcon size={16} />
+                          </button>
+
+                        </div>
 
                       </div>
-
-                    </div>
-                  ))}
-
+                    ))
+                  )}
                 </div>
 
               </div>
 
               {/* ── 3. Bottom Telemetry Bento Row ── */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-                {/* Hours Logged with MetricBars */}
+                {/* Estimated Workload with MetricBars */}
                 <div className="bento-card bento-card-interactive p-6 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-bold text-stone-500">Hours logged</span>
+                      <span className="text-[13px] font-bold text-stone-500">Estimated workload</span>
                       <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-lime-100 px-2.5 py-0.5 text-[11px] font-extrabold text-lime-800">
-                        <ArrowUpRightIcon size={12} /> +18.4%
+                        <ArrowUpRightIcon size={12} /> {overviewLoading ? '...' : `${overview?.workloadAllocation ?? 0}% allocated`}
                       </span>
                     </div>
                     <div className="stat-number text-[34px] font-extrabold tracking-tight text-stone-900 mt-1">
-                      106<span className="text-[18px] text-stone-400 font-normal ml-0.5">h</span>
+                      {overviewLoading ? '...' : (overview?.estimatedWorkload ?? 0)}<span className="text-[18px] text-stone-400 font-normal ml-0.5">h</span>
                     </div>
                   </div>
-                  <MetricBars tint="lime" highlight={4} />
+                  <MetricBars tint="lime" highlight={6} unit=" tasks" data={weeklyTrendBars} />
                 </div>
 
                 {/* Tasks Completed with MetricBars */}
@@ -810,14 +855,14 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-[13px] font-bold text-stone-500">Tasks completed</span>
                       <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-extrabold text-purple-800">
-                        <ArrowUpRightIcon size={12} /> +12%
+                        <ArrowUpRightIcon size={12} /> {overviewLoading ? '...' : `${overview?.completeTask ?? 0} total`}
                       </span>
                     </div>
                     <div className="stat-number text-[34px] font-extrabold tracking-tight text-stone-900 mt-1">
-                      1,482
+                      {overviewLoading ? '...' : (overview?.completeTask ?? 0)}
                     </div>
                   </div>
-                  <MetricBars tint="lavender" highlight={5} unit=" tasks" />
+                  <MetricBars tint="lavender" highlight={6} unit=" tasks" data={weeklyTrendBars} />
                 </div>
 
                 {/* Team Capacity Dial */}
@@ -825,25 +870,27 @@ export default function Dashboard() {
                   <div>
                     <div className="text-[13px] font-bold text-stone-500 mb-3">Team capacity</div>
                     <div className="flex items-center gap-4">
-                      <CapacityDial value={68} tint="peach" size={68} />
+                      <CapacityDial value={Math.min(100, Math.round(overview?.workloadAllocation ?? 0))} tint="peach" size={68} />
                       <div className="space-y-1 text-[12.5px]">
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-orange-500" />
-                          <span className="font-semibold text-stone-700">Allocated (68%)</span>
+                          <span className="font-semibold text-stone-700">Allocated ({overviewLoading ? '...' : `${overview?.workloadAllocation ?? 0}%`})</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="h-2 w-2 rounded-full bg-orange-200" />
-                          <span className="font-semibold text-stone-500">Available (32%)</span>
+                          <span className="font-semibold text-stone-500">Available ({overviewLoading ? '...' : `${Math.max(0, Number((100 - (overview?.workloadAllocation ?? 0)).toFixed(2)))}%`})</span>
                         </div>
                         <div className="stat-number pt-1 font-bold text-stone-900 text-xs">
-                          6 members · 54 tasks
+                          {overviewLoading ? '...' : `${overview?.activeMembers ?? 0} members · ${overview?.totaltask ?? 0} tasks`}
                         </div>
                       </div>
                     </div>
                   </div>
                   <div className="pt-4 border-t border-stone-100 text-xs font-medium text-stone-500 flex items-center justify-between">
-                    <span>Sprint 24 capacity</span>
-                    <span className="stat-number font-bold text-stone-800">32h headroom</span>
+                    <span>Sprint capacity</span>
+                    <span className="stat-number font-bold text-stone-800">
+                      {overviewLoading ? '...' : `${Math.max(0, Number((((overview?.activeMembers ?? 0) * 8) - (overview?.estimatedWorkload ?? 0)).toFixed(1)))}h headroom`}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -860,6 +907,8 @@ export default function Dashboard() {
         members={orgMembers}
         onAdd={(newTask) => {
           refreshTasks()
+          fetchOverview()
+          fetchLineup()
           toast.success('Task created successfully!')
         }}
       />
@@ -875,10 +924,14 @@ export default function Dashboard() {
           onUpdateTask={(updated) => {
             setMyWork(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
             refreshTasks()
+            fetchOverview()
+            fetchLineup()
           }}
           onDeleteTask={(id) => {
             setMyWork(prev => prev.filter(t => t.id !== id))
             refreshTasks()
+            fetchOverview()
+            fetchLineup()
           }}
         />
       )}

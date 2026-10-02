@@ -291,10 +291,10 @@ export default function MetricCard({
 
         {/* Micro Day-Axis Labels */}
         <div className="flex justify-between items-center text-[9px] font-mono font-semibold text-stone-400 mt-2 px-0.5 select-none">
-          <span>Mon</span>
-          <span>Wed</span>
-          <span>Fri</span>
-          <span>Sun</span>
+          <span>{timelineData[0]?.day || 'Mon'}</span>
+          <span>{timelineData[2]?.day || 'Wed'}</span>
+          <span>{timelineData[4]?.day || 'Fri'}</span>
+          <span>{timelineData[6]?.day || 'Sun'}</span>
         </div>
       </div>
     </div>

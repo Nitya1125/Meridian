@@ -20,8 +20,8 @@ export default function AttentionCenter({
   onMarkDone,
   onCaughtUp,
   onNudge,
-  sprintName = "Sprint 24",
-  sprintDaysLeft = 4
+  sprintName = "Active Sprint",
+  sprintDaysLeft
 }) {
   const [filter, setFilter] = useState("all");
   const [menuFor, setMenuFor] = useState(null);
@@ -77,7 +77,7 @@ export default function AttentionCenter({
                 )}
               </h2>
               <p className="mt-0.5 text-[12.5px] font-semibold text-stone-600">
-                {sprintName} · {sprintDaysLeft} days left
+                {sprintName}{sprintDaysLeft !== undefined && sprintDaysLeft !== null ? ` · ${sprintDaysLeft} days left` : ''}
                 {atRisk
                   ? ` · ${overdue.length} overdue, ${stale.length} gone quiet`
                   : " · sprint on track, zero blockers"}
@@ -126,16 +126,18 @@ export default function AttentionCenter({
       {/* Rows */}
       <div className="p-3">
         {shown.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-lime-700">
-              <Check className="h-6 w-6" strokeWidth={2.6} />
+          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-stone-50 border border-stone-200/60">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-lime-100 text-lime-700 shrink-0">
+                <Check className="h-4 w-4" strokeWidth={2.6} />
+              </span>
+              <span className="text-xs font-bold text-stone-800">
+                {filter === "stale" ? "No quiet deliverables" : filter === "overdue" ? "No overdue deliverables" : "All deliverables on track — zero items need immediate attention."}
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-stone-400 hidden sm:inline">
+              Sprint on schedule
             </span>
-            <p className="text-[14px] font-extrabold text-stone-900">
-              Nothing {filter === "stale" ? "gone quiet" : filter === "overdue" ? "overdue" : "needs attention"}
-            </p>
-            <p className="text-[12.5px] font-medium text-stone-500">
-              Everything in this view is active or resolved. Ship with confidence.
-            </p>
           </div>
         ) : (
           <div className="space-y-1.5">

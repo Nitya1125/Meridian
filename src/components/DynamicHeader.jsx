@@ -242,7 +242,7 @@ export default function DynamicHeader({
         {/* ════════════════════════════════════════════════════════════════ */}
         {/* DYNAMIC ISLAND COMMAND CAPSULE                                   */}
         {/* ════════════════════════════════════════════════════════════════ */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 px-4 py-2 bg-[#111318] text-white rounded-full shadow-xl shadow-black/15 border border-white/12 hover:border-white/20 transition-all duration-300">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 px-3.5 py-1.5 bg-stone-900/90 backdrop-blur-md text-white rounded-full shadow-md border border-stone-800 hover:border-stone-700 transition-all duration-300">
           
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 1. INTERACTIVE WORKSPACE SELECTOR SEGMENT                    */}
@@ -407,17 +407,17 @@ export default function DynamicHeader({
                 setMembersOpen(false)
               }}
               className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-white/10 transition-all cursor-pointer group text-xs select-none"
-              title="View Sprint 24 details"
+              title="View sprint deliverables details"
             >
               <span className="h-3 w-px bg-white/15" />
               <div className="flex items-center gap-1.5">
                 <IconlyCalendar size={14} primaryColor="#a3e635" />
-                <span className="text-white font-semibold text-xs">Sprint 24</span>
+                <span className="text-white font-semibold text-xs">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</span>
               </div>
-              <span className="text-stone-400 text-[11px]">4 days left</span>
+              <span className="text-stone-400 text-[11px]">{totalTasks > 0 ? `${totalTasks} tasks` : '0 tasks'}</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-medium border border-emerald-500/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                <span>On track</span>
+                <span>{completionPct >= 100 && totalTasks > 0 ? 'Completed' : completionPct > 0 ? `${completionPct}% done` : 'Active'}</span>
               </span>
               <ChevronDownIcon
                 size={10}
@@ -438,13 +438,13 @@ export default function DynamicHeader({
                       <IconlyCalendar size={18} primaryColor="#a3e635" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white">Sprint 24</div>
-                      <div className="text-[11px] text-stone-400">Ends Friday · 4 days left</div>
+                      <div className="text-xs font-bold text-white">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</div>
+                      <div className="text-[11px] text-stone-400">{doneTasks} of {totalTasks} deliverables done</div>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    On track
+                    {completionPct >= 100 && totalTasks > 0 ? 'Completed' : 'On track'}
                   </span>
                 </div>
 
