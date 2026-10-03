@@ -8,7 +8,7 @@ import {
   ChevronRightIcon, ZapIcon, FolderIcon, CalendarIcon, PlusIcon,
   SparklesIcon, BuildingIcon,
   IconlyHome, IconlyBuilding, IconlyTasks, IconlyCalendar, IconlyActivity,
-  IconlyMembers, IconlyChat, IconlyBilling, IconlySettings, IconlySearch,
+  IconlyMembers, IconlyChat, IconlySettings, IconlySearch,
   IconlyPlus
 } from './Icons'
 import toast from 'react-hot-toast'
@@ -40,10 +40,9 @@ const navItems = [
   { id: 'organization', label: 'Organization', href: '/organization', Icon: IconlyBuilding },
   { id: 'kanban', label: 'Tasks Board', href: '/kanban', Icon: IconlyTasks },
   { id: 'calendar', label: 'Schedule', href: '/calendar', Icon: IconlyCalendar },
-  { id: 'analytics', label: 'Activity', href: '/Analytics', Icon: IconlyActivity },
+  { id: 'analytics', label: 'Activity', href: '/analytics', Icon: IconlyActivity },
   { id: 'team', label: 'Members', href: '/team', Icon: IconlyMembers },
   { id: 'chat', label: 'Chat', href: '/messages', Icon: IconlyChat },
-  { id: 'billing', label: 'Billing', href: '/billing', Icon: IconlyBilling },
   { id: 'settings', label: 'Settings', href: '/settings', Icon: IconlySettings },
 ]
 

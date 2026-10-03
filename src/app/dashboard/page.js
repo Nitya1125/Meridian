@@ -459,7 +459,7 @@ export default function Dashboard() {
                   value={overviewLoading ? '...' : (overview?.efficiencyScore !== undefined ? String(overview.efficiencyScore) : '0.0')}
                   label="Efficiency Score"
                   theme="amber"
-                  onClick={() => router.push('/Analytics')}
+                  onClick={() => router.push('/analytics')}
                 />
                 <MetricCard
                   icon={TargetIcon}

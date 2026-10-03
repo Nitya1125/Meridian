@@ -235,19 +235,19 @@ export default function DynamicHeader({
   const currentOrgRole = activeOrg?.role || (activeOrg?.created_by === user?.id ? "Owner" : "Workspace")
 
   return (
-    <header className="w-full mb-6">
+    <header className="w-full mb-7 relative z-30">
       {/* Top Dynamic Bar */}
       <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
 
         {/* ════════════════════════════════════════════════════════════════ */}
         {/* DYNAMIC ISLAND COMMAND CAPSULE                                   */}
         {/* ════════════════════════════════════════════════════════════════ */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3 px-3.5 py-1.5 bg-stone-900/90 backdrop-blur-md text-white rounded-full shadow-md border border-stone-800 hover:border-stone-700 transition-all duration-300">
+        <div className="flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 bg-[#111318] text-white rounded-2xl sm:rounded-full shadow-sm border border-stone-800/90 transition-all duration-200 overflow-x-auto sm:overflow-visible">
           
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 1. INTERACTIVE WORKSPACE SELECTOR SEGMENT                    */}
           {/* ──────────────────────────────────────────────────────────── */}
-          <div className="relative" ref={orgMenuRef}>
+          <div className="relative shrink-0" ref={orgMenuRef}>
             <button
               type="button"
               onClick={() => {
@@ -267,7 +267,7 @@ export default function DynamicHeader({
                 <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30 shrink-0">
                   {currentOrgRole}
                 </span>
-                <span className="text-stone-100 text-xs font-bold truncate max-w-[120px] sm:max-w-[170px] group-hover:text-white transition-colors">
+                <span className="text-stone-100 text-xs font-bold truncate max-w-[110px] sm:max-w-[160px] md:max-w-[200px] group-hover:text-white transition-colors">
                   {currentOrgName}
                 </span>
                 <ChevronDownIcon
@@ -281,7 +281,7 @@ export default function DynamicHeader({
 
             {/* Workspace Switcher Popover */}
             {orgDropdownOpen && (
-              <div className="absolute left-0 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+              <div className="absolute left-0 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                 
                 <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 mb-2">
                   <div className="flex items-center gap-2">
@@ -429,7 +429,7 @@ export default function DynamicHeader({
 
             {/* Sprint Overview Popover */}
             {assuranceOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 sm:w-88 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+              <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 sm:w-88 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
                 
                 {/* Sprint Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -563,7 +563,7 @@ export default function DynamicHeader({
 
             {/* Members Presence Popover */}
             {membersOpen && (
-              <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+              <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                 
                 <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 mb-2">
                   <div className="flex items-center gap-2">
