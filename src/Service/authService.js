@@ -101,3 +101,57 @@ export async function getCurrentUser(){
 
     return result
 }
+
+export async function forgotPassword(data){
+    const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers:{
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if(!response.ok){
+        throw new Error(result.message)
+    }
+
+    return result
+}
+
+export async function resetPasswordVerifyOtp(data){
+    const response = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers:{
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if(!response.ok){
+        throw new Error(result.message)
+    }
+
+    return result
+}
+
+export async function resetPassword(data){
+    const response = await fetch("/api/auth/reset-password", {
+        method: "PATCH",
+        headers:{
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+    });
+
+    const result = await response.json();
+
+    if(!response.ok){
+        throw new Error(result.message)
+    }
+
+    return result
+}
