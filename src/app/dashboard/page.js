@@ -480,120 +480,123 @@ export default function Dashboard() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              {/* ── 2. Middle Grid: Active Lineup & Working Activity ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 items-stretch">
 
-                <div className="lg:col-span-2 space-y-6">
+                <div className="lg:col-span-2 flex flex-col gap-6">
 
-                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs">
-                    <div className="flex items-center justify-between mb-5">
-                      <div className="flex items-center gap-3">
-                        <h2 className="text-base sm:text-[17px] font-extrabold tracking-tight text-stone-900">
-                          Active <span className="font-serif-italic font-normal text-stone-500">lineup</span>
-                        </h2>
+                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-3">
+                          <h2 className="text-lg font-extrabold tracking-tight text-stone-900">
+                            Active <span className="font-serif-italic font-normal text-stone-500">lineup</span>
+                          </h2>
 
-                        <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-500 font-mono">
-                          {lineupLoading ? '...' : `${lineupActiveCount} IN FLIGHT`}
-                        </span>
+                          <span className="tech-badge rounded-md bg-stone-100 px-2 py-0.5 text-[10px] text-stone-500 font-mono">
+                            {lineupLoading ? '...' : `${lineupActiveCount} IN FLIGHT`}
+                          </span>
 
-                        <button
-                          onClick={() => router.push('/kanban')}
-                          className="text-xs font-bold text-violet-700 hover:text-violet-900 flex items-center gap-1 transition-colors cursor-pointer ml-1"
-                          aria-label="View all kanban board tasks"
-                        >
-                          <span>View board</span>
-                          <ArrowUpRightIcon size={13} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                      {lineup.length === 0 && !lineupLoading && (
-                        <div className="sm:col-span-2 p-6 text-center text-xs font-medium text-stone-400 bg-stone-50 rounded-2xl border border-stone-200/60">
-                          No active in-flight deliverables found.
+                          <button
+                            onClick={() => router.push('/kanban')}
+                            className="text-xs font-bold text-violet-700 hover:text-violet-900 flex items-center gap-1 transition-colors cursor-pointer ml-1"
+                            aria-label="View all kanban board tasks"
+                          >
+                            <span>View board</span>
+                            <ArrowUpRightIcon size={13} />
+                          </button>
                         </div>
-                      )}
-                      {lineup.map((item, idx) => (
-                        <div
-                          key={item.id || idx}
-                          onClick={() => {
-                            const matchingTask = myWork.find(t => String(t.id) === String(item.id)) || liveTasks.find(t => String(t.task_id || t.id) === String(item.id))
-                            if (matchingTask) {
-                              setSelectedTask(matchingTask)
-                            } else {
-                              setSelectedTask({
-                                id: item.id,
-                                taskId: item.taskId,
-                                title: item.title,
-                                priority: item.priority || 'High',
-                                due: item.due || 'In flight',
-                                assigneeName: item.assignees?.[0]?.name || fullName || 'Unassigned',
-                                assigneeColor: item.color,
-                                tags: ['Deliverable', item.category],
-                                description: item.description || ''
-                              })
-                            }
-                          }}
-                          className={`p-5 rounded-2xl border ${item.border} ${item.bg} hover:shadow-xs transition-all cursor-pointer group`}
-                        >
-                          <div className="flex items-start justify-between mb-2.5">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 font-mono">
-                              {item.category}
-                            </span>
+                      </div>
 
-                            <span className="text-2xl font-extrabold text-stone-900 stat-number">
-                              {item.progress}%
-                            </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        {lineup.length === 0 && !lineupLoading && (
+                          <div className="sm:col-span-2 p-6 text-center text-xs font-medium text-stone-400 bg-stone-50 rounded-2xl border border-stone-200/60">
+                            No active in-flight deliverables found.
                           </div>
+                        )}
+                        {lineup.map((item, idx) => (
+                          <div
+                            key={item.id || idx}
+                            onClick={() => {
+                              const matchingTask = myWork.find(t => String(t.id) === String(item.id)) || liveTasks.find(t => String(t.task_id || t.id) === String(item.id))
+                              if (matchingTask) {
+                                setSelectedTask(matchingTask)
+                              } else {
+                                setSelectedTask({
+                                  id: item.id,
+                                  taskId: item.taskId,
+                                  title: item.title,
+                                  priority: item.priority || 'High',
+                                  due: item.due || 'In flight',
+                                  assigneeName: item.assignees?.[0]?.name || fullName || 'Unassigned',
+                                  assigneeColor: item.color,
+                                  tags: ['Deliverable', item.category],
+                                  description: item.description || ''
+                                })
+                              }
+                            }}
+                            className={`p-5 rounded-2xl border ${item.border} ${item.bg} hover:shadow-xs transition-all cursor-pointer group`}
+                          >
+                            <div className="flex items-start justify-between mb-2.5">
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500 font-mono">
+                                {item.category}
+                              </span>
 
-                          <div className="text-sm font-bold text-stone-900 group-hover:text-stone-700 leading-snug mb-3">
-                            {item.title}
-                          </div>
-
-                          <div className="w-full h-1.5 rounded-full bg-stone-200/60 overflow-hidden mb-3">
-                            <div
-                              className={`h-full rounded-full striped-anim ${item.color === '#f97316' ? 'striped-bar-orange' : 'striped-bar-purple'}`}
-                              style={{ width: `${item.progress}%` }}
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between text-xs text-stone-500 pt-2.5 border-t border-stone-900/5">
-                            <div className="flex items-center gap-1.5 text-xs">
-                              <ClockIcon size={13} className="text-stone-400" />
-                              <span className="stat-number font-mono">
-                                {item.timeSpent}
+                              <span className="text-2xl font-extrabold text-stone-900 stat-number">
+                                {item.progress}%
                               </span>
                             </div>
 
-                            <div className="flex -space-x-1.5 overflow-hidden">
-                              {item.assignees && item.assignees.length > 0 ? (
-                                item.assignees.map((a, i) => (
+                            <div className="text-sm font-bold text-stone-900 group-hover:text-stone-700 leading-snug mb-3">
+                              {item.title}
+                            </div>
+
+                            <div className="w-full h-1.5 rounded-full bg-stone-200/60 overflow-hidden mb-3">
+                              <div
+                                className={`h-full rounded-full striped-anim ${item.color === '#f97316' ? 'striped-bar-orange' : 'striped-bar-purple'}`}
+                                style={{ width: `${item.progress}%` }}
+                              />
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs text-stone-500 pt-2.5 border-t border-stone-900/5">
+                              <div className="flex items-center gap-1.5 text-xs">
+                                <ClockIcon size={13} className="text-stone-400" />
+                                <span className="stat-number font-mono">
+                                  {item.timeSpent}
+                                </span>
+                              </div>
+
+                              <div className="flex -space-x-1.5 overflow-hidden">
+                                {item.assignees && item.assignees.length > 0 ? (
+                                  item.assignees.map((a, i) => (
+                                    <div
+                                      key={i}
+                                      className="w-6 h-6 rounded-full ring-1 ring-white text-[10px] font-bold text-white flex items-center justify-center"
+                                      style={{ backgroundColor: a.color || item.color }}
+                                    >
+                                      {a.name?.[0] || 'U'}
+                                    </div>
+                                  ))
+                                ) : (
                                   <div
-                                    key={i}
                                     className="w-6 h-6 rounded-full ring-1 ring-white text-[10px] font-bold text-white flex items-center justify-center"
-                                    style={{ backgroundColor: a.color || item.color }}
+                                    style={{ backgroundColor: item.color }}
                                   >
-                                    {a.name?.[0] || 'U'}
+                                    {fullName?.[0] || 'U'}
                                   </div>
-                                ))
-                              ) : (
-                                <div
-                                  className="w-6 h-6 rounded-full ring-1 ring-white text-[10px] font-bold text-white flex items-center justify-center"
-                                  style={{ backgroundColor: item.color }}
-                                >
-                                  {fullName?.[0] || 'U'}
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
 
                   <div className="bg-white rounded-3xl p-6 border border-stone-200/80 shadow-2xs">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <h3 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                        <h3 className="text-lg font-extrabold tracking-tight text-stone-900">
                           Trending <span className="font-serif-italic font-normal text-stone-500">initiatives</span>
                         </h3>
 
@@ -628,11 +631,11 @@ export default function Dashboard() {
 
                 </div>
 
-                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs flex flex-col justify-between">
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-stone-200/80 shadow-2xs flex flex-col justify-between h-full">
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                      <h2 className="text-lg font-extrabold tracking-tight text-stone-900">
                         Working <span className="font-serif-italic font-normal text-stone-500">activity</span>
                       </h2>
 
@@ -704,7 +707,7 @@ export default function Dashboard() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-stone-100">
 
                   <div className="flex items-center gap-3">
-                    <h2 className="text-[17px] font-extrabold tracking-tight text-stone-900">
+                    <h2 className="text-lg font-extrabold tracking-tight text-stone-900">
                       My <span className="font-serif-italic font-normal text-stone-500">focus</span> & deliverables
                     </h2>
 
@@ -713,25 +716,29 @@ export default function Dashboard() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 bg-stone-100 p-1 rounded-2xl">
+                  <div role="tablist" aria-label="Filter deliverables" className="inline-flex items-center gap-1 bg-stone-100 p-1 rounded-full border border-stone-200/50">
 
                     <button
+                      role="tab"
+                      aria-selected={workTab === 'todo'}
                       onClick={() => setWorkTab('todo')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                         workTab === 'todo'
-                          ? 'bg-[#111318] text-white shadow-xs'
-                          : 'text-stone-500 hover:text-stone-800'
+                          ? 'bg-white text-stone-900 shadow-xs'
+                          : 'text-stone-600 hover:text-stone-900'
                       }`}
                     >
                       To do ({overviewLoading ? myWork.filter(w => w.tab === 'todo').length : (overview?.TodoTask ?? myWork.filter(w => w.tab === 'todo').length)})
                     </button>
 
                     <button
+                      role="tab"
+                      aria-selected={workTab === 'done'}
                       onClick={() => setWorkTab('done')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                         workTab === 'done'
-                          ? 'bg-[#111318] text-white shadow-xs'
-                          : 'text-stone-500 hover:text-stone-800'
+                          ? 'bg-white text-stone-900 shadow-xs'
+                          : 'text-stone-600 hover:text-stone-900'
                       }`}
                     >
                       Done ({overviewLoading ? myWork.filter(w => w.tab === 'done').length : (overview?.completeTask ?? myWork.filter(w => w.tab === 'done').length)})
@@ -837,13 +844,13 @@ export default function Dashboard() {
                 <div className="bento-card bento-card-interactive p-6 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-bold text-stone-500">Estimated workload</span>
-                      <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-lime-100 px-2.5 py-0.5 text-[11px] font-extrabold text-lime-800">
+                      <span className="text-xs font-bold text-stone-500">Estimated workload</span>
+                      <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-lime-100 px-2.5 py-0.5 text-xs font-extrabold text-lime-800">
                         <ArrowUpRightIcon size={12} /> {overviewLoading ? '...' : `${overview?.workloadAllocation ?? 0}% allocated`}
                       </span>
                     </div>
-                    <div className="stat-number text-[34px] font-extrabold tracking-tight text-stone-900 mt-1">
-                      {overviewLoading ? '...' : (overview?.estimatedWorkload ?? 0)}<span className="text-[18px] text-stone-400 font-normal ml-0.5">h</span>
+                    <div className="stat-number text-3xl font-extrabold tracking-tight text-stone-900 mt-1">
+                      {overviewLoading ? '...' : Math.round(overview?.estimatedWorkload ?? 0)}<span className="text-base text-stone-400 font-normal ml-0.5">h</span>
                     </div>
                   </div>
                   <MetricBars tint="lime" highlight={6} unit=" tasks" data={weeklyTrendBars} />
@@ -853,12 +860,12 @@ export default function Dashboard() {
                 <div className="bento-card bento-card-interactive p-6 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-[13px] font-bold text-stone-500">Tasks completed</span>
-                      <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-purple-100 px-2.5 py-0.5 text-[11px] font-extrabold text-purple-800">
+                      <span className="text-xs font-bold text-stone-500">Tasks completed</span>
+                      <span className="stat-number inline-flex items-center gap-0.5 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-extrabold text-purple-800">
                         <ArrowUpRightIcon size={12} /> {overviewLoading ? '...' : `${overview?.completeTask ?? 0} total`}
                       </span>
                     </div>
-                    <div className="stat-number text-[34px] font-extrabold tracking-tight text-stone-900 mt-1">
+                    <div className="stat-number text-3xl font-extrabold tracking-tight text-stone-900 mt-1">
                       {overviewLoading ? '...' : (overview?.completeTask ?? 0)}
                     </div>
                   </div>

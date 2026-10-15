@@ -90,7 +90,7 @@ export async function GET(request){
             await db.query(`insert into users (email,first_name,last_name,github_id) values (?,?,?,?)`,[email,first_name,last_name,githubId]);
         }
 
-        const token = jwt.sign({id:users[0].id,email:email}, process.env.JWT_SECRET,{expiresIn: "7d"})
+        const token = jwt.sign({id:users[0].id, email:email}, process.env.JWT_SECRET,{expiresIn: "7d"})
 
         const response = NextResponse.redirect(new URL("/dashboard",request.url));
 
@@ -102,12 +102,11 @@ export async function GET(request){
             path:"/",
         })
 
+        return response;
 
-        //return response
-
-        return NextResponse.redirect(
-            new URL(`/dashboard?token=${token}`, request.url)
-        )
+        // return NextResponse.redirect(
+        //     new URL(`/dashboard?token=${token}`, request.url)
+        // )
     }catch(error){
         return NextResponse.json({
             success:false,
