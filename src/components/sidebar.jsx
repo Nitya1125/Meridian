@@ -43,13 +43,14 @@ const navItems = [
   { id: 'analytics', label: 'Activity', href: '/Analytics', Icon: IconlyActivity },
   { id: 'team', label: 'Members', href: '/team', Icon: IconlyMembers },
   { id: 'chat', label: 'Chat', href: '/messages', Icon: IconlyChat },
+  { id: 'design-system', label: 'Design System', href: '/design-system', Icon: SparklesIcon },
   { id: 'settings', label: 'Settings', href: '/settings', Icon: IconlySettings },
 ]
 
 const spaces = [
   { id: 'pub', name: 'Publications', color: '#f43f5e', expanded: false, sub: ['Dribbble Shots', 'Behance Case Study', 'Articles'] },
   { id: 'comm', name: 'Commercial', color: '#8b5cf6', expanded: false, sub: ['Client Portals', 'Pitch Decks'] },
-  { id: 'int', name: 'Design Internal', color: '#10b981', expanded: false, sub: ['Design System 2.0', 'Brand Assets'] },
+  { id: 'int', name: 'Design Internal', color: '#10b981', expanded: true, sub: ['Design System 2.0', 'Brand Assets'] },
 ]
 
 export default function Sidebar() {
@@ -241,6 +242,10 @@ export default function Sidebar() {
                         <div
                           key={subItem}
                           onClick={() => {
+                            if (subItem === 'Design System 2.0') {
+                              router.push('/design-system')
+                              return
+                            }
                             toast.success(`Filtered to ${subItem}`)
                             router.push('/kanban')
                           }}
