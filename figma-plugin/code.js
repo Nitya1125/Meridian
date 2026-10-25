@@ -249,7 +249,6 @@ function drawRealSidebar(parent, activeItem = 'Overview') {
     { name: "Activity", icon: "📊" },
     { name: "Members", icon: "👥" },
     { name: "Chat", icon: "💬" },
-    { name: "Design System", icon: "✦" },
     { name: "Settings", icon: "⚙" },
   ];
 

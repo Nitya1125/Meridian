@@ -43,7 +43,6 @@ const navItems = [
   { id: 'analytics', label: 'Activity', href: '/analytics', Icon: IconlyActivity },
   { id: 'team', label: 'Members', href: '/team', Icon: IconlyMembers },
   { id: 'chat', label: 'Chat', href: '/messages', Icon: IconlyChat },
-  { id: 'design-system', label: 'Design System', href: '/design-system', Icon: SparklesIcon },
   { id: 'settings', label: 'Settings', href: '/settings', Icon: IconlySettings },
 ]
 
@@ -224,10 +223,6 @@ export default function Sidebar() {
                         <div
                           key={subItem}
                           onClick={() => {
-                            if (subItem === 'Design System 2.0') {
-                              router.push('/design-system')
-                              return
-                            }
                             toast.success(`Filtered to ${subItem}`)
                             router.push('/kanban')
                           }}
