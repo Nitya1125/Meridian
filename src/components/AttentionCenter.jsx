@@ -20,8 +20,8 @@ export default function AttentionCenter({
   onMarkDone,
   onCaughtUp,
   onNudge,
-  sprintName = "Sprint 24",
-  sprintDaysLeft = 4
+  sprintName = "Active Sprint",
+  sprintDaysLeft
 }) {
   const [filter, setFilter] = useState("all");
   const [menuFor, setMenuFor] = useState(null);
@@ -77,7 +77,7 @@ export default function AttentionCenter({
                 )}
               </h2>
               <p className="mt-0.5 text-[12.5px] font-semibold text-stone-600">
-                {sprintName} · {sprintDaysLeft} days left
+                {sprintName}{sprintDaysLeft !== undefined && sprintDaysLeft !== null ? ` · ${sprintDaysLeft} days left` : ''}
                 {atRisk
                   ? ` · ${overdue.length} overdue, ${stale.length} gone quiet`
                   : " · sprint on track, zero blockers"}
@@ -100,7 +100,7 @@ export default function AttentionCenter({
         </div>
 
         {enriched.length > 0 && (
-          <div className="mt-4 inline-flex rounded-full bg-white/70 p-1 backdrop-blur shadow-2xs">
+          <div role="tablist" aria-label="Filter attention items" className="mt-4 inline-flex rounded-full bg-white/70 p-1 backdrop-blur shadow-2xs border border-stone-200/50">
             {[
               ["all", `All (${enriched.length})`],
               ["overdue", `Overdue (${overdue.length})`],
@@ -109,8 +109,10 @@ export default function AttentionCenter({
               <button
                 key={f}
                 type="button"
+                role="tab"
+                aria-selected={filter === f}
                 onClick={() => setFilter(f)}
-                className={`tactile rounded-full px-3.5 py-1.5 text-[12px] font-extrabold transition-all cursor-pointer ${
+                className={`tactile rounded-full px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
                   filter === f
                     ? "bg-white text-stone-900 shadow-xs"
                     : "text-stone-600 hover:text-stone-900"
@@ -126,16 +128,18 @@ export default function AttentionCenter({
       {/* Rows */}
       <div className="p-3">
         {shown.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-100 text-lime-700">
-              <Check className="h-6 w-6" strokeWidth={2.6} />
+          <div className="flex items-center justify-between px-4 py-3 rounded-2xl bg-stone-50 border border-stone-200/60">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-lime-100 text-lime-700 shrink-0">
+                <Check className="h-4 w-4" strokeWidth={2.6} />
+              </span>
+              <span className="text-xs font-bold text-stone-800">
+                {filter === "stale" ? "No quiet deliverables" : filter === "overdue" ? "No overdue deliverables" : "All deliverables on track — zero items need immediate attention."}
+              </span>
+            </div>
+            <span className="text-xs font-mono text-stone-400 hidden sm:inline">
+              Sprint on schedule
             </span>
-            <p className="text-[14px] font-extrabold text-stone-900">
-              Nothing {filter === "stale" ? "gone quiet" : filter === "overdue" ? "overdue" : "needs attention"}
-            </p>
-            <p className="text-[12.5px] font-medium text-stone-500">
-              Everything in this view is active or resolved. Ship with confidence.
-            </p>
           </div>
         ) : (
           <div className="space-y-1.5">
@@ -173,20 +177,20 @@ export default function AttentionCenter({
                     className="tactile min-w-0 flex-1 text-left cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="tech-badge text-[9px] text-stone-400">
+                      <span className="tech-badge text-[10px] text-stone-400 font-mono">
                         {t.taskId || t.code || "TASK"}
                       </span>
                       <span
-                        className="tnum stat-number rounded-full px-2 py-0.5 text-[10px] font-extrabold"
+                        className="tnum stat-number rounded-full px-2 py-0.5 text-xs font-bold"
                         style={{ background: c.bg, color: c.text }}
                       >
                         {od ? `${h.daysOverdue}d overdue` : `Quiet ${h.daysSinceUpdate}d`}
                       </span>
                     </div>
-                    <div className="mt-0.5 truncate text-[13.5px] font-bold text-stone-900 group-hover:text-violet-700 transition-colors">
+                    <div className="mt-0.5 truncate text-sm font-bold text-stone-900 group-hover:text-violet-700 transition-colors">
                       {t.title}
                     </div>
-                    <div className="mt-0.5 text-[11.5px] font-medium text-stone-500">
+                    <div className="mt-0.5 text-xs font-medium text-stone-500">
                       {od
                         ? `Was due ${h.daysOverdue}d ago · sitting in ${t.status || t.tab || "todo"}`
                         : `No update in ${h.daysSinceUpdate} days · sitting in ${t.status || t.tab || "todo"}`}
@@ -195,7 +199,7 @@ export default function AttentionCenter({
 
                   {/* Assignee pill */}
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white shadow-2xs shrink-0"
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-2xs shrink-0"
                     style={{ background: t.color || "#8b5cf6" }}
                     title={leadName}
                   >
@@ -203,14 +207,16 @@ export default function AttentionCenter({
                   </div>
 
                   {/* Actions */}
-                  <div className="flex shrink-0 items-center gap-1.5">
+                  <div className="flex shrink-0 items-center gap-2.5">
                     {od ? (
                       <>
                         <div className="relative">
                           <button
                             type="button"
                             onClick={() => setMenuFor((m) => (m === t.id ? null : t.id))}
-                            className="tactile flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-extrabold text-stone-700 border border-stone-200 shadow-2xs hover:bg-stone-50 cursor-pointer"
+                            aria-haspopup="menu"
+                            aria-expanded={menuFor === t.id}
+                            className="tactile inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-xs font-bold text-stone-700 border border-stone-200 shadow-2xs hover:bg-stone-50 cursor-pointer"
                           >
                             <CalendarClock className="h-3.5 w-3.5 text-stone-500" strokeWidth={2.2} />
                             <span>Reschedule</span>
@@ -238,7 +244,7 @@ export default function AttentionCenter({
                                       onReschedule && onReschedule(t.id, d);
                                       setMenuFor(null);
                                     }}
-                                    className="tactile flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-[12.5px] font-bold text-stone-700 hover:bg-stone-100 cursor-pointer"
+                                    className="tactile flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-bold text-stone-700 hover:bg-stone-100 cursor-pointer"
                                   >
                                     <span>{label}</span>
                                     <ArrowRight className="h-3.5 w-3.5 text-stone-400" strokeWidth={2.2} />
@@ -252,18 +258,20 @@ export default function AttentionCenter({
                         <button
                           type="button"
                           onClick={() => onNudge && onNudge(t.id)}
-                          className="tactile flex h-8 w-8 items-center justify-center rounded-full bg-white text-stone-500 hover:text-stone-900 border border-stone-200 shadow-2xs hover:bg-stone-50 cursor-pointer"
+                          aria-label="Nudge assignee"
                           title="Nudge assignee"
+                          className="tactile inline-flex h-9 w-9 items-center justify-center rounded-full bg-white text-stone-500 hover:text-stone-900 border border-stone-200 shadow-2xs hover:bg-stone-50 cursor-pointer"
                         >
-                          <Bell className="h-[15px] w-[15px]" strokeWidth={2.2} />
+                          <Bell className="h-4 w-4" strokeWidth={2.2} />
                         </button>
 
                         <button
                           type="button"
                           onClick={() => onMarkDone && onMarkDone(t.id)}
-                          className="tactile flex items-center gap-1 rounded-full bg-[#111318] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-xs hover:bg-black cursor-pointer"
+                          aria-label={`Mark ${t.title} as done`}
+                          className="tactile inline-flex h-9 items-center gap-1.5 rounded-full bg-stone-100 px-3.5 text-xs font-bold text-stone-800 border border-stone-200/80 hover:bg-stone-200 hover:text-stone-950 transition-colors cursor-pointer"
                         >
-                          <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
+                          <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.8} />
                           <span>Done</span>
                         </button>
                       </>
@@ -272,7 +280,8 @@ export default function AttentionCenter({
                         <button
                           type="button"
                           onClick={() => onNudge && onNudge(t.id)}
-                          className="tactile flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[12px] font-extrabold text-stone-700 border border-stone-200 shadow-2xs hover:bg-stone-50 cursor-pointer"
+                          aria-label="Nudge assignee"
+                          className="tactile inline-flex h-9 items-center gap-1.5 rounded-full bg-white px-3.5 text-xs font-bold text-stone-700 border border-stone-200 shadow-2xs hover:bg-stone-50 cursor-pointer"
                         >
                           <Bell className="h-3.5 w-3.5 text-stone-500" strokeWidth={2.2} />
                           <span>Nudge</span>
@@ -281,9 +290,10 @@ export default function AttentionCenter({
                         <button
                           type="button"
                           onClick={() => onCaughtUp && onCaughtUp(t.id)}
-                          className="tactile flex items-center gap-1 rounded-full bg-[#111318] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-xs hover:bg-black cursor-pointer"
+                          aria-label={`Mark ${t.title} as caught up`}
+                          className="tactile inline-flex h-9 items-center gap-1.5 rounded-full bg-stone-100 px-3.5 text-xs font-bold text-stone-800 border border-stone-200/80 hover:bg-stone-200 hover:text-stone-950 transition-colors cursor-pointer"
                         >
-                          <Check className="h-3.5 w-3.5" strokeWidth={2.8} />
+                          <Check className="h-3.5 w-3.5 text-emerald-600" strokeWidth={2.8} />
                           <span>Caught up</span>
                         </button>
                       </>

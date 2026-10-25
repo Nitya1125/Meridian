@@ -7,7 +7,7 @@ import DynamicHeader from '@/components/DynamicHeader'
 import { useAuth } from '@/context/AuthContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  UsersIcon, SettingsIcon, MessageIcon,
+  UsersIcon, SettingsIcon, CreditCardIcon, MessageIcon,
   CheckIcon, ZapIcon, ShieldIcon, BellIcon
 } from '@/components/Icons'
 import { toast } from 'react-hot-toast'

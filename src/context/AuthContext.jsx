@@ -1,55 +1,39 @@
 "use client"
 
-import React, { createContext, useContext, useState, useSyncExternalStore, useEffect, use } from 'react'
+import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import {getCurrentUser} from "../Service/authService";
+import { getCurrentUser } from "../Service/authService"
 
 const AuthContext = createContext(null)
 
-const emptySubscribe = () => () => {}
-
-function getInitialToken() {
-  if (typeof window === 'undefined') return null
-  try {
-    return localStorage.getItem('meridian_token')
-  } catch {
-    return null
-  }
-}
-
-function getInitialUser() {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = localStorage.getItem('meridian_user')
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    return null
-  }
-}
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(getInitialUser)
-  const [token, setToken] = useState(getInitialToken)
+  const [user, setUser] = useState(null)
+  const [token, setToken] = useState(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  // React 19 hydrated check
-  const isHydrated = useSyncExternalStore(emptySubscribe, () => true, () => false)
-  
   useEffect(() => {
-    if (!isHydrated) return 
+    let isMounted = true
+
     const checkUser = async () => {
       try {
-        const localToken = getInitialToken()
-        const localUser = getInitialUser()
-        if (localToken && localToken.startsWith('demo_') && localUser) {
-          setUser(localUser)
-          setToken(localToken)
-          setLoading(false)
-          return
-        }
+        // Check for local demo token first
+        try {
+          const localToken = localStorage.getItem('meridian_token')
+          const localUserStr = localStorage.getItem('meridian_user')
+          if (localToken && localToken.startsWith('demo_') && localUserStr) {
+            if (isMounted) {
+              setUser(JSON.parse(localUserStr))
+              setToken(localToken)
+              setLoading(false)
+            }
+            return
+          }
+        } catch {}
 
         const result = await getCurrentUser()
+        if (!isMounted) return
+
         if (result && result.user) {
           setUser(result.user)
           setToken("authenticated")
@@ -62,6 +46,7 @@ export function AuthProvider({ children }) {
           } catch {}
         }
       } catch (error) {
+        if (!isMounted) return
         setUser(null)
         setToken(null)
         try {
@@ -69,17 +54,24 @@ export function AuthProvider({ children }) {
           localStorage.removeItem('meridian_user')
         } catch {}
       } finally {
-        setLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
+
     checkUser()
-  }, [isHydrated])
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
 
   const login = (userData, jwtToken) => {
     setUser(userData)
-    setToken(jwtToken)
+    setToken(jwtToken || "authenticated")
     try {
-      localStorage.setItem('meridian_token', jwtToken)
+      if (jwtToken) localStorage.setItem('meridian_token', jwtToken)
       localStorage.setItem('meridian_user', JSON.stringify(userData))
     } catch (e) {
       console.error('Storage write error', e)

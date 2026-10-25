@@ -1,10 +1,23 @@
 import db from "@/Lib/db";
 import { NextResponse } from "next/server";
 import bcrypt from "bcrypt";
+import {verifyOtpRateLimit} from "@/Lib/rateLimit";
 
 
 export async function POST(request){
     try{
+
+        const ip = request.headers.get("x-forwarded-for")?.split(",")[0] || "unknown";
+
+        const {success} = await verifyOtpRateLimit.limit(ip)
+
+        if(!success){
+            return NextResponse.json({
+                success:false,
+                message:"Too many requests, please try again later"
+            },{status:429})
+        }
+
         const  {email,otp} = await request.json();
 
         if(!email || !otp){

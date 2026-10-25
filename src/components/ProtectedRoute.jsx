@@ -1,28 +1,15 @@
 "use client"
 
-import React, { useEffect, useSyncExternalStore } from 'react'
+import React, { useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { ShieldLockIcon, ZapIcon } from './Icons'
+import { ShieldLockIcon } from './Icons'
 import StripedLoader from './StripedLoader'
-
-if (typeof window !== 'undefined') {
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get("token");
-
-  if (token) {
-    localStorage.setItem("meridian_token", token);
-    window.history.replaceState({}, "", window.location.pathname);
-  }
-}
-
-const emptySubscribe = () => () => {}
 
 export default function ProtectedRoute({ children }) {
   const { isAuthenticated, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const isHydrated = useSyncExternalStore(emptySubscribe, () => true, () => false)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -33,9 +20,7 @@ export default function ProtectedRoute({ children }) {
         window.history.replaceState({}, '', pathname || '/dashboard')
       }
     }
-    if (!loading && isHydrated && !isAuthenticated) {
-
-    
+    if (!loading && !isAuthenticated) {
       if (typeof window !== 'undefined') {
         try {
           sessionStorage.setItem('meridian_redirect_after_login', pathname)
@@ -45,9 +30,9 @@ export default function ProtectedRoute({ children }) {
       }
       router.push('/')
     }
-  }, [isAuthenticated, loading, isHydrated, router, pathname])
+  }, [isAuthenticated, loading, router, pathname])
 
-  if (loading || !isHydrated) {
+  if (loading) {
     return (
       <StripedLoader
         variant="page"

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ZapIcon, ShieldIcon, CheckIcon } from '@/components/Icons';
 import { toast } from 'react-hot-toast';
 import StripedLoader from '@/components/StripedLoader';
+import { forgotPassword, resetPasswordVerifyOtp, resetPassword } from '@/Service/authService';
 
 /* ── Tiny Icons ── */
 const MailIcon = () => (
@@ -298,6 +299,7 @@ export default function ForgotPasswordPage() {
   const [step, setStep] = useState('request'); // 'request' | 'verify' | 'reset' | 'success'
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [otpErr, setOtpErr] = useState(false);
@@ -305,18 +307,79 @@ export default function ForgotPasswordPage() {
   const [pwErr, setPwErr] = useState('');
   const [cPwErr, setCPwErr] = useState('');
 
-  const load = (fn) => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      if (fn) fn();
-    }, 800);
-  };
-
   const validateEmail = (v) => {
     if (!v) return 'Email is required';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Please enter a valid email address';
     return '';
+  };
+
+  const handleSendOtp = async () => {
+    const e = validateEmail(email);
+    if (e) {
+      setEmailErr(e);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await forgotPassword({ email });
+      toast.success(res?.message || 'Reset code sent to your email!');
+      setStep('verify');
+    } catch (err) {
+      toast.error(err.message || 'Failed to send reset code');
+      setEmailErr(err.message || 'Failed to send reset code');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (codeToVerify) => {
+    const code = codeToVerify || otp;
+    if (!code || code.length !== 6) {
+      setOtpErr(true);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await resetPasswordVerifyOtp({ email, otp: code });
+      toast.success(res?.message || 'OTP verified successfully!');
+      setOtpErr(false);
+      setStep('reset');
+    } catch (err) {
+      setOtpErr(true);
+      toast.error(err.message || 'Invalid or expired OTP');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (password.length < 8) {
+      setPwErr('At least 8 characters');
+      return;
+    }
+    if (password !== confirmPw) {
+      setCPwErr("Passwords don't match");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await resetPassword({ email, newPassword: password, confirmPassword: confirmPw });
+      toast.success(res?.message || 'Password reset successfully!');
+      setStep('success');
+    } catch (err) {
+      toast.error(err.message || 'Failed to reset password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    try {
+      const res = await forgotPassword({ email });
+      toast.success(res?.message || 'New recovery code sent to your email!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to resend code');
+    }
   };
 
   return (
@@ -370,18 +433,8 @@ export default function ForgotPasswordPage() {
               <button
                 type="button"
                 disabled={loading}
-                onClick={() => {
-                  const e = validateEmail(email);
-                  if (e) {
-                    setEmailErr(e);
-                    return;
-                  }
-                  load(() => {
-                    toast.success('Reset code sent to your email!');
-                    setStep('verify');
-                  });
-                }}
-                className="w-full py-3 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                onClick={handleSendOtp}
+                className="w-full py-3 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer disabled:opacity-60"
               >
                 {loading ? 'Sending code...' : 'Send Recovery Code'}
                 {!loading && <span>→</span>}
@@ -403,32 +456,35 @@ export default function ForgotPasswordPage() {
 
               <OtpInput
                 hasError={otpErr}
-                onComplete={(otp) => {
-                  if (otp === '000000') {
-                    setOtpErr(true);
-                    return;
-                  }
+                onComplete={(completedOtp) => {
+                  setOtp(completedOtp);
                   setOtpErr(false);
-                  setStep('reset');
+                  handleVerifyOtp(completedOtp);
                 }}
               />
 
               {otpErr && (
                 <p className="text-rose-500 text-[11px] font-semibold mb-3">
-                  ⚠ Invalid code. Please try again.
+                  ⚠ Invalid or expired code. Please try again.
                 </p>
               )}
 
-              <Countdown onResend={() => toast.success('New code sent!')} />
+              {loading && (
+                <div className="mb-3 animate-in fade-in duration-200">
+                  <StripedLoader color="lime" size="sm" label="Verifying OTP code..." />
+                </div>
+              )}
+
+              <Countdown onResend={handleResendOtp} />
 
               <div className="mt-5">
                 <button
                   type="button"
                   disabled={loading}
-                  onClick={() => setStep('reset')}
-                  className="w-full py-3 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                  onClick={() => handleVerifyOtp()}
+                  className="w-full py-3 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer disabled:opacity-60"
                 >
-                  Verify & Continue
+                  {loading ? 'Verifying...' : 'Verify & Continue'}
                 </button>
               </div>
             </div>
@@ -474,24 +530,17 @@ export default function ForgotPasswordPage() {
                 icon={<LockIcon />}
               />
 
+              {loading && (
+                <div className="mb-3 animate-in fade-in duration-200">
+                  <StripedLoader color="amber" size="md" label="Updating your password..." />
+                </div>
+              )}
+
               <button
                 type="button"
                 disabled={loading}
-                onClick={() => {
-                  if (password.length < 8) {
-                    setPwErr('At least 8 characters');
-                    return;
-                  }
-                  if (password !== confirmPw) {
-                    setCPwErr("Passwords don't match");
-                    return;
-                  }
-                  load(() => {
-                    toast.success('Password reset successfully!');
-                    setStep('success');
-                  });
-                }}
-                className="w-full py-3 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer mt-2"
+                onClick={handleResetPassword}
+                className="w-full py-3 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer mt-2 disabled:opacity-60"
               >
                 {loading ? 'Updating Password...' : 'Save New Password'}
               </button>

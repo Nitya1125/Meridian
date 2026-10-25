@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useMemo, useCallback } from 'react'
+import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import Sidebar from '@/components/sidebar'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
@@ -18,6 +18,7 @@ import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTasks, formatLocalDate } from '@/context/TaskContext'
 import { useOrg } from '@/context/OrgContext'
+import { getAnalytics } from '@/Service/analytics'
 
 // ── Curated Baseline Tasks Fallback (Guarantees zero-blank UI on empty workspaces) ──
 const FALLBACK_TASKS = [
@@ -90,11 +91,37 @@ const FALLBACK_TASKS = [
 ]
 
 // ── 1. Interactive Burndown Curve Component ──
-function BurndownChart({ tasks = [], timeRange = '30d' }) {
+function BurndownChart({ tasks = [], timeRange = '30d', apiBurndown = [] }) {
   const [hover, setHover] = useState(null)
   const w = 620, h = 210, pad = 14
 
   const burndownData = useMemo(() => {
+    if (apiBurndown && Array.isArray(apiBurndown) && apiBurndown.length > 0) {
+      const totalPoints = apiBurndown.reduce((acc, t) => acc + (Number(t.reminingTask) || 0), 0) || 10
+      const steps = apiBurndown.length
+
+      return apiBurndown.map((item, i) => {
+        const frac = steps > 1 ? i / (steps - 1) : 0
+        const ideal = Math.round(totalPoints * (1 - frac))
+        const actual = Number(item.reminingTask) || 0
+        let dateLabel = `D${i + 1}`
+        if (item.date) {
+          try {
+            const d = new Date(item.date)
+            dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          } catch {
+            dateLabel = String(item.date).split('T')[0]
+          }
+        }
+
+        return {
+          d: dateLabel,
+          ideal,
+          actual
+        }
+      })
+    }
+
     const totalPoints = tasks.reduce((acc, t) => acc + (parseFloat(t.estimated_time_value) || 3), 0) || 40
     const steps = timeRange === '7d' ? 7 : timeRange === '90d' ? 9 : 6
 
@@ -118,7 +145,7 @@ function BurndownChart({ tasks = [], timeRange = '30d' }) {
       })
     }
     return points
-  }, [tasks, timeRange])
+  }, [tasks, timeRange, apiBurndown])
 
   const maxVal = burndownData[0]?.ideal || 100
   const x = (i) => pad + (i / Math.max(1, burndownData.length - 1)) * (w - pad * 2)
@@ -474,14 +501,27 @@ const HEAT_TINTS = [
   { bg: "#15803d", border: "border-emerald-800 shadow-xs" }
 ]
 
-function ActivityHeatmap({ tasks = [], onSelectDate }) {
+function ActivityHeatmap({ tasks = [], apiHeatmap = [], onSelectDate }) {
   const [hoveredCell, setHoveredCell] = useState(null)
-
 
   const heatmapMatrix = useMemo(() => {
     const today = new Date()
     const matrix = []
     let totalActions = 0
+
+    const apiMap = new Map()
+    if (apiHeatmap && Array.isArray(apiHeatmap) && apiHeatmap.length > 0) {
+      apiHeatmap.forEach(item => {
+        let dStr = ''
+        if (typeof item.day === 'string') dStr = item.day.split('T')[0]
+        else if (item.day instanceof Date) dStr = item.day.toISOString().split('T')[0]
+        else if (item.day) dStr = String(item.day).split('T')[0]
+
+        if (dStr) {
+          apiMap.set(dStr, Number(item.count) || 0)
+        }
+      })
+    }
 
     // Curated realistic baseline pattern for past sprint history
     const baselineWeights = [
@@ -503,8 +543,17 @@ function ActivityHeatmap({ tasks = [], onSelectDate }) {
         const dayTasks = tasks.filter(t => t.due_date && String(t.due_date).startsWith(dateStr))
         const doneCount = dayTasks.filter(t => t.status === 'DONE').length
 
-        const baseWeight = baselineWeights[4 - w][d]
-        const count = dayTasks.length > 0 ? (dayTasks.length * 2 + doneCount) : baseWeight
+        let count = 0
+        if (apiMap.has(dateStr)) {
+          count = apiMap.get(dateStr)
+        } else if (apiHeatmap && apiHeatmap.length > 0) {
+          count = 0
+        } else if (dayTasks.length > 0) {
+          count = dayTasks.length * 2 + doneCount
+        } else {
+          count = baselineWeights[4 - w][d]
+        }
+
         totalActions += count
 
         const level = count === 0 ? 0 : count <= 2 ? 1 : count <= 4 ? 2 : count <= 6 ? 3 : 4
@@ -524,7 +573,7 @@ function ActivityHeatmap({ tasks = [], onSelectDate }) {
       matrix.push(week)
     }
     return { matrix, totalActions }
-  }, [tasks])
+  }, [tasks, apiHeatmap])
 
   return (
     <div className="flex flex-col items-center gap-2 font-sans select-none relative">
@@ -624,6 +673,37 @@ export default function AnalyticsPage() {
   const [feedFilter, setFeedFilter] = useState("ALL") // 'ALL' | 'DONE' | 'REVIEW' | 'CRITICAL'
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState(null)
 
+  // Real backend analytics API data state
+  const [analyticsData, setAnalyticsData] = useState(null)
+  const [analyticsLoading, setAnalyticsLoading] = useState(true)
+
+  // Fetch real analytics data whenever active organization changes
+  const fetchAnalytics = useCallback(async () => {
+    if (!activeOrg?.id) {
+      setAnalyticsLoading(false)
+      setAnalyticsData(null)
+      return
+    }
+    try {
+      setAnalyticsLoading(true)
+      const res = await getAnalytics(activeOrg.id)
+      if (res && res.success && res.data) {
+        setAnalyticsData(res.data)
+      } else {
+        toast.error(res?.message || 'Failed to fetch analytics data')
+      }
+    } catch (err) {
+      console.error('Analytics fetch error:', err)
+      toast.error(err.message || 'Failed to fetch analytics data')
+    } finally {
+      setAnalyticsLoading(false)
+    }
+  }, [activeOrg?.id])
+
+  useEffect(() => {
+    fetchAnalytics()
+  }, [fetchAnalytics])
+
   // Use effective tasks fallback to ensure rich visual state on empty orgs
   const effectiveTasks = useMemo(() => {
     if (tasks && tasks.length > 0) return tasks
@@ -643,7 +723,7 @@ export default function AnalyticsPage() {
     })
   }, [effectiveTasks, timeRange])
 
-  // Real KPI Metrics derived from windowTasks
+  // Real KPI Metrics derived from windowTasks (fallback if API loading)
   const totalTasks = windowTasks.length || 1
   const doneTasks = windowTasks.filter(t => t.status === 'DONE')
   const completionRate = Math.round((doneTasks.length / totalTasks) * 100)
@@ -652,8 +732,24 @@ export default function AnalyticsPage() {
   const avgCycleHours = (totalHours / totalTasks).toFixed(1)
   const criticalCount = windowTasks.filter(t => t.priority === 'CRITICAL' && t.status !== 'DONE').length
 
-  // Priority distribution for Donut Chart
+  // Priority distribution for Donut Chart (driven by real API priorityDistribution)
   const priorityDistribution = useMemo(() => {
+    if (analyticsData?.priorityDistribution && Array.isArray(analyticsData.priorityDistribution) && analyticsData.priorityDistribution.length > 0) {
+      const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 }
+      analyticsData.priorityDistribution.forEach(item => {
+        const p = (item.priority || 'MEDIUM').toUpperCase()
+        if (counts[p] !== undefined) counts[p] = Number(item.count) || 0
+        else counts.MEDIUM += Number(item.count) || 0
+      })
+
+      return [
+        { id: 'CRITICAL', label: 'Critical Focus', count: counts.CRITICAL, color: '#EF4444' },
+        { id: 'HIGH', label: 'High Priority', count: counts.HIGH, color: '#FF4400' },
+        { id: 'MEDIUM', label: 'Medium Stream', count: counts.MEDIUM, color: '#6366F1' },
+        { id: 'LOW', label: 'Low / Routine', count: counts.LOW, color: '#10B981' }
+      ]
+    }
+
     const counts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0 }
     windowTasks.forEach(t => {
       const p = (t.priority || 'MEDIUM').toUpperCase()
@@ -667,10 +763,22 @@ export default function AnalyticsPage() {
       { id: 'MEDIUM', label: 'Medium Stream', count: counts.MEDIUM, color: '#6366F1' },
       { id: 'LOW', label: 'Low / Routine', count: counts.LOW, color: '#10B981' }
     ]
-  }, [windowTasks])
+  }, [analyticsData?.priorityDistribution, windowTasks])
 
-  // Weekly velocity histogram bars
+  // Weekly velocity histogram bars (driven by real API weeklyVelocity)
   const velocityBuckets = useMemo(() => {
+    if (analyticsData?.weeklyVelocity && Array.isArray(analyticsData.weeklyVelocity) && analyticsData.weeklyVelocity.length > 0) {
+      return analyticsData.weeklyVelocity.map((item, idx, arr) => {
+        const weekStr = String(item.week)
+        const weekNum = weekStr.length >= 6 ? weekStr.slice(-2) : (idx + 1)
+        return {
+          label: `W${weekNum}`,
+          val: Number(item.completedTasks) || 0,
+          isCurrent: idx === arr.length - 1
+        }
+      })
+    }
+
     const buckets = [
       { label: 'S1', val: 32 },
       { label: 'S2', val: 38 },
@@ -679,10 +787,10 @@ export default function AnalyticsPage() {
       { label: 'S5', val: 41 },
       { label: 'S6', val: 48 },
       { label: 'S7', val: 42 },
-      { label: 'S8 (Now)', val: doneTasks.length * 8 || 52, isCurrent: true }
+      { label: 'S8 (Now)', val: (analyticsData?.kpiMetrics?.completedTasks ?? doneTasks.length) * 8 || 52, isCurrent: true }
     ]
     return buckets
-  }, [doneTasks.length])
+  }, [analyticsData?.weeklyVelocity, analyticsData?.kpiMetrics?.completedTasks, doneTasks.length])
 
   // Real-Time Activity & Audit Feed Events
   const activityEvents = useMemo(() => {
@@ -833,23 +941,23 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
             <MetricCard
               label="Sprint Velocity"
-              value={`${doneTasks.length * 8 || 48} pts`}
-              badge={`${doneTasks.length} tasks closed`}
+              value={analyticsLoading ? '...' : `${analyticsData?.kpiMetrics?.sprintVelocity ?? (doneTasks.length * 8 || 48)} pts`}
+              badge={analyticsLoading ? '...' : `${analyticsData?.kpiMetrics?.completedTasks ?? doneTasks.length} tasks closed`}
               hint="Throughput across active cadence"
               theme="purple"
               icon={ZapIcon}
             />
             <MetricCard
               label="Completion Rate"
-              value={`${completionRate}%`}
-              badge={completionRate >= 75 ? "+12% High Pace" : "Pacing"}
-              hint={`${doneTasks.length} of ${totalTasks} deliverables done`}
+              value={analyticsLoading ? '...' : `${analyticsData?.kpiMetrics?.completionRate ?? completionRate}%`}
+              badge={analyticsLoading ? '...' : ((analyticsData?.kpiMetrics?.completionRate ?? completionRate) >= 75 ? "+12% High Pace" : "Pacing")}
+              hint={analyticsLoading ? '...' : `${analyticsData?.kpiMetrics?.completedTasks ?? doneTasks.length} of ${analyticsData?.kpiMetrics?.totalTasks ?? totalTasks} deliverables done`}
               theme="emerald"
               icon={CheckCircleIcon}
             />
             <MetricCard
               label="Average Cycle Time"
-              value={`${avgCycleHours}h`}
+              value={analyticsLoading ? '...' : `${analyticsData?.kpiMetrics?.cycleTime ?? avgCycleHours}h`}
               badge="Cadence"
               hint="Mean effort per deliverable"
               theme="amber"
@@ -857,10 +965,10 @@ export default function AnalyticsPage() {
             />
             <MetricCard
               label="Critical Deliverables"
-              value={String(criticalCount)}
-              badge={criticalCount === 0 ? "All Clear" : "Needs Focus"}
+              value={analyticsLoading ? '...' : String(analyticsData?.kpiMetrics?.criticalTasks ?? criticalCount)}
+              badge={analyticsLoading ? '...' : ((analyticsData?.kpiMetrics?.criticalTasks ?? criticalCount) === 0 ? "All Clear" : "Needs Focus")}
               hint="High priority unclosed items"
-              theme={criticalCount > 0 ? "rose" : "sky"}
+              theme={(analyticsData?.kpiMetrics?.criticalTasks ?? criticalCount) > 0 ? "rose" : "sky"}
               icon={AlertCircle}
             />
           </div>
@@ -893,12 +1001,12 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
 
-                <BurndownChart tasks={windowTasks} timeRange={timeRange} />
+                <BurndownChart tasks={windowTasks} timeRange={timeRange} apiBurndown={analyticsData?.burndownDate} />
 
                 <div className="mt-4 pt-4 border-t border-stone-100 flex items-center justify-between text-xs text-stone-500 font-medium">
-                  <span>Current sprint focus: <strong className="text-stone-900">Sprint 24 Active</strong></span>
+                  <span>Current sprint focus: <strong className="text-stone-900">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</strong></span>
                   <span className="text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-mono">
-                    {completionRate}% Sprint Completion
+                    {analyticsLoading ? '...' : `${analyticsData?.kpiMetrics?.completionRate ?? completionRate}% Sprint Completion`}
                   </span>
                 </div>
               </div>
@@ -1049,8 +1157,8 @@ export default function AnalyticsPage() {
 
                 <WeeklyVelocityChart
                   buckets={velocityBuckets}
-                  activePoints={doneTasks.length * 8 || 16}
-                  completionRate={completionRate}
+                  activePoints={analyticsData?.kpiMetrics?.sprintVelocity ?? (doneTasks.length * 8 || 16)}
+                  completionRate={analyticsData?.kpiMetrics?.completionRate ?? completionRate}
                 />
               </div>
             </div>
@@ -1072,7 +1180,7 @@ export default function AnalyticsPage() {
                   </span>
                 </div>
 
-                <ActivityHeatmap tasks={effectiveTasks} />
+                <ActivityHeatmap tasks={effectiveTasks} apiHeatmap={analyticsData?.heatMapData} />
               </div>
             </div>
           </div>
@@ -1141,11 +1249,13 @@ export default function AnalyticsPage() {
               if (updateTask) await updateTask(updated)
               setSelectedTaskForDrawer(null)
               if (refreshTasks) refreshTasks()
+              fetchAnalytics()
             }}
             onDeleteTask={async (id) => {
               if (deleteTask) await deleteTask(id)
               setSelectedTaskForDrawer(null)
               if (refreshTasks) refreshTasks()
+              fetchAnalytics()
             }}
             members={members}
           />

@@ -104,86 +104,38 @@ export default function DynamicHeader({
           status: 'online'
         }))
         setRealMembers(formatted)
-      } else {
+      } else if (user) {
         setRealMembers([
           {
             id: `mem_${user?.id || 'me'}`,
-            name: fullName ? `${fullName} (You)` : 'Alex Johnson (You)',
-            email: user?.email || 'alex.johnson@meridian.io',
+            name: fullName ? `${fullName} (You)` : (user?.email || 'You'),
+            email: user?.email || '',
             role: activeOrg?.role || 'Owner',
-            initials: initials || 'AJ',
+            initials: initials || 'U',
             color: '#8b5cf6',
-            status: 'online'
-          },
-          {
-            id: 'mem_sarah',
-            name: 'Sarah Chen',
-            email: 'sarah.c@meridian.io',
-            role: 'Lead Designer',
-            initials: 'SC',
-            color: '#10b981',
-            status: 'online'
-          },
-          {
-            id: 'mem_marcus',
-            name: 'Marcus Vance',
-            email: 'm.vance@meridian.io',
-            role: 'Staff Engineer',
-            initials: 'MV',
-            color: '#f59e0b',
-            status: 'online'
-          },
-          {
-            id: 'mem_elena',
-            name: 'Elena Rostova',
-            email: 'elena.r@meridian.io',
-            role: 'DevOps Lead',
-            initials: 'ER',
-            color: '#0ea5e9',
             status: 'online'
           }
         ])
+      } else {
+        setRealMembers([])
       }
     } catch (err) {
       console.error("Failed to fetch header org members:", err)
-      setRealMembers([
-        {
-          id: `mem_${user?.id || 'me'}`,
-          name: fullName ? `${fullName} (You)` : 'Alex Johnson (You)',
-          email: user?.email || 'alex.johnson@meridian.io',
-          role: activeOrg?.role || 'Owner',
-          initials: initials || 'AJ',
-          color: '#8b5cf6',
-          status: 'online'
-        },
-        {
-          id: 'mem_sarah',
-          name: 'Sarah Chen',
-          email: 'sarah.c@meridian.io',
-          role: 'Lead Designer',
-          initials: 'SC',
-          color: '#10b981',
-          status: 'online'
-        },
-        {
-          id: 'mem_marcus',
-          name: 'Marcus Vance',
-          email: 'm.vance@meridian.io',
-          role: 'Staff Engineer',
-          initials: 'MV',
-          color: '#f59e0b',
-          status: 'online'
-        },
-        {
-          id: 'mem_elena',
-          name: 'Elena Rostova',
-          email: 'elena.r@meridian.io',
-          role: 'DevOps Lead',
-          initials: 'ER',
-          color: '#0ea5e9',
-          status: 'online'
-        }
-      ])
+      if (user) {
+        setRealMembers([
+          {
+            id: `mem_${user?.id || 'me'}`,
+            name: fullName ? `${fullName} (You)` : (user?.email || 'You'),
+            email: user?.email || '',
+            role: activeOrg?.role || 'Owner',
+            initials: initials || 'U',
+            color: '#8b5cf6',
+            status: 'online'
+          }
+        ])
+      } else {
+        setRealMembers([])
+      }
     } finally {
       setMembersLoading(false)
     }
@@ -193,7 +145,7 @@ export default function DynamicHeader({
     fetchOrgMembers()
   }, [fetchOrgMembers])
 
-  const activeMembersList = realMembers.length > 0 ? realMembers : [
+  const activeMembersList = realMembers.length > 0 ? realMembers : (user ? [
     {
       id: 'self',
       name: fullName || user?.email?.split('@')[0] || 'You',
@@ -203,7 +155,7 @@ export default function DynamicHeader({
       color: '#8b5cf6',
       status: 'online'
     }
-  ]
+  ] : [])
 
   // Live Sprint Assurance Calculations from Shared TaskContext or Props
   const { sprintMetrics, tasks: liveTasks = [] } = useTasks() || {}
@@ -220,31 +172,42 @@ export default function DynamicHeader({
   const todoCountFromList = taskList.filter(t => t.status === 'TODO' || t.status === 'BACKLOG' || !t.status).length
 
   const doneTasks = columns
-    ? (columns.find(c => c.id === 'ready' || c.id === 'done')?.tasks?.length ?? doneCountFromList)
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'READY' || id === 'DONE'
+      })?.tasks?.length ?? doneCountFromList)
     : doneCountFromList
 
   const inProgressTasks = columns
-    ? (columns.find(c => c.id === 'inprogress')?.tasks?.length ?? inProgressCountFromList)
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'INPROGRESS' || id === 'IN_PROGRESS'
+      })?.tasks?.length ?? inProgressCountFromList)
     : inProgressCountFromList
 
   const reviewTasks = columns
-    ? (columns.find(c => c.id === 'review' || c.id === 'under-review')?.tasks?.length ?? reviewCountFromList)
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'REVIEW' || id === 'UNDER_REVIEW'
+      })?.tasks?.length ?? reviewCountFromList)
     : reviewCountFromList
 
   const todoTasks = columns
-    ? (columns.find(c => c.id === 'todo')?.tasks?.length ?? todoCountFromList)
+    ? (columns.find(c => {
+        const id = String(c.id).toUpperCase()
+        return id === 'TODO'
+      })?.tasks?.length ?? todoCountFromList)
     : todoCountFromList
 
   const computedTotal = (doneTasks + inProgressTasks + reviewTasks + todoTasks) || taskList.length
-  const totalTasks = computedTotal > 0 ? computedTotal : (sprintMetrics?.totalTasks || 6)
-  const effectiveDone = computedTotal > 0 ? doneTasks : (sprintMetrics?.doneTasks || 2)
-  const effectiveInProgress = computedTotal > 0 ? inProgressTasks : (sprintMetrics?.inProgressTasks || 1)
-  const effectiveReview = computedTotal > 0 ? reviewTasks : (sprintMetrics?.reviewTasks || 1)
-  const effectiveTodo = computedTotal > 0 ? todoTasks : (sprintMetrics?.todoTasks || 2)
+  const totalTasks = computedTotal > 0 ? computedTotal : (sprintMetrics?.totalTasks || (allTasks ? allTasks.length : 0))
+  const effectiveDone = computedTotal > 0 ? doneTasks : (sprintMetrics?.doneTasks || doneTasks)
+  const effectiveInProgress = computedTotal > 0 ? inProgressTasks : (sprintMetrics?.inProgressTasks || inProgressTasks)
+  const effectiveReview = computedTotal > 0 ? reviewTasks : (sprintMetrics?.reviewTasks || reviewTasks)
+  const effectiveTodo = computedTotal > 0 ? todoTasks : (sprintMetrics?.todoTasks || todoTasks)
 
-  const completionPct = totalTasks > 0 ? Math.round((effectiveDone / totalTasks) * 100) : 33
-  const confidenceScore = Math.min(99, Math.max(88, completionPct + 16))
-  const isAnyOpen = Boolean(orgDropdownOpen || assuranceOpen || membersOpen || notifOpen)
+  const completionPct = totalTasks > 0 ? Math.round((effectiveDone / totalTasks) * 100) : 0
+  const confidenceScore = totalTasks > 0 ? Math.min(99, Math.max(50, completionPct + 16)) : 100
 
   // Notification handlers
   const handleAcceptRequest = async (requestId) => {
@@ -294,6 +257,8 @@ export default function DynamicHeader({
   const currentOrgName = activeOrg?.name || "Select Workspace"
   const currentOrgRole = activeOrg?.role || (activeOrg?.created_by === user?.id ? "Owner" : "Workspace")
 
+  const isAnyOpen = Boolean(orgDropdownOpen || assuranceOpen || membersOpen || notifOpen)
+
   return (
     <>
       {/* Soft Backdrop Scrim when any Dynamic Island popover is active */}
@@ -322,7 +287,7 @@ export default function DynamicHeader({
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 1. INTERACTIVE WORKSPACE SELECTOR SEGMENT                    */}
           {/* ──────────────────────────────────────────────────────────── */}
-          <div className="relative" ref={orgMenuRef}>
+          <div className="relative shrink-0" ref={orgMenuRef}>
             <button
               type="button"
               onClick={() => {
@@ -339,20 +304,12 @@ export default function DynamicHeader({
               </span>
 
               <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wide">
-                {activeOrg ? (
-                  <>
-                    <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30 shrink-0">
-                      {currentOrgRole}
-                    </span>
-                    <span className="text-stone-100 text-xs font-bold truncate max-w-[120px] sm:max-w-[150px] group-hover:text-white transition-colors">
-                      {activeOrg.name}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-stone-200 text-xs font-bold truncate max-w-[140px] group-hover:text-white transition-colors">
-                    Select Workspace
-                  </span>
-                )}
+                <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30 shrink-0">
+                  {currentOrgRole}
+                </span>
+                <span className="text-stone-100 text-xs font-bold truncate max-w-[120px] sm:max-w-[160px] group-hover:text-white transition-colors">
+                  {currentOrgName}
+                </span>
                 <ChevronDownIcon
                   size={12}
                   className={`text-stone-400 group-hover:text-stone-200 transition-transform duration-200 shrink-0 ${
@@ -364,7 +321,7 @@ export default function DynamicHeader({
 
             {/* Workspace Switcher Popover */}
             {orgDropdownOpen && (
-              <div className="absolute left-0 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+              <div className="absolute left-0 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                 
                 <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 mb-2">
                   <div className="flex items-center gap-2">
@@ -493,16 +450,16 @@ export default function DynamicHeader({
                 setMembersOpen(false)
               }}
               className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-white/10 transition-all cursor-pointer group text-xs select-none"
-              title="View Sprint 24 details"
+              title="View sprint deliverables details"
             >
               <div className="flex items-center gap-1.5">
                 <IconlyCalendar size={13} primaryColor="#a3e635" />
-                <span className="text-white font-semibold text-xs">Sprint 24</span>
+                <span className="text-white font-semibold text-xs">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</span>
               </div>
-              <span className="text-stone-400 text-[11px] hidden xl:inline">4 days left</span>
+              <span className="text-stone-400 text-[11px]">{totalTasks > 0 ? `${totalTasks} tasks` : '0 tasks'}</span>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-medium border border-emerald-500/30">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                <span>On track</span>
+                <span>{completionPct >= 100 && totalTasks > 0 ? 'Completed' : completionPct > 0 ? `${completionPct}% done` : 'Active'}</span>
               </span>
               <ChevronDownIcon
                 size={10}
@@ -514,7 +471,7 @@ export default function DynamicHeader({
 
             {/* Sprint Overview Popover */}
             {assuranceOpen && (
-              <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 sm:w-88 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+              <div className="absolute left-1/2 -translate-x-1/2 mt-3 w-80 sm:w-88 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-4 z-50 animate-in fade-in zoom-in-95 duration-150">
                 
                 {/* Sprint Header */}
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -523,13 +480,13 @@ export default function DynamicHeader({
                       <IconlyCalendar size={18} primaryColor="#a3e635" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white">Sprint 24</div>
-                      <div className="text-[11px] text-stone-400">Ends Friday &bull; 4 days left</div>
+                      <div className="text-xs font-bold text-white">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</div>
+                      <div className="text-[11px] text-stone-400">{effectiveDone} of {totalTasks} deliverables done</div>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                    On track
+                    {completionPct >= 100 && totalTasks > 0 ? 'Completed' : 'On track'}
                   </span>
                 </div>
 
@@ -651,7 +608,7 @@ export default function DynamicHeader({
 
             {/* Members Presence Popover */}
             {membersOpen && (
-              <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-xl">
+              <div className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 mt-3 w-80 bg-[#111318] text-white rounded-3xl border border-white/15 shadow-2xl p-3 z-50 animate-in fade-in zoom-in-95 duration-150">
                 
                 <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 mb-2">
                   <div className="flex items-center gap-2">

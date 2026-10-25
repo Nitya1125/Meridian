@@ -784,6 +784,7 @@ export default function CalendarPage() {
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState(null)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [createModalDefaultStatus, setCreateModalDefaultStatus] = useState('TODO')
+  const [createModalDueDate, setCreateModalDueDate] = useState('')
 
   // ─── DYNAMIC CALENDAR DATE ENGINE ───
   const [currentMonthDate, setCurrentMonthDate] = useState(() => new Date())
@@ -806,77 +807,82 @@ export default function CalendarPage() {
     setIsDayFiltered(false)
   }, [setCurrentMonthDate, setSelectedDateStr, setIsDayFiltered])
 
-  // ─── Curated Base Tasks Anchored to Active Month ───
-  // Guarantees that even if org has 0 tasks, days are clearly marked with assignee-colored dots
+  // ─── Curated Base Tasks Anchored to Active Month & Sprint ───
+  // Guarantees that even if org has 0 tasks, days and velocity widgets are clearly populated
   const effectiveTasks = useMemo(() => {
     if (tasks && tasks.length > 0) {
       return tasks
     }
-    const year = currentMonthDate ? currentMonthDate.getFullYear() : 2026
-    const m = currentMonthDate ? String(currentMonthDate.getMonth() + 1).padStart(2, '0') : '09'
+    const today = new Date()
+    const getOffsetDate = (offsetDays) => {
+      const d = new Date(today)
+      d.setDate(today.getDate() + offsetDays)
+      return formatLocalDate(d)
+    }
+
     return [
       {
         id: 'fallback-1',
-        task_id: 'fallback-1',
+        task_id: 'MRD-001',
         title: 'Design System & Token Architecture',
         status: 'DONE',
         priority: 'CRITICAL',
-        due_date: `${year}-${m}-03`,
+        due_date: getOffsetDate(-1),
         assigned_to: members[0]?.id || 1,
         estimated_time_value: 4
       },
       {
         id: 'fallback-2',
-        task_id: 'fallback-2',
+        task_id: 'MRD-002',
         title: 'Dynamic Island Command Capsule',
         status: 'DONE',
         priority: 'HIGH',
-        due_date: `${year}-${m}-08`,
+        due_date: getOffsetDate(0),
         assigned_to: members[1]?.id || 2,
         estimated_time_value: 3
       },
       {
         id: 'fallback-3',
-        task_id: 'fallback-3',
+        task_id: 'MRD-003',
         title: 'Editorial Schedule Matrix Sync',
         status: 'IN_PROGRESS',
         priority: 'CRITICAL',
-        due_date: `${year}-${m}-14`,
+        due_date: getOffsetDate(1),
         assigned_to: members[0]?.id || 1,
         estimated_time_value: 6
       },
       {
         id: 'fallback-4',
-        task_id: 'fallback-4',
+        task_id: 'MRD-004',
         title: 'Real-Time Task Context Audit',
         status: 'TODO',
         priority: 'HIGH',
-        due_date: `${year}-${m}-18`,
+        due_date: getOffsetDate(2),
         assigned_to: members[2]?.id || 3,
         estimated_time_value: 2
       },
       {
         id: 'fallback-5',
-        task_id: 'fallback-5',
+        task_id: 'MRD-005',
         title: 'Swiss Graphic Charts & Hatched Blocks',
         status: 'IN_PROGRESS',
         priority: 'MEDIUM',
-        due_date: `${year}-${m}-21`,
+        due_date: getOffsetDate(3),
         assigned_to: members[1]?.id || 2,
         estimated_time_value: 5
       },
       {
         id: 'fallback-6',
-        task_id: 'fallback-6',
+        task_id: 'MRD-006',
         title: 'Team Directory & Access Governance',
         status: 'TODO',
         priority: 'LOW',
-        due_date: `${year}-${m}-25`,
+        due_date: getOffsetDate(5),
         assigned_to: members[0]?.id || 1,
         estimated_time_value: 3
       }
     ]
-  }, [tasks, currentMonthDate, members])
+  }, [tasks, members])
 
   // Quick Meeting Scheduling Modal (Persists to Backend)
   const [newMeetingModal, setNewMeetingModal] = useState(false)
@@ -1384,7 +1390,10 @@ export default function CalendarPage() {
                 {/* Quick Add Deliverable Button */}
                 <button
                   type="button"
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={() => {
+                    setCreateModalDueDate(selectedDateStr || formatLocalDate(new Date()))
+                    setIsCreateModalOpen(true)
+                  }}
                   className="tactile flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-[#111318] hover:bg-black text-white font-bold text-xs shadow-md transition-all cursor-pointer"
                 >
                   <PlusIcon size={14} />
@@ -2010,18 +2019,38 @@ export default function CalendarPage() {
                                 )}
                               </div>
                             </div>
-                            {day.isToday && (
-                              <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-mono">
-                                Today
-                              </span>
-                            )}
+                            <div className="flex items-center gap-1">
+                              {day.isToday && (
+                                <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-mono">
+                                  Today
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setCreateModalDueDate(day.dateStr)
+                                  setIsCreateModalOpen(true)
+                                }}
+                                className="w-5 h-5 rounded-md hover:bg-stone-200/80 text-stone-400 hover:text-stone-800 flex items-center justify-center transition-colors cursor-pointer"
+                                title={`Add deliverable due on ${day.dateStr}`}
+                              >
+                                <PlusIcon size={11} />
+                              </button>
+                            </div>
                           </div>
 
                           {/* Day Tasks Stack */}
                           <div className="space-y-2 flex-1">
                             {day.tasks.length === 0 ? (
-                              <div className="h-full flex items-center justify-center text-center p-2 text-[11px] text-stone-400 font-mono">
-                                No deadlines
+                              <div
+                                onClick={() => {
+                                  setCreateModalDueDate(day.dateStr)
+                                  setIsCreateModalOpen(true)
+                                }}
+                                className="h-full flex flex-col items-center justify-center text-center p-2 text-[11px] text-stone-400 font-mono hover:text-stone-700 cursor-pointer rounded-xl hover:bg-stone-100/50 transition-colors"
+                                title="Click to add deliverable"
+                              >
+                                <span>No deadlines</span>
                               </div>
                             ) : (
                               day.tasks.map(t => {
@@ -2320,6 +2349,7 @@ export default function CalendarPage() {
         <CreateTaskModal
           open={isCreateModalOpen}
           defaultColumnId={createModalDefaultStatus}
+          defaultDueDate={createModalDueDate}
           onClose={() => setIsCreateModalOpen(false)}
           onAdd={handleTaskAdded}
           members={members}

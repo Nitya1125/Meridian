@@ -2,6 +2,7 @@
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
+  output: process.env.VERCEL ? undefined : 'standalone',
   allowedDevOrigins: [
     'localhost',
     'localhost:3000',
