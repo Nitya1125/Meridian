@@ -228,7 +228,7 @@ export default function WorkflowGuideModal({ open, onClose }) {
               <div className="p-4 rounded-3xl bg-gradient-to-r from-amber-50 via-purple-50 to-sky-50 border border-stone-200">
                 <div className="flex items-center gap-2 font-bold text-xs text-stone-900 mb-1">
                   <span className="px-2 py-0.5 rounded-full bg-amber-400 text-stone-900 font-extrabold inline-flex items-center gap-1">
-                    <Zap size={11} className="fill-stone-900" />
+                    <ZapIcon size={11} className="fill-stone-900" />
                     <span>CONCURRENCY</span>
                   </span>
                   <span>Why Parallel Streams?</span>
@@ -291,7 +291,7 @@ export default function WorkflowGuideModal({ open, onClose }) {
                     </span>
                   </div>
                   <p className="text-xs text-stone-600 leading-relaxed">
-                    You don't always have to drag and drop! Every task card now features tactile 1-click stage buttons:
+                    You don&apos;t always have to drag and drop! Every task card now features tactile 1-click stage buttons:
                   </p>
                   <ul className="text-xs text-stone-600 space-y-1.5 pt-1">
                     <li className="flex items-center gap-2">
@@ -337,7 +337,7 @@ export default function WorkflowGuideModal({ open, onClose }) {
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="font-bold text-stone-900">Parallel Swimlanes:</span>
-                      <span>Horizontal tracks showing each stream's independent 4 columns.</span>
+                      <span>Horizontal tracks showing each stream&apos;s independent 4 columns.</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="font-bold text-stone-900">Filter by Stream:</span>
