@@ -1130,7 +1130,10 @@ export default function AnalyticsPage() {
 
                 <div className="pt-3 border-t border-stone-100 mt-4 flex items-center justify-between text-xs text-stone-500">
                   <span>Click any event to inspect</span>
-                  <span className="font-bold text-violet-700">Open Drawer ➔</span>
+                  <span className="font-bold text-violet-700 flex items-center gap-1">
+                    <span>Open Drawer</span>
+                    <ArrowUpRightIcon size={13} />
+                  </span>
                 </div>
               </div>
             </div>

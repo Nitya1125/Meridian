@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react'
 import { PlusIcon } from './Icons'
+import { X, Zap } from 'lucide-react'
 import { useOrg } from '@/context/OrgContext'
 import { addTask } from '@/Service/taskService'
 import { handleOrganizationUsers } from '@/Service/organization'
 import { toast } from 'react-hot-toast'
 import StripedLoader from './StripedLoader'
+import { PARALLEL_TRACKS } from '@/Lib/parallelTracks'
 
 const COLUMNS = [
   { id: 'TODO', title: 'To do' },
@@ -63,6 +65,7 @@ export default function CreateTaskModal({
   open,
   defaultColumnId = 'TODO',
   defaultDueDate,
+  defaultTrackId,
   onClose,
   onAdd,
   members: propMembers = [],
@@ -79,6 +82,8 @@ export default function CreateTaskModal({
   const [priority, setPriority] = useState('MEDIUM')
   const [columnId, setColumnId] = useState(defaultColumnId)
   const [assigneeId, setAssigneeId] = useState('')
+  const [selectedTrack, setSelectedTrack] = useState(defaultTrackId || PARALLEL_TRACKS[0].id)
+  const [isParallel, setIsParallel] = useState(true)
   
   // Format today + 3 days as default due date YYYY-MM-DD
   const getDefaultDueDate = () => {
@@ -105,9 +110,12 @@ export default function CreateTaskModal({
       } else {
         setDue(getDefaultDueDate())
       }
+      if (defaultTrackId) {
+        setSelectedTrack(defaultTrackId)
+      }
       setTitleErr(false)
     }
-  }, [open, defaultColumnId, defaultDueDate])
+  }, [open, defaultColumnId, defaultDueDate, defaultTrackId])
 
   // Sync members from props or fetch if missing
   useEffect(() => {
@@ -180,6 +188,7 @@ export default function CreateTaskModal({
     setLoading(true)
 
     try {
+      const matchedTrack = PARALLEL_TRACKS.find(t => t.id === selectedTrack) || PARALLEL_TRACKS[0]
       const payload = {
         title: title.trim(),
         description: description.trim() || 'Deliverable for workspace sprint milestone.',
@@ -189,7 +198,10 @@ export default function CreateTaskModal({
         estimate_time_value: Number(estimateValue),
         estimate_time_unit: estimateUnit,
         assign_to: Number(assigneeId),
-        organization_id: Number(currentOrgId)
+        organization_id: Number(currentOrgId),
+        track: matchedTrack.shortName,
+        track_id: matchedTrack.id,
+        is_parallel: isParallel ? 1 : 0
       }
 
       const result = await addTask(payload)
@@ -205,6 +217,8 @@ export default function CreateTaskModal({
         setEstimateValue(2)
         setEstimateUnit('HOURS')
         setTitleErr(false)
+        setSelectedTrack(PARALLEL_TRACKS[0].id)
+        setIsParallel(true)
 
         onAdd?.(result, columnId)
         onClose?.()
@@ -248,9 +262,9 @@ export default function CreateTaskModal({
           <button
             onClick={onClose}
             disabled={loading}
-            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors disabled:opacity-50 cursor-pointer"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 
@@ -402,6 +416,51 @@ export default function CreateTaskModal({
                 onChange={e => setDue(e.target.value)}
                 className="w-full px-3 py-2 text-xs font-medium rounded-2xl bg-white border border-stone-200 focus:border-stone-400 outline-none"
               />
+            </div>
+          </div>
+
+          {/* Parallel Sprint Track & Concurrency Selection */}
+          <div className="pt-2 border-t border-stone-200/60">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+                <span>Parallel Sprint Track</span>
+                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 border border-violet-200 inline-flex items-center gap-1">
+                  <Zap size={11} className="text-violet-600 fill-violet-600" />
+                  <span>Concurrency</span>
+                </span>
+              </label>
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-stone-700 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isParallel}
+                  onChange={e => setIsParallel(e.target.checked)}
+                  className="rounded text-violet-600 focus:ring-violet-500 cursor-pointer"
+                />
+                <span>Run in Parallel</span>
+              </label>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {PARALLEL_TRACKS.map(trk => {
+                const isSelected = selectedTrack === trk.id
+                return (
+                  <button
+                    key={trk.id}
+                    type="button"
+                    onClick={() => setSelectedTrack(trk.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-2xl border text-left transition-all cursor-pointer ${
+                      isSelected
+                        ? 'bg-white border-stone-900 shadow-xs ring-1 ring-stone-900'
+                        : 'bg-stone-50/70 border-stone-200/80 hover:bg-white text-stone-600'
+                    }`}
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: trk.color }} />
+                    <div className="truncate">
+                      <div className="text-[11px] font-bold text-stone-900 truncate">{trk.shortName}</div>
+                      <div className="text-[9px] font-mono text-stone-400">{trk.code}</div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

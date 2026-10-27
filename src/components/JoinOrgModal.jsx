@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react'
 import { useOrg } from '@/context/OrgContext'
 import { verifyOrganizationCode, joinOrganization } from '@/Service/organization'
-import { BuildingIcon, CheckIcon, ShieldIcon } from '@/components/Icons'
+import { BuildingIcon, CheckIcon, ShieldIcon, AlertTriangleIcon } from '@/components/Icons'
 import { toast } from 'react-hot-toast'
 import StripedLoader from './StripedLoader'
 
@@ -157,8 +157,9 @@ export default function JoinOrgModal() {
                   ))}
                 </div>
                 {errorMsg && (
-                  <div className="mt-3 text-center text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl">
-                    ⚠ {errorMsg}
+                  <div className="mt-3 text-center text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-2.5 rounded-xl flex items-center justify-center gap-1.5">
+                    <AlertTriangleIcon size={14} />
+                    <span>{errorMsg}</span>
                   </div>
                 )}
               </div>
@@ -200,8 +201,9 @@ export default function JoinOrgModal() {
         {orgFound && !requestSent && (
           <div className="py-2">
             <div className="flex items-center gap-3 mb-5">
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 font-mono">
-                ✓ Code Verified
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 font-mono inline-flex items-center gap-1">
+                <CheckCircle2 size={12} className="text-emerald-700" />
+                <span>Code Verified</span>
               </span>
             </div>
 

@@ -131,8 +131,10 @@ export default function CommandPalette({ open, onClose }) {
         {/* Results List */}
         <div className="flex-1 overflow-y-auto p-2 space-y-3">
           {filteredItems.length === 0 ? (
-            <div className="py-12 text-center text-stone-400">
-              <div className="text-2xl mb-1">🔍</div>
+            <div className="py-12 text-center text-stone-400 flex flex-col items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-400 mb-2">
+                <SearchIcon size={20} />
+              </div>
               <p className="text-xs font-medium">No results found for &ldquo;{query}&rdquo;</p>
             </div>
           ) : (

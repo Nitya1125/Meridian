@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginApi, googleLogin, githubLogin } from '../Service/authService';
 import { toast } from 'react-hot-toast';
-import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, SparklesIcon } from '@/components/Icons';
+import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, SparklesIcon, AlertTriangleIcon } from '@/components/Icons';
 import StripedLoader from '@/components/StripedLoader';
 
 /* ── Tiny Icons ── */
@@ -58,7 +58,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, error, icon
             }`}
         />
       </div>
-      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold">⚠ {error}</div>}
+      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold flex items-center gap-1"><AlertTriangleIcon size={12} /><span>{error}</span></div>}
     </div>
   );
 }

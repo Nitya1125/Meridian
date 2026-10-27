@@ -6,6 +6,7 @@ import ProtectedRoute from '@/components/ProtectedRoute'
 import DynamicHeader from '@/components/DynamicHeader'
 import CreateTaskModal, { getMemberColor, getMemberInitials, getMemberFullName } from '@/components/CreateTaskModal'
 import TaskDetailDrawer from '@/components/TaskDetailDrawer'
+import WorkflowGuideModal from '@/components/WorkflowGuideModal'
 import MetricCard from '@/components/MetricCard'
 import SprintWorkflowCanvas from '@/components/SprintWorkflowCanvas'
 import StripedLoader from '@/components/StripedLoader'
@@ -19,7 +20,15 @@ import {
   IconlyTasks, IconlyCalendar, IconlyActivity, IconlyWorkflow,
   IconlySearch, IconlyPlus, IconlyChat
 } from '@/components/Icons'
-import { CalendarClock, BarChart3, AlarmClock, MoonStar, InboxIcon } from 'lucide-react'
+import {
+  CalendarClock, BarChart3, AlarmClock, MoonStar, InboxIcon,
+  Play, CheckCircle2, ChevronRight, ChevronLeft, Split, HelpCircle,
+  Sparkles, Layers, SlidersHorizontal, ArrowRight, Eye, RefreshCw
+} from 'lucide-react'
+import {
+  PARALLEL_TRACKS, DEFAULT_TRACK, getTaskTrack,
+  isTaskParallel, groupTasksByParallelTracks
+} from '@/Lib/parallelTracks'
 import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -29,10 +38,10 @@ import { getTasks, updateTask, deleteTask } from '@/Service/taskService'
 import { handleOrganizationUsers } from '@/Service/organization'
 
 const COLUMNS_CONFIG = [
-  { id: 'TODO', title: 'To do', tint: 'stone' },
-  { id: 'IN_PROGRESS', title: 'In progress', tint: 'peach' },
-  { id: 'REVIEW', title: 'Under review', tint: 'sky' },
-  { id: 'DONE', title: 'Done', tint: 'mint' },
+  { id: 'TODO', title: 'To do', tint: 'stone', badge: 'Ready', desc: 'Backlog & Scope Ready' },
+  { id: 'IN_PROGRESS', title: 'In progress', tint: 'peach', badge: 'In Flight', desc: 'Active Development' },
+  { id: 'REVIEW', title: 'Under review', tint: 'sky', badge: 'Verification', desc: 'QA & Peer Review' },
+  { id: 'DONE', title: 'Done', tint: 'mint', badge: 'Shipped', desc: 'Completed & Verified' },
 ]
 
 const tagPills = {
@@ -43,7 +52,6 @@ const tagPills = {
   Security: 'bg-[#FFE4E6] text-[#BE123C] border-[#FECDD3]',
   Mobile: 'bg-[#FEF9C3] text-[#A16207] border-[#FEF08A]'
 }
-
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -238,6 +246,235 @@ function BoardAnalytics({ columns, allTasks }) {
   );
 }
 
+// ── Reusable Interactive Kanban Task Card ──
+function KanbanTaskCard({
+  task,
+  columnId,
+  onOpen,
+  onMove,
+  isBeingDragged,
+  onDragStart,
+  onDragEnd
+}) {
+  const isDone = columnId === 'DONE'
+  const isReview = columnId === 'REVIEW'
+  const isInProgress = columnId === 'IN_PROGRESS'
+  const isTodo = columnId === 'TODO'
+
+  const totalSubtasks = task.subtasks?.length || 0
+  const doneSubtasks = task.subtasks?.filter(s => s.done).length || 0
+  const subtasksPct = totalSubtasks > 0 ? Math.round((doneSubtasks / totalSubtasks) * 100) : 0
+
+  return (
+    <div
+      draggable={true}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onClick={() => onOpen(task)}
+      className={`bg-white rounded-3xl p-5 border shadow-xs hover:shadow-md bento-card-interactive cursor-grab active:cursor-grabbing group relative transition-all ${
+        isBeingDragged
+          ? 'card-dragging shadow-xl rotate-1 opacity-60 ring-2 ring-lime-400/60'
+          : isDone
+          ? 'border-stone-200/60 bg-stone-50/50'
+          : 'border-stone-200/90 hover:border-stone-400'
+      }`}
+    >
+      {/* Drag Handle Indicator */}
+      <div
+        className="absolute top-4 right-3.5 opacity-40 group-hover:opacity-100 transition-opacity text-stone-400 hover:text-stone-700"
+        title="Drag to move card"
+      >
+        <GripVerticalIcon size={14} />
+      </div>
+
+      {/* Top Badges Row: Track Pill, Concurrency Pill, Priority Pill */}
+      <div className="flex flex-wrap items-center gap-1.5 mb-3 pr-5">
+        {/* Parallel Sprint Track Pill */}
+        {task.track && (
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${task.track.bg || 'bg-stone-100'} ${task.track.text || 'text-stone-700'} ${task.track.border || 'border-stone-200'} font-mono flex items-center gap-1 shadow-2xs`}
+            title={task.track.name}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${task.track.dot || 'bg-stone-500'}`} />
+            {task.track.code || 'TRK'}
+          </span>
+        )}
+
+        {/* Parallel Concurrency Tag */}
+        {task.isParallel && (
+          <span
+            className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-0.5 shadow-2xs"
+            title="Non-blocking concurrent task"
+          >
+            <ZapIcon size={10} className="text-amber-500 fill-amber-500" />
+            <span>Parallel</span>
+          </span>
+        )}
+
+        {/* Priority Badge */}
+        <span
+          className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shadow-2xs ${
+            task.priority === 'CRITICAL' ? 'bg-rose-100 text-rose-700 border-rose-200' :
+            task.priority === 'HIGH' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+            task.priority === 'MEDIUM' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' :
+            'bg-stone-100 text-stone-700 border-stone-200'
+          }`}
+        >
+          {task.priority}
+        </span>
+      </div>
+
+      {/* Task Code & Title */}
+      <div className="mb-2">
+        <span className="text-[10px] font-mono font-bold text-stone-400 block mb-0.5">
+          {task.taskId}
+        </span>
+        <h3 className={`text-sm font-bold text-stone-900 group-hover:text-violet-700 tracking-tight leading-snug font-urbanist ${isDone ? 'line-through text-stone-400' : ''}`}>
+          {task.title}
+        </h3>
+      </div>
+
+      {/* Description */}
+      {task.description && (
+        <p className="text-xs text-stone-500 line-clamp-2 leading-relaxed mb-3 font-normal">
+          {task.description}
+        </p>
+      )}
+
+      {/* Subtasks Progress Bar */}
+      {totalSubtasks > 0 && (
+        <div className="mb-3.5 bg-stone-50 p-2.5 rounded-2xl border border-stone-100">
+          <div className="mb-1.5 flex items-center justify-between text-[10.5px] font-bold text-stone-500">
+            <span>Subtasks</span>
+            <span className="font-mono text-stone-700">
+              {doneSubtasks}/{totalSubtasks} ({subtasksPct}%)
+            </span>
+          </div>
+          <div className="w-full bg-stone-200 h-1.5 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-300 ${
+                subtasksPct === 100 ? 'bg-emerald-500' : 'bg-lime-500'
+              }`}
+              style={{ width: `${subtasksPct}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Due Date & Assignee Footer */}
+      <div className="flex items-center justify-between pt-2.5 border-t border-stone-100 text-xs text-stone-500 mb-3">
+        <div className="flex items-center gap-1.5 text-[11px] text-stone-600 bg-stone-50 px-2 py-0.5 rounded-md border border-stone-200/60 font-mono">
+          <IconlyCalendar size={12} className="text-stone-400" />
+          <span>{task.due}</span>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Assignee Avatar */}
+          <div className="flex -space-x-1.5 overflow-hidden">
+            {task.assignees?.map((a, i) => (
+              <div
+                key={i}
+                className="w-5 h-5 rounded-full ring-2 ring-white text-[9px] font-bold text-white flex items-center justify-center shadow-2xs"
+                style={{ backgroundColor: a.color }}
+                title={a.name}
+              >
+                {a.initials}
+              </div>
+            ))}
+            {(!task.assignees || task.assignees.length === 0) && (
+              <div className="w-5 h-5 rounded-full ring-2 ring-white text-[9px] font-bold text-stone-400 bg-stone-200 flex items-center justify-center" title="Unassigned">
+                ?
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── 1-Click Quick Move Tactile Action Bar ── */}
+      <div className="pt-2 border-t border-dashed border-stone-200/80" onClick={(e) => e.stopPropagation()}>
+        {isTodo && (
+          <button
+            type="button"
+            onClick={() => onMove(task, 'TODO', 'IN_PROGRESS')}
+            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-stone-100 hover:bg-stone-900 hover:text-white text-stone-700 text-xs font-bold transition-all cursor-pointer shadow-2xs group/btn"
+            title="Start working on this task"
+          >
+            <Play size={11} className="text-amber-500 fill-amber-500 group-hover/btn:text-white group-hover/btn:fill-white" />
+            <span>Start Working</span>
+            <ChevronRight size={13} className="text-stone-400 group-hover/btn:text-white" />
+          </button>
+        )}
+
+        {isInProgress && (
+          <div className="flex items-center gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => onMove(task, 'IN_PROGRESS', 'TODO')}
+              className="flex-1 py-1.5 px-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+              title="Move back to To Do"
+            >
+              <ChevronLeft size={12} />
+              <span>To Do</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove(task, 'IN_PROGRESS', 'REVIEW')}
+              className="flex-[2] py-1.5 px-2 rounded-xl bg-sky-100 hover:bg-sky-600 hover:text-white text-sky-800 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs group/btn"
+              title="Submit for QA & Review"
+            >
+              <CheckDoubleIcon size={12} />
+              <span>Submit Review</span>
+              <ChevronRight size={12} />
+            </button>
+          </div>
+        )}
+
+        {isReview && (
+          <div className="flex items-center gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={() => onMove(task, 'REVIEW', 'IN_PROGRESS')}
+              className="flex-1 py-1.5 px-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-600 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1"
+              title="Needs revisions"
+            >
+              <ChevronLeft size={12} />
+              <span>Revise</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onMove(task, 'REVIEW', 'DONE')}
+              className="flex-[2] py-1.5 px-2 rounded-xl bg-emerald-100 hover:bg-emerald-600 hover:text-white text-emerald-800 text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 shadow-2xs group/btn"
+              title="Mark as Done"
+            >
+              <CheckCircle2 size={12} />
+              <span>Mark Done</span>
+              <ChevronRight size={12} />
+            </button>
+          </div>
+        )}
+
+        {isDone && (
+          <div className="flex items-center justify-between w-full text-[11px] text-stone-500 pt-0.5">
+            <span className="flex items-center gap-1 text-emerald-700 font-bold">
+              <CheckCircle2 size={13} className="text-emerald-600" />
+              <span>Shipped & Verified</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => onMove(task, 'DONE', 'IN_PROGRESS')}
+              className="text-[10px] font-bold text-stone-400 hover:text-stone-800 hover:underline cursor-pointer flex items-center gap-0.5"
+              title="Reopen task"
+            >
+              <RefreshCw size={10} />
+              <span>Reopen</span>
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function KanbanPage() {
   const { fullName, initials } = useCurrentUser()
   const { activeOrg, activeOrgId } = useOrg()
@@ -253,15 +490,19 @@ export default function KanbanPage() {
   } = useTasks()
 
   const [viewMode, setViewMode] = useState('board') // 'list' | 'board' | 'timeline' | 'analytics' | 'workflow'
+  const [boardLayout, setBoardLayout] = useState('columns') // 'columns' | 'parallel_tracks'
+  const [selectedTrackFilter, setSelectedTrackFilter] = useState('ALL')
+  const [workflowGuideOpen, setWorkflowGuideOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [targetColId, setTargetColId] = useState('TODO')
+  const [targetTrackId, setTargetTrackId] = useState(null)
   const [selectedTask, setSelectedTask] = useState(null)
   const [draggedTask, setDraggedTask] = useState(null)
   const [dragSourceColId, setDragSourceColId] = useState(null)
   const [dragOverColId, setDragOverColId] = useState(null)
 
-  // Map raw tasks with real assignees and format
+  // Map raw tasks with real assignees, parallel track resolution, and format
   const mappedTasks = useMemo(() => {
     return rawTasks.map(task => {
       const tid = task.task_id || task.id
@@ -281,6 +522,8 @@ export default function KanbanPage() {
 
       const normStatus = normalizeStatus(task.status)
       const normPriority = (task.priority || 'MEDIUM').toUpperCase()
+      const resolvedTrack = getTaskTrack(task)
+      const isParallel = isTaskParallel(task)
 
       return {
         ...task,
@@ -291,6 +534,9 @@ export default function KanbanPage() {
         description: task.description || '',
         status: normStatus,
         priority: normPriority,
+        track: resolvedTrack,
+        track_id: task.track_id || resolvedTrack.id,
+        isParallel,
         due: formatDueDate(task.due_date),
         due_date: task.due_date,
         assignees,
@@ -319,6 +565,34 @@ export default function KanbanPage() {
     return columns.flatMap(c => c.tasks.map(t => ({ ...t, columnTitle: c.title, columnId: c.id })))
   }, [columns])
 
+  // Parallel Streams grouping
+  const parallelTrackGroups = useMemo(() => {
+    return groupTasksByParallelTracks(mappedTasks)
+  }, [mappedTasks])
+
+  const activeParallelStreamsCount = useMemo(() => {
+    return parallelTrackGroups.filter(g => g.tasks.length > 0).length
+  }, [parallelTrackGroups])
+
+  const parallelTasksCount = useMemo(() => {
+    return mappedTasks.filter(t => t.isParallel).length
+  }, [mappedTasks])
+
+  // Filter tasks helper for column or swimlane views
+  const filterTask = useCallback((task) => {
+    if (selectedTrackFilter !== 'ALL' && task.track?.id !== selectedTrackFilter) {
+      return false
+    }
+    if (!searchQuery.trim()) return true
+    const q = searchQuery.toLowerCase()
+    return (
+      task.title?.toLowerCase().includes(q) ||
+      task.description?.toLowerCase().includes(q) ||
+      task.priority?.toLowerCase().includes(q) ||
+      task.track?.name?.toLowerCase().includes(q) ||
+      task.track?.code?.toLowerCase().includes(q)
+    )
+  }, [selectedTrackFilter, searchQuery])
 
   // ── Task Mutations (Connect to TaskContext for instant cross-app synchronization) ──
 
@@ -436,6 +710,7 @@ export default function KanbanPage() {
             allTasks={allTasks}
             onOpenNewTask={() => {
               setTargetColId('TODO')
+              setTargetTrackId(null)
               setCreateModalOpen(true)
             }}
             onOpenSearch={() => {
@@ -448,15 +723,15 @@ export default function KanbanPage() {
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-7">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <div>
-                <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px]">
+                <h1 className="text-[32px] font-extrabold leading-none tracking-tight text-stone-900 lg:text-[38px] font-urbanist">
                   {viewMode === 'workflow' ? (
                     <>
-                      Project <span className="font-serif-italic font-normal text-violet-700">architecture</span> & workflow
+                      Project <span className="font-serif italic font-normal text-violet-700">architecture</span> & workflow
                     </>
                   ) : (
                     <>
                       Sprint{' '}
-                      <span className="font-serif-italic font-normal text-violet-700">
+                      <span className="font-serif italic font-normal text-violet-700">
                         {viewMode === 'timeline' ? 'timeline' : viewMode === 'analytics' ? 'analytics' : viewMode === 'list' ? 'list' : 'board'}
                       </span>
                     </>
@@ -465,7 +740,7 @@ export default function KanbanPage() {
                 <p className="mt-1.5 text-[13.5px] font-medium text-stone-500">
                   {viewMode === 'workflow'
                     ? 'Structural topology, module dependencies & CI/CD delivery pipelines.'
-                    : activeOrg ? `${activeOrg.name} — drag cards to move them across the pipeline.` : 'Select an organization to manage tasks.'}
+                    : activeOrg ? `${activeOrg.name} — concurrent parallel streams & 1-click stage transitions.` : 'Select an organization to manage tasks.'}
                 </p>
               </div>
 
@@ -535,8 +810,18 @@ export default function KanbanPage() {
               </div>
             </div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions & Workflow Guide Pill */}
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setWorkflowGuideOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs font-extrabold text-amber-900 shadow-2xs transition-all cursor-pointer"
+                title="View Sprint Stages & Parallel Concurrency Rules"
+              >
+                <HelpCircle size={14} className="text-amber-600" />
+                <span>Workflow Guide</span>
+              </button>
+
               <button
                 onClick={() => {
                   navigator.clipboard?.writeText(window.location.href)
@@ -568,7 +853,7 @@ export default function KanbanPage() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search tasks by title, description, or priority..."
+                  placeholder="Search tasks by title, description, track (Frontend, Backend), or priority..."
                   className="w-full pl-10 pr-4 py-2.5 text-xs font-medium bg-white rounded-2xl border border-stone-200/80 shadow-2xs outline-none focus:border-stone-400 font-sans"
                 />
               </div>
@@ -598,9 +883,9 @@ export default function KanbanPage() {
                 />
                 <MetricCard
                   icon={RocketIcon}
-                  badge={`${highPriorityCount} Urgent`}
-                  value={String(highPriorityCount)}
-                  label="High Priority"
+                  badge={`${activeParallelStreamsCount} Active Streams`}
+                  value={`${parallelTasksCount} Parallel`}
+                  label="Concurrency Streams"
                   theme="lime"
                 />
               </div>
@@ -618,7 +903,7 @@ export default function KanbanPage() {
               <div className="w-14 h-14 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-400 mb-4">
                 <InboxIcon size={28} strokeWidth={1.5} />
               </div>
-              <h3 className="text-lg font-bold text-stone-900 mb-1">No tasks in this workspace</h3>
+              <h3 className="text-lg font-bold text-stone-900 mb-1 font-urbanist">No tasks in this workspace</h3>
               <p className="text-xs text-stone-500 mb-6 max-w-xs">
                 Get started by creating your first deliverable for {activeOrg?.name || 'your workspace'}.
               </p>
@@ -626,6 +911,7 @@ export default function KanbanPage() {
                 type="button"
                 onClick={() => {
                   setTargetColId('TODO')
+                  setTargetTrackId(null)
                   setCreateModalOpen(true)
                 }}
                 className="px-5 py-2.5 rounded-2xl bg-[#111318] hover:bg-black text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center gap-2"
@@ -641,212 +927,322 @@ export default function KanbanPage() {
               {/* ══════════════════════════════════════════════════════════ */}
               {viewMode === 'board' && (
                 <>
-                  {/* Quick Prompt to Project Architecture & Structural Workflow */}
-                  <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:px-5 rounded-3xl bg-gradient-to-r from-white via-amber-50/30 to-violet-50/30 border border-stone-200/90 shadow-2xs">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-[#E5F722] border border-stone-300/80 shadow-xs flex items-center justify-center text-stone-900 font-bold text-xs shrink-0">
-                        <WorkflowIcon size={15} />
+                  {/* ── Parallel Concurrency HUD & Layout Bar ── */}
+                  <div className="mb-6 p-4 rounded-3xl bg-white border border-stone-200/90 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    {/* Left: Concurrency Telemetry & Stream Indicators */}
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-amber-400 text-stone-950 font-bold flex items-center justify-center shadow-xs shrink-0">
+                        <ZapIcon size={16} />
                       </div>
                       <div>
-                        <span className="text-xs font-extrabold text-stone-900 font-urbanist flex items-center gap-1.5">
-                          Project Architecture Pipeline Active
-                          <span className="w-1.5 h-1.5 rounded-full bg-lime-500 animate-pulse" />
-                        </span>
-                        <p className="text-[11px] text-stone-500 font-medium">
-                          Explore the live structural module tree, coupling waves & CI/CD build rhythm.
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-extrabold text-stone-900 font-urbanist tracking-tight">
+                            Parallel Streams Concurrency Engine
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                            Active
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="text-[11px] text-stone-500 font-medium">Streams:</span>
+                          {PARALLEL_TRACKS.map(track => {
+                            const count = mappedTasks.filter(t => t.track?.id === track.id).length
+                            return (
+                              <button
+                                key={track.id}
+                                type="button"
+                                onClick={() => setSelectedTrackFilter(prev => prev === track.id ? 'ALL' : track.id)}
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer flex items-center gap-1 ${
+                                  selectedTrackFilter === track.id
+                                    ? 'bg-stone-900 text-white border-stone-900'
+                                    : `${track.bg} ${track.text} ${track.border} hover:opacity-80`
+                                }`}
+                                title={`Filter by ${track.name}`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${selectedTrackFilter === track.id ? 'bg-amber-400' : track.dot}`} />
+                                <span>{track.shortName}</span>
+                                <span className="opacity-70 font-mono">({count})</span>
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode('workflow')}
-                      className="px-4 py-1.5 rounded-full bg-[#111318] text-white text-xs font-bold hover:bg-stone-800 transition-all cursor-pointer shadow-xs active:scale-95 whitespace-nowrap self-start sm:self-auto"
-                    >
-                      View Project Structure →
-                    </button>
+
+                    {/* Right: Board Layout Switcher (Canonical Columns vs Parallel Swimlanes) */}
+                    <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
+                      <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-2xl border border-stone-200/70">
+                        <button
+                          type="button"
+                          onClick={() => setBoardLayout('columns')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            boardLayout === 'columns'
+                              ? 'bg-white text-stone-900 shadow-2xs border border-stone-200/70'
+                              : 'text-stone-500 hover:text-stone-900'
+                          }`}
+                        >
+                          <KanbanBoardIcon size={13} />
+                          <span>Columns</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setBoardLayout('parallel_tracks')}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            boardLayout === 'parallel_tracks'
+                              ? 'bg-white text-stone-900 shadow-2xs border border-stone-200/70'
+                              : 'text-stone-500 hover:text-stone-900'
+                          }`}
+                        >
+                          <LayersIcon size={13} />
+                          <span>Parallel Swimlanes</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        </button>
+                      </div>
+
+                      {selectedTrackFilter !== 'ALL' && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTrackFilter('ALL')}
+                          className="px-2.5 py-1.5 rounded-xl bg-stone-200 hover:bg-stone-300 text-stone-700 text-xs font-bold transition-all cursor-pointer"
+                          title="Clear stream filter"
+                        >
+                          Clear Filter
+                        </button>
+                      )}
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start mb-12">
-                  {columns.map(col => {
-                    const isDragOver = dragOverColId === col.id
-                    const filteredTasks = col.tasks.filter(t => {
-                      if (!searchQuery.trim()) return true
-                      const q = searchQuery.toLowerCase()
-                      return (
-                        t.title.toLowerCase().includes(q) ||
-                        t.description.toLowerCase().includes(q) ||
-                        t.priority.toLowerCase().includes(q)
-                      )
-                    })
+                  {/* ══════════════════════════════════════════════════════════ */}
+                  {/* SUB-VIEW A: CANONICAL 4 COLUMNS                            */}
+                  {/* ══════════════════════════════════════════════════════════ */}
+                  {boardLayout === 'columns' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-start mb-12">
+                      {columns.map(col => {
+                        const isDragOver = dragOverColId === col.id
+                        const filteredTasks = col.tasks.filter(filterTask)
 
-                    return (
-                      <div
-                        key={col.id}
-                        onDragOver={(e) => handleDragOver(e, col.id)}
-                        onDragLeave={(e) => handleDragLeave(e, col.id)}
-                        onDrop={(e) => handleDrop(e, col.id)}
-                        className={`flex flex-col gap-3.5 p-2 rounded-3xl transition-all duration-200 ${
-                          isDragOver ? 'drag-over-column' : 'bg-transparent'
-                        }`}
-                      >
-                        {/* Column Header Pill */}
-                        <div className="flex items-center justify-between px-2.5 mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[13.5px] font-extrabold tracking-tight text-stone-900">
-                              {col.title}
-                            </span>
-                            <span className="tnum rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-stone-500 border border-stone-200/60 shadow-2xs">
-                              {col.count}
-                            </span>
-                          </div>
-
-                          <button
-                            onClick={() => {
-                              setTargetColId(col.id)
-                              setCreateModalOpen(true)
-                            }}
-                            className="p-1.5 rounded-xl hover:bg-stone-200/70 text-stone-400 hover:text-stone-800 transition-colors cursor-pointer"
-                            title="Add task in this column"
+                        return (
+                          <div
+                            key={col.id}
+                            onDragOver={(e) => handleDragOver(e, col.id)}
+                            onDragLeave={(e) => handleDragLeave(e, col.id)}
+                            onDrop={(e) => handleDrop(e, col.id)}
+                            className={`flex flex-col gap-3.5 p-2 rounded-3xl transition-all duration-200 ${
+                              isDragOver ? 'drag-over-column' : 'bg-transparent'
+                            }`}
                           >
-                            <PlusIcon size={14} strokeWidth={2.5} />
-                          </button>
-                        </div>
+                            {/* Column Header Pill */}
+                            <div className="flex items-center justify-between px-2.5 mb-1">
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[14px] font-extrabold tracking-tight text-stone-900 font-urbanist">
+                                    {col.title}
+                                  </span>
+                                  <span className="tnum rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-stone-500 border border-stone-200/60 shadow-2xs">
+                                    {filteredTasks.length}
+                                  </span>
+                                </div>
+                                <span className="text-[10.5px] font-medium text-stone-400 block mt-0.5">
+                                  {col.desc}
+                                </span>
+                              </div>
 
-                        {/* Tasks Container */}
-                        <div className="space-y-3.5 min-h-[220px]">
-                          {isDragOver && (
-                            <div className="p-3.5 rounded-2xl border-2 border-dashed border-lime-500/60 bg-lime-400/10 text-center text-xs font-mono font-bold text-lime-900 transition-all flex items-center justify-center gap-2 animate-in fade-in duration-150">
-                              <span>Drop to move to {col.title}</span>
-                              <span className="text-lime-600 font-bold">↓</span>
-                            </div>
-                          )}
-                          {filteredTasks.map(task => {
-                            const isBeingDragged = draggedTask?.task_id === task.task_id
-                            return (
-                              <div
-                                key={task.id}
-                                draggable={true}
-                                onDragStart={(e) => handleDragStart(e, task, col.id)}
-                                onDragEnd={handleDragEnd}
-                                onClick={() => setSelectedTask(task)}
-                                className={`bg-white rounded-3xl p-5 border border-stone-200/80 shadow-xs hover:shadow-md bento-card-interactive cursor-grab active:cursor-grabbing group relative transition-all ${
-                                  isBeingDragged ? 'card-dragging shadow-xl rotate-1 opacity-60 ring-2 ring-lime-400/60' : ''
-                                }`}
+                              <button
+                                onClick={() => {
+                                  setTargetColId(col.id)
+                                  setTargetTrackId(selectedTrackFilter !== 'ALL' ? selectedTrackFilter : null)
+                                  setCreateModalOpen(true)
+                                }}
+                                className="p-1.5 rounded-xl hover:bg-stone-200/70 text-stone-400 hover:text-stone-800 transition-colors cursor-pointer"
+                                title={`Add task in ${col.title}`}
                               >
-                                {/* Drag Handle Indicator (Audit Item 4: Kanban Affordance) */}
-                                <div className="absolute top-4 right-3 opacity-40 group-hover:opacity-100 transition-opacity text-stone-400 hover:text-stone-700" title="Drag to move">
-                                  <GripVerticalIcon size={14} />
+                                <PlusIcon size={14} strokeWidth={2.5} />
+                              </button>
+                            </div>
+
+                            {/* Tasks Container */}
+                            <div className="space-y-3.5 min-h-[220px]">
+                              {isDragOver && (
+                                <div className="p-4 rounded-2xl border-2 border-dashed border-lime-500/60 bg-lime-400/10 text-center text-xs font-mono font-bold text-lime-900 transition-all flex items-center justify-center gap-2 animate-in fade-in duration-150">
+                                  <span>Drop to move to {col.title}</span>
+                                  <span className="text-lime-600 font-bold">↓</span>
+                                </div>
+                              )}
+
+                              {filteredTasks.map(task => (
+                                <KanbanTaskCard
+                                  key={task.id}
+                                  task={task}
+                                  columnId={col.id}
+                                  onOpen={setSelectedTask}
+                                  onMove={handleMoveTask}
+                                  isBeingDragged={draggedTask?.task_id === task.task_id}
+                                  onDragStart={(e) => handleDragStart(e, task, col.id)}
+                                  onDragEnd={handleDragEnd}
+                                />
+                              ))}
+
+                              {/* Quick Add Card Placeholder */}
+                              <button
+                                onClick={() => {
+                                  setTargetColId(col.id)
+                                  setTargetTrackId(selectedTrackFilter !== 'ALL' ? selectedTrackFilter : null)
+                                  setCreateModalOpen(true)
+                                }}
+                                className="w-full py-3 rounded-2xl border-2 border-dashed border-stone-200 hover:border-stone-400 text-stone-400 hover:text-stone-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              >
+                                <IconlyPlus size={14} className="text-stone-400 group-hover:text-stone-700 transition-colors" />
+                                <span>Add Task in {col.title}</span>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+
+                  {/* ══════════════════════════════════════════════════════════ */}
+                  {/* SUB-VIEW B: PARALLEL TRACKS SWIMLANES                     */}
+                  {/* ══════════════════════════════════════════════════════════ */}
+                  {boardLayout === 'parallel_tracks' && (
+                    <div className="space-y-6 mb-12">
+                      {parallelTrackGroups
+                        .filter(group => selectedTrackFilter === 'ALL' || group.track.id === selectedTrackFilter)
+                        .map(group => {
+                          const track = group.track
+                          const trackTasks = group.tasks
+                          const trackTotal = trackTasks.length
+                          const trackDone = trackTasks.filter(t => t.status === 'DONE').length
+                          const trackPct = trackTotal > 0 ? Math.round((trackDone / trackTotal) * 100) : 0
+
+                          return (
+                            <div
+                              key={track.id}
+                              className="bg-white rounded-3xl border border-stone-200 shadow-2xs overflow-hidden"
+                            >
+                              {/* Swimlane Header */}
+                              <div className={`px-6 py-4 border-b border-stone-100 ${track.bg} flex flex-col md:flex-row md:items-center justify-between gap-4`}>
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-mono font-bold text-xs shadow-xs shrink-0"
+                                    style={{ backgroundColor: track.accent }}
+                                  >
+                                    {track.code}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <h3 className="text-sm font-extrabold text-stone-900 font-urbanist">
+                                        {track.name}
+                                      </h3>
+                                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-white border border-stone-200 text-stone-700">
+                                        {trackTasks.length} tasks
+                                      </span>
+                                    </div>
+                                    <p className="text-xs text-stone-600 font-medium mt-0.5">
+                                      {track.description}
+                                    </p>
+                                  </div>
                                 </div>
 
-                                {/* Tag Badges & Context Menu */}
-                                <div className="flex items-start justify-between gap-2 mb-3">
-                                  <div className="flex flex-wrap gap-1.5">
-                                    <span
-                                      className={`text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border ${
-                                        task.priority === 'CRITICAL' ? 'bg-rose-100 text-rose-700 border-rose-200' :
-                                        task.priority === 'HIGH' ? 'bg-amber-100 text-amber-800 border-amber-200' :
-                                        task.priority === 'MEDIUM' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' :
-                                        'bg-stone-100 text-stone-700 border-stone-200'
-                                      }`}
-                                    >
-                                      {task.priority}
+                                {/* Progress & Add Button */}
+                                <div className="flex items-center gap-4 self-start md:self-auto">
+                                  <div className="flex flex-col items-end min-w-[120px]">
+                                    <span className="text-[11px] font-bold text-stone-600 font-mono">
+                                      {trackDone}/{trackTotal} Completed ({trackPct}%)
                                     </span>
+                                    <div className="w-28 bg-white/80 h-2 rounded-full overflow-hidden mt-1 border border-stone-200">
+                                      <div
+                                        className="h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${trackPct}%`, backgroundColor: track.accent }}
+                                      />
+                                    </div>
                                   </div>
 
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      const nextCol = col.id === 'TODO' ? 'IN_PROGRESS' : col.id === 'IN_PROGRESS' ? 'REVIEW' : 'DONE'
-                                      handleMoveTask(task, col.id, nextCol)
+                                    type="button"
+                                    onClick={() => {
+                                      setTargetColId('TODO')
+                                      setTargetTrackId(track.id)
+                                      setCreateModalOpen(true)
                                     }}
-                                    className="text-stone-400 hover:text-stone-800 p-1 rounded-md hover:bg-stone-100 cursor-pointer"
-                                    title="Quick move forward"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-stone-900 hover:bg-black text-white text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95"
                                   >
-                                    <MoreHorizontalIcon size={15} />
+                                    <PlusIcon size={12} />
+                                    <span>Add Task</span>
                                   </button>
                                 </div>
-
-                                {/* Title & Description */}
-                                <h3 className="text-sm font-normal text-stone-900 group-hover:text-stone-700 tracking-tight leading-snug mb-2 font-serif">
-                                  {task.title}
-                                </h3>
-
-                                {task.description && (
-                                  <p className="text-xs text-stone-500 line-clamp-3 leading-relaxed mb-4 font-normal">
-                                    {task.description}
-                                  </p>
-                                )}
-
-                                {/* Subtasks Progress Bar if applicable */}
-                                {task.subtasks && task.subtasks.length > 0 && (
-                                  <div className="mb-3">
-                                    <div className="mb-1 flex items-center justify-between text-[11px] font-bold text-stone-500">
-                                      <span>Subtasks</span>
-                                      <span className="stat-number font-mono">
-                                        {task.subtasks.filter(s => s.done).length}/{task.subtasks.length}
-                                      </span>
-                                    </div>
-                                    <div className="flex gap-1">
-                                      {task.subtasks.map((s, idx) => (
-                                        <div
-                                          key={idx}
-                                          className="h-1.5 flex-1 rounded-full transition-colors"
-                                          style={{ background: s.done ? '#84cc16' : '#e7e5e4' }}
-                                        />
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Due Date & Assignee Footer */}
-                                <div className="flex items-center justify-between pt-3 border-t border-stone-100 text-xs text-stone-500">
-                                  <div className="flex items-center gap-1.5 text-[11px] text-stone-600 bg-stone-50 px-2 py-0.5 rounded-md border border-stone-200/50 font-mono">
-                                    <IconlyCalendar size={12} className="text-stone-400" />
-                                    <span>{task.due}</span>
-                                  </div>
-
-                                  <div className="flex items-center gap-3">
-                                    {/* Assignee Avatar */}
-                                    <div className="flex -space-x-1.5 overflow-hidden">
-                                      {task.assignees.map((a, i) => (
-                                        <div
-                                          key={i}
-                                          className="w-5 h-5 rounded-full ring-2 ring-white text-[9px] font-bold text-white flex items-center justify-center shadow-2xs"
-                                          style={{ backgroundColor: a.color }}
-                                          title={a.name}
-                                        >
-                                          {a.initials}
-                                        </div>
-                                      ))}
-                                      {task.assignees.length === 0 && (
-                                        <div className="w-5 h-5 rounded-full ring-2 ring-white text-[9px] font-bold text-stone-400 bg-stone-200 flex items-center justify-center" title="Unassigned">
-                                          ?
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-
                               </div>
-                            )
-                          })}
 
-                          {/* Quick Add Card Placeholder */}
-                          <button
-                            onClick={() => {
-                              setTargetColId(col.id)
-                              setCreateModalOpen(true)
-                            }}
-                            className="w-full py-3 rounded-2xl border-2 border-dashed border-stone-200 hover:border-stone-400 text-stone-400 hover:text-stone-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                          >
-                            <IconlyPlus size={14} className="text-stone-400 group-hover:text-stone-700 transition-colors" />
-                            <span>Add Task</span>
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                              {/* Swimlane 4-Columns Grid */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-stone-50/40">
+                                {COLUMNS_CONFIG.map(col => {
+                                  const colTasksInTrack = trackTasks
+                                    .filter(t => t.status === col.id)
+                                    .filter(filterTask)
+                                  const isDragOver = dragOverColId === `${track.id}-${col.id}`
+
+                                  return (
+                                    <div
+                                      key={col.id}
+                                      onDragOver={(e) => handleDragOver(e, `${track.id}-${col.id}`)}
+                                      onDragLeave={(e) => handleDragLeave(e, `${track.id}-${col.id}`)}
+                                      onDrop={(e) => handleDrop(e, col.id)}
+                                      className={`flex flex-col gap-3 p-3 rounded-2xl transition-all ${
+                                        isDragOver ? 'bg-lime-50 border-2 border-dashed border-lime-400' : 'bg-white/80 border border-stone-200/70'
+                                      }`}
+                                    >
+                                      {/* Sub-column Header */}
+                                      <div className="flex items-center justify-between px-1">
+                                        <span className="text-xs font-bold text-stone-700 font-urbanist">
+                                          {col.title}
+                                        </span>
+                                        <span className="text-[10px] font-mono font-bold text-stone-400 bg-stone-100 px-1.5 py-0.2 rounded">
+                                          {colTasksInTrack.length}
+                                        </span>
+                                      </div>
+
+                                      {/* Task Cards in this swimlane column */}
+                                      <div className="space-y-3 min-h-[140px]">
+                                        {colTasksInTrack.map(task => (
+                                          <KanbanTaskCard
+                                            key={task.id}
+                                            task={task}
+                                            columnId={col.id}
+                                            onOpen={setSelectedTask}
+                                            onMove={handleMoveTask}
+                                            isBeingDragged={draggedTask?.task_id === task.task_id}
+                                            onDragStart={(e) => handleDragStart(e, task, col.id)}
+                                            onDragEnd={handleDragEnd}
+                                          />
+                                        ))}
+
+                                        {colTasksInTrack.length === 0 && (
+                                          <div className="h-28 rounded-2xl border border-dashed border-stone-200 flex flex-col items-center justify-center text-center p-3 text-stone-400">
+                                            <span className="text-[11px] font-medium">No tasks in {col.title}</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setTargetColId(col.id)
+                                                setTargetTrackId(track.id)
+                                                setCreateModalOpen(true)
+                                              }}
+                                              className="mt-1.5 text-[10.5px] font-bold text-stone-700 hover:text-stone-900 hover:underline cursor-pointer inline-flex items-center gap-1"
+                                            >
+                                              <PlusIcon size={10} />
+                                              <span>Add</span>
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
+                  )}
                 </>
               )}
 
@@ -868,6 +1264,7 @@ export default function KanbanPage() {
                     <button
                       onClick={() => {
                         setTargetColId('TODO')
+                        setTargetTrackId(null)
                         setCreateModalOpen(true)
                       }}
                       className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-[#111318] text-white text-xs font-bold hover:bg-black transition-all cursor-pointer shadow-xs"
@@ -882,6 +1279,7 @@ export default function KanbanPage() {
                       <thead>
                         <tr className="border-b border-stone-200 text-stone-400 font-bold uppercase text-[10px] tracking-wider">
                           <th className="pb-3 pl-3">Task & ID</th>
+                          <th className="pb-3">Stream</th>
                           <th className="pb-3">Status</th>
                           <th className="pb-3">Priority</th>
                           <th className="pb-3">Assignee</th>
@@ -891,7 +1289,7 @@ export default function KanbanPage() {
                       </thead>
                       <tbody className="divide-y divide-stone-100">
                         {allTasks
-                          .filter(t => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()))
+                          .filter(filterTask)
                           .map(t => (
                             <tr
                               key={t.id}
@@ -904,14 +1302,28 @@ export default function KanbanPage() {
                                     {t.taskId}
                                   </span>
                                   <div>
-                                    <div className="font-bold text-stone-900 group-hover:text-violet-700 text-xs">
-                                      {t.title}
+                                    <div className="font-bold text-stone-900 group-hover:text-violet-700 text-xs flex items-center gap-1.5">
+                                      <span>{t.title}</span>
+                                      {t.isParallel && (
+                                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 inline-flex items-center gap-0.5">
+                                          <ZapIcon size={9} className="text-amber-700 fill-amber-700" />
+                                          <span>Parallel</span>
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="text-[11px] text-stone-400 line-clamp-1 max-w-md">
                                       {t.description}
                                     </div>
                                   </div>
                                 </div>
+                              </td>
+
+                              <td className="py-3.5">
+                                {t.track && (
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${t.track.bg} ${t.track.text} ${t.track.border} font-mono`}>
+                                    {t.track.shortName}
+                                  </span>
+                                )}
                               </td>
 
                               <td className="py-3.5">
@@ -977,7 +1389,7 @@ export default function KanbanPage() {
               {/* VIEW 3: TIMELINE VIEW                                     */}
               {/* ══════════════════════════════════════════════════════════ */}
               {viewMode === 'timeline' && (
-                <TimelineView tasks={allTasks} onOpenTask={setSelectedTask} />
+                <TimelineView tasks={allTasks.filter(filterTask)} onOpenTask={setSelectedTask} />
               )}
 
               {/* ══════════════════════════════════════════════════════════ */}
@@ -999,6 +1411,7 @@ export default function KanbanPage() {
                   onSelectTask={setSelectedTask}
                   onOpenNewTask={(colId = 'TODO') => {
                     setTargetColId(typeof colId === 'string' ? colId : 'TODO')
+                    setTargetTrackId(null)
                     setCreateModalOpen(true)
                   }}
                   onBackToBoard={() => setViewMode('board')}
@@ -1014,6 +1427,7 @@ export default function KanbanPage() {
       <CreateTaskModal
         open={createModalOpen}
         defaultColumnId={targetColId}
+        defaultTrackId={targetTrackId}
         onClose={() => setCreateModalOpen(false)}
         onAdd={() => {
           refreshTasks()
@@ -1035,6 +1449,12 @@ export default function KanbanPage() {
           members={members}
         />
       )}
+
+      {/* Sprint Workflow & Concurrency Guide Modal */}
+      <WorkflowGuideModal
+        open={workflowGuideOpen}
+        onClose={() => setWorkflowGuideOpen(false)}
+      />
     </ProtectedRoute>
   )
 }

@@ -13,6 +13,7 @@ import {
   CheckIcon, SparklesIcon, ZapIcon, TargetIcon,
   GoogleMeetIcon, ZoomIcon, FigmaIcon, NotionIcon
 } from '@/components/Icons'
+import { X } from 'lucide-react'
 
 const AlertCircleIcon = ({ size = 16, className = '' }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -899,7 +900,7 @@ export default function CalendarPage() {
 
     try {
       await updateTaskToContext({ task_id: realId, status: nextStatus })
-      toast.success(nextStatus === 'DONE' ? 'Task marked complete! 🎯' : 'Task restored to active')
+      toast.success(nextStatus === 'DONE' ? 'Task marked complete!' : 'Task restored to active')
     } catch (err) {
       toast.error('Failed to update task status')
     }
@@ -1724,7 +1725,7 @@ export default function CalendarPage() {
                             className="px-4 py-1.5 rounded-full bg-[#111318] hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-transform active:scale-98 cursor-pointer"
                           >
                             <PlusIcon size={12} />
-                            <span>+ Event</span>
+                            <span>Event</span>
                           </button>
                         </div>
                       </div>
@@ -2126,9 +2127,10 @@ export default function CalendarPage() {
                         <button
                           type="button"
                           onClick={() => setIsCreateModalOpen(true)}
-                          className="mt-4 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold hover:bg-stone-800 transition-colors cursor-pointer"
+                          className="mt-4 px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold hover:bg-stone-800 transition-colors cursor-pointer inline-flex items-center gap-1.5"
                         >
-                          + Create Deliverable
+                          <PlusIcon size={12} />
+                          <span>Create Deliverable</span>
                         </button>
                       </div>
                     ) : (
@@ -2261,9 +2263,9 @@ export default function CalendarPage() {
                 <button
                   type="button"
                   onClick={() => setNewMeetingModal(false)}
-                  className="text-stone-400 hover:text-stone-700 text-xs font-bold cursor-pointer"
+                  className="text-stone-400 hover:text-stone-700 p-1 rounded-lg hover:bg-stone-100 cursor-pointer"
                 >
-                  ✕
+                  <X size={16} />
                 </button>
               </div>
 

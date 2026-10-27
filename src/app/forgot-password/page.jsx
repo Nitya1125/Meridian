@@ -2,7 +2,8 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ZapIcon, ShieldIcon, CheckIcon } from '@/components/Icons';
+import { ZapIcon, ShieldIcon, CheckIcon, AlertTriangleIcon } from '@/components/Icons';
+import { Lock, Check } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import StripedLoader from '@/components/StripedLoader';
 import { forgotPassword, resetPasswordVerifyOtp, resetPassword } from '@/Service/authService';
@@ -67,7 +68,7 @@ function PasswordStrength({ password }) {
             key={c.label}
             className={`text-[11px] flex items-center gap-0.5 ${c.ok ? 'text-emerald-600 font-semibold' : 'text-stone-400'}`}
           >
-            <span>{c.ok ? '✓' : '○'}</span>
+            <span>{c.ok ? <Check size={12} className="inline text-emerald-600" /> : <span className="inline-block w-2.5 h-2.5 rounded-full border border-stone-300" />}</span>
             {c.label}
           </span>
         ))}
@@ -219,7 +220,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, error, icon
           </button>
         )}
       </div>
-      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold">⚠ {error}</div>}
+      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold flex items-center gap-1"><AlertTriangleIcon size={12} /><span>{error}</span></div>}
     </div>
   );
 }
@@ -444,8 +445,8 @@ export default function ForgotPasswordPage() {
 
           {step === 'verify' && (
             <div className="text-center">
-              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-4 text-xl shadow-2xs">
-                🔒
+              <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 flex items-center justify-center mx-auto mb-4 shadow-2xs">
+                <Lock size={20} className="text-amber-700" />
               </div>
               <h2 className="text-2xl font-normal font-serif text-stone-950 mb-1">
                 Enter <em className="italic font-serif font-normal text-stone-900">reset code</em>
@@ -464,8 +465,9 @@ export default function ForgotPasswordPage() {
               />
 
               {otpErr && (
-                <p className="text-rose-500 text-[11px] font-semibold mb-3">
-                  ⚠ Invalid or expired code. Please try again.
+                <p className="text-rose-500 text-[11px] font-semibold mb-3 flex items-center justify-center gap-1">
+                  <AlertTriangleIcon size={12} />
+                  <span>Invalid or expired code. Please try again.</span>
                 </p>
               )}
 

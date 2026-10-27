@@ -89,7 +89,7 @@ function PendingScreen() {
             className="group flex items-center justify-between bg-white rounded-2xl p-5 border border-stone-200/90 shadow-2xs hover:shadow-md hover:border-stone-400 transition-all cursor-pointer text-left"
           >
             <div>
-              <div className="text-sm font-bold text-stone-900 mb-0.5">+ Create Organization</div>
+              <div className="text-sm font-bold text-stone-900 mb-0.5">Create Organization</div>
               <div className="text-xs text-stone-500 font-medium">Start your own workspace</div>
             </div>
             <div className="w-8 h-8 rounded-full bg-stone-100 group-hover:bg-[#111318] group-hover:text-lime-400 flex items-center justify-center transition-all duration-200 shrink-0">
@@ -102,7 +102,7 @@ function PendingScreen() {
             className="group flex items-center justify-between bg-white rounded-2xl p-5 border border-stone-200/90 shadow-2xs hover:shadow-md hover:border-stone-400 transition-all cursor-pointer text-left"
           >
             <div>
-              <div className="text-sm font-bold text-stone-900 mb-0.5">+ Join Another Organization</div>
+              <div className="text-sm font-bold text-stone-900 mb-0.5">Join Another Organization</div>
               <div className="text-xs text-stone-500 font-medium">Use an invite code</div>
             </div>
             <div className="w-8 h-8 rounded-full bg-stone-100 group-hover:bg-[#111318] group-hover:text-lime-400 flex items-center justify-center transition-all duration-200 shrink-0">

@@ -154,7 +154,7 @@ export default function BillingPage() {
                       <div className="space-y-2.5 my-6 text-xs">
                         {plan.features.map(f => (
                           <div key={f} className="flex items-center gap-2">
-                            <span className={isSelected ? 'text-lime-400 font-bold' : 'text-emerald-600 font-bold'}>✓</span>
+                            <CheckIcon size={13} className={isSelected ? 'text-lime-400' : 'text-emerald-600'} />
                             <span className={isSelected ? 'text-stone-300' : 'text-stone-700'}>{f}</span>
                           </div>
                         ))}

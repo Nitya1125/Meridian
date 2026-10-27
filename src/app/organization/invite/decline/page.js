@@ -4,8 +4,8 @@ import React, { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'react-hot-toast'
-import { declineOrganizationInvitation } from '@/Service/organization'
-import { ZapIcon, BuildingIcon, CheckIcon, ShieldIcon } from '@/components/Icons'
+import { ZapIcon, BuildingIcon, CheckIcon, ShieldIcon, AlertTriangleIcon } from '@/components/Icons'
+import { X, Lock } from 'lucide-react'
 
 function DeclineContent() {
   const router = useRouter()
@@ -21,7 +21,7 @@ function DeclineContent() {
     return (
       <div className="w-full max-w-md bg-white rounded-3xl p-8 sm:p-10 border border-stone-200/80 shadow-2xl text-center space-y-5 animate-in zoom-in-95 duration-200">
         <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center mx-auto shadow-xs">
-          <span className="text-2xl font-bold">✕</span>
+          <X size={24} />
         </div>
 
         <div>
@@ -137,7 +137,7 @@ function DeclineContent() {
       {errorMessage && (
         <div className="mb-5 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs font-medium text-rose-700 space-y-1">
           <div className="font-bold flex items-center gap-1.5">
-            <span>⚠</span>
+            <AlertTriangleIcon size={14} className="text-rose-600" />
             <span>Notice</span>
           </div>
           <p className="text-[11px] leading-relaxed text-rose-600">{errorMessage}</p>
@@ -148,7 +148,7 @@ function DeclineContent() {
       {loginRequired && (
         <div className="mb-5 p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs space-y-2.5">
           <div className="font-bold text-amber-900 flex items-center gap-1.5">
-            <span>🔒</span>
+            <Lock size={14} className="text-amber-700" />
             <span>Authentication Required</span>
           </div>
           <p className="text-[11px] text-amber-800 leading-relaxed font-medium">

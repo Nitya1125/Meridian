@@ -3,7 +3,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { sendOtp, verifyOtp, signup } from "@/Service/authService";
-import { ZapIcon, ShieldIcon, SparklesIcon } from '@/components/Icons';
+import { ZapIcon, ShieldIcon, SparklesIcon, AlertTriangleIcon } from '@/components/Icons';
+import { Mail, X, Check } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'react-hot-toast';
 import StripedLoader from '@/components/StripedLoader';
@@ -81,7 +82,7 @@ function PasswordStrength({ password }) {
             key={c.label}
             className={`text-[11px] flex items-center gap-0.5 ${c.ok ? 'text-emerald-600 font-semibold' : 'text-stone-400'}`}
           >
-            <span>{c.ok ? '✓' : '○'}</span>
+            <span>{c.ok ? <Check size={12} className="inline text-emerald-600" /> : <span className="inline-block w-2.5 h-2.5 rounded-full border border-stone-300" />}</span>
             {c.label}
           </span>
         ))}
@@ -132,7 +133,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, error, icon
           </button>
         )}
       </div>
-      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold">⚠ {error}</div>}
+      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold flex items-center gap-1"><AlertTriangleIcon size={12} /><span>{error}</span></div>}
     </div>
   );
 }
@@ -275,14 +276,14 @@ function OtpModal({ email, onClose, onSuccess }) {
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-6 right-6 text-stone-400 hover:text-stone-700 bg-transparent border-none text-lg cursor-pointer"
+          className="absolute top-6 right-6 text-stone-400 hover:text-stone-700 bg-transparent border-none cursor-pointer"
         >
-          ✕
+          <X size={16} />
         </button>
 
         <div className="text-center mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-700 flex items-center justify-center mx-auto mb-4 text-xl font-bold shadow-2xs">
-            ✉️
+          <div className="w-12 h-12 rounded-2xl bg-violet-50 text-violet-700 flex items-center justify-center mx-auto mb-4 shadow-2xs">
+            <Mail size={22} className="text-violet-700" />
           </div>
           <h3 className="text-2xl font-normal font-serif text-stone-950 tracking-tight mb-1.5">
             Verify your <em className="italic font-serif font-normal">work email</em>
@@ -315,8 +316,9 @@ function OtpModal({ email, onClose, onSuccess }) {
         </div>
 
         {otpErr && (
-          <p className="text-center text-[11px] text-rose-500 font-semibold mb-4">
-            ⚠ {otpErr}
+          <p className="text-center text-[11px] text-rose-500 font-semibold mb-4 flex items-center justify-center gap-1">
+            <AlertTriangleIcon size={12} />
+            <span>{otpErr}</span>
           </p>
         )}
 
@@ -576,8 +578,9 @@ export default function SignupPage() {
 
           {step === 3 && (
             <div>
-              <div className="mb-4 inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-900 rounded-full px-3 py-1 text-xs font-bold font-mono">
-                <span>Email verified ✓</span>
+              <div className="mb-4 inline-flex items-center gap-1 bg-emerald-100 text-emerald-900 rounded-full px-3 py-1 text-xs font-bold font-mono">
+                <span>Email verified</span>
+                <Check size={12} className="text-emerald-700" />
               </div>
 
               <Field

@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { TrashIcon } from "./Icons"
+import { TrashIcon, AlertTriangleIcon } from "./Icons"
 import { toast } from "react-hot-toast"
 import { deleteOrganization } from "@/Service/organization"
 import { useOrg } from "@/context/OrgContext"
@@ -83,7 +83,7 @@ export default function DeleteOrgModal({ open, onClose, organization }) {
         {/* Warning Banner */}
         <div className="my-4 p-3.5 rounded-2xl bg-rose-50/80 border border-rose-200 text-xs text-rose-800 space-y-1">
           <div className="font-bold flex items-center gap-1.5 text-rose-900">
-            <span>⚠</span>
+            <AlertTriangleIcon size={14} className="text-rose-600" />
             <span>Irreversible Action</span>
           </div>
           <p className="text-[11px] leading-relaxed text-rose-700 font-medium">
