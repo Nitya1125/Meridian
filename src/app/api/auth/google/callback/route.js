@@ -61,7 +61,7 @@ export async function GET(request){
 
         const token = jwt.sign({id:userId,email:email},process.env.JWT_SECRET ,{expiresIn:"7d"});
 
-        const response = NextResponse.redirect(new URL(`/dashboard?token=${token}`, request.url));
+        const response = NextResponse.redirect(new URL("/dashboard", request.url));
 
         //storing JWT in http-cookies
         response.cookies.set("token",token,{

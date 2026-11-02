@@ -300,6 +300,7 @@ export default function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [otpErr, setOtpErr] = useState(false);
@@ -323,6 +324,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await forgotPassword({ email });
       toast.success(res?.message || 'Reset code sent to your email!');
+      setResetToken('');
       setStep('verify');
     } catch (err) {
       toast.error(err.message || 'Failed to send reset code');
@@ -341,6 +343,9 @@ export default function ForgotPasswordPage() {
     setLoading(true);
     try {
       const res = await resetPasswordVerifyOtp({ email, otp: code });
+      if (res?.resetToken) {
+        setResetToken(res.resetToken);
+      }
       toast.success(res?.message || 'OTP verified successfully!');
       setOtpErr(false);
       setStep('reset');
@@ -363,7 +368,12 @@ export default function ForgotPasswordPage() {
     }
     setLoading(true);
     try {
-      const res = await resetPassword({ email, newPassword: password, confirmPassword: confirmPw });
+      const res = await resetPassword({
+        email,
+        resetToken,
+        newPassword: password,
+        confirmPassword: confirmPw,
+      });
       toast.success(res?.message || 'Password reset successfully!');
       setStep('success');
     } catch (err) {
@@ -376,6 +386,7 @@ export default function ForgotPasswordPage() {
   const handleResendOtp = async () => {
     try {
       const res = await forgotPassword({ email });
+      setResetToken('');
       toast.success(res?.message || 'New recovery code sent to your email!');
     } catch (err) {
       toast.error(err.message || 'Failed to resend code');

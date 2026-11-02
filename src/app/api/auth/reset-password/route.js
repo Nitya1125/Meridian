@@ -1,14 +1,40 @@
 import { NextResponse } from "next/server";
 import db from "@/Lib/db";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { resetPasswordRateLimit, getClientIp } from "@/Lib/rateLimit";
 
 export async function PATCH(request) {
     try {
-        const { email, newPassword, confirmPassword } = await request.json();
+        const body = await request.json().catch(() => ({}));
+        const authHeader = request.headers.get("authorization");
+        const resetToken = body.resetToken || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : null);
+        const { email, newPassword, confirmPassword } = body;
 
         if (!email || !newPassword || !confirmPassword) {
             return NextResponse.json({
                 message: "All fields are required",
+                success: false
+            }, { status: 400 });
+        }
+
+        const normalizedEmail = String(email).trim().toLowerCase();
+
+        // Rate limit check
+        const clientKey = getClientIp(request, normalizedEmail);
+        const { success: rateLimitOk } = await resetPasswordRateLimit.limit(clientKey);
+
+        if (!rateLimitOk) {
+            return NextResponse.json({
+                message: "Too many password reset attempts, please try again later",
+                success: false
+            }, { status: 429 });
+        }
+
+        // Backend password validation
+        if (newPassword.length < 8) {
+            return NextResponse.json({
+                message: "Password must be at least 8 characters long",
                 success: false
             }, { status: 400 });
         }
@@ -20,11 +46,46 @@ export async function PATCH(request) {
             }, { status: 400 });
         }
 
+        // Validate that reset token is present
+        if (!resetToken) {
+            return NextResponse.json({
+                message: "Reset authorization token is missing. Please verify your OTP first.",
+                success: false
+            }, { status: 401 });
+        }
+        
+        let decoded;
+        try {
+            decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+        } catch (err) {
+            return NextResponse.json({
+                message: "Invalid or expired reset token. Please request a new OTP.",
+                success: false
+            }, { status: 401 });
+        }
+
+        // Validate token purpose
+        if (decoded.purpose !== "password-reset") {
+            return NextResponse.json({
+                message: "Invalid token purpose",
+                success: false
+            }, { status: 403 });
+        }
+
+        // Ensure token matches the provided email
+        if (decoded.email?.toLowerCase() !== normalizedEmail) {
+            return NextResponse.json({
+                message: "Token does not match the provided email address",
+                success: false
+            }, { status: 403 });
+        }
+
+        // Query user and check server-side authorization state
         const [verifyUser] = await db.query(
-            `SELECT id, reset_otp_verified
+            `SELECT id, email, reset_otp_verified, reset_otp_expires_at
              FROM users
-             WHERE email = ?`,
-            [email]
+             WHERE id = ? AND LOWER(email) = ?`,
+            [decoded.userId, normalizedEmail]
         );
 
         if (verifyUser.length === 0) {
@@ -36,15 +97,18 @@ export async function PATCH(request) {
 
         const user = verifyUser[0];
 
-        if (!user.reset_otp_verified) {
+        // Ensure reset authorization was granted, has not expired, and has not already been used
+        if (!Boolean(user.reset_otp_verified) || !user.reset_otp_expires_at || new Date(user.reset_otp_expires_at) < new Date()) {
             return NextResponse.json({
-                message: "OTP verification required",
+                message: "Reset authorization has expired or has already been used. Please request a new OTP.",
                 success: false
             }, { status: 400 });
         }
 
+        // Hash new password using bcrypt cost factor 10
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
+        // Atomically update password and revoke reset authorization (prevents token reuse)
         await db.query(
             `UPDATE users
              SET password = ?,

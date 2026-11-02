@@ -84,13 +84,18 @@ export async function GET(request){
 
         const [users] = await db.query(`select * from users where email =?`,[email]);
 
+        let userId;
+
         if(users.length > 0){
+            userId = users[0].id
             await db.query(`update users set github_id = ? where email = ?`,[githubId,email]);
         }else{
-            await db.query(`insert into users (email,first_name,last_name,github_id) values (?,?,?,?)`,[email,first_name,last_name,githubId]);
+            const [insertResult] = await db.query(`insert into users (email,first_name,last_name,github_id) values (?,?,?,?)`,[email,first_name,last_name,githubId]);
+
+            userId = insertResult.insertId;
         }
 
-        const token = jwt.sign({id:users[0].id, email:email}, process.env.JWT_SECRET,{expiresIn: "7d"})
+        const token = jwt.sign({id:userId, email:email}, process.env.JWT_SECRET,{expiresIn: "7d"})
 
         const response = NextResponse.redirect(new URL("/dashboard",request.url));
 
@@ -108,11 +113,11 @@ export async function GET(request){
         //     new URL(`/dashboard?token=${token}`, request.url)
         // )
     }catch(error){
+        console.log("Github Oauth error:", error)
+
         return NextResponse.json({
             success:false,
             message:"Something went wrong"
         },{status:500})
-
-        console.log(error)
     }
 }

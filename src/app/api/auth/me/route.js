@@ -17,7 +17,7 @@ export async function GET(request){
 
         const decode = jwt.verify(token,process.env.JWT_SECRET)
 
-        const [users] = await db.query(`Select * FROM users Where email = ?`,[decode.email]);
+        const [users] = await db.query(`Select id,email,first_name,last_name FROM users Where id = ?`,[decode.id]);
 
         if(users.length === 0){
             return NextResponse.json({

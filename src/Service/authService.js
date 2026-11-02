@@ -155,3 +155,21 @@ export async function resetPassword(data){
 
     return result
 }
+
+
+export async function logout(){
+    const response = await fetch("/api/logout", {
+        method: "POST",
+        headers:{
+            "Content-Type": "application/json"
+        }
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if(!response.ok){
+        throw new Error(result.message || "Failed to logout")
+    }
+
+    return result
+}

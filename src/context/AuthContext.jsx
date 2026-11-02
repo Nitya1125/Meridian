@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getCurrentUser } from "../Service/authService"
+import { getCurrentUser, logout as apiLogout } from "../Service/authService"
 
 const AuthContext = createContext(null)
 
@@ -79,16 +79,22 @@ export function AuthProvider({ children }) {
     router.push('/dashboard')
   }
 
-  const logout = () => {
-    setUser(null)
-    setToken(null)
+  const logout = async () => {
     try {
-      localStorage.removeItem('meridian_token')
-      localStorage.removeItem('meridian_user')
-    } catch (e) {
-      console.error('Storage clear error', e)
+      await apiLogout()
+    } catch (err) {
+      console.error('Logout API error:', err)
+    } finally {
+      setUser(null)
+      setToken(null)
+      try {
+        localStorage.removeItem('meridian_token')
+        localStorage.removeItem('meridian_user')
+      } catch (e) {
+        console.error('Storage clear error', e)
+      }
+      router.push('/')
     }
-    router.push('/')
   }
 
   const isAuthenticated = Boolean(token)
