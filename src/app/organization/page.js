@@ -218,9 +218,10 @@ export default function OrganizationPage() {
               <button
                 type="button"
                 onClick={openCreateModal}
-                className="px-4 py-2 rounded-2xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 text-xs font-bold shadow-2xs transition-all cursor-pointer"
+                className="px-4 py-2 rounded-2xl bg-white border border-stone-200 text-stone-800 hover:bg-stone-50 text-xs font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1.5"
               >
-                + New Org
+                <PlusIcon size={12} />
+                <span>New Org</span>
               </button>
               <button
                 type="button"

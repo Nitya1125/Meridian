@@ -7,7 +7,7 @@ import {
   ShareIcon, CheckCircleIcon, TargetIcon, ZapIcon, SparklesIcon,
   ThumbsUpIcon, HeartIcon, RocketIcon, BulbIcon, FlameIcon, CopyIcon
 } from './Icons'
-import { AlarmClock, MoonStar, Play, Pause, Clock } from 'lucide-react'
+import { AlarmClock, MoonStar, Play, Pause, Clock, Lock, X, Zap } from 'lucide-react'
 import { PASTEL, taskHealth } from '@/Lib/meridianTheme'
 import { toast } from 'react-hot-toast'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -16,6 +16,7 @@ import {
   getSubtasks, addSubtask as apiAddSubtask, updateSubtask as apiUpdateSubtask, deleteSubtask as apiDeleteSubtask,
   getTaskComments, addTaskComment, editTaskComment, deleteTaskComment
 } from '@/Service/taskService'
+import { PARALLEL_TRACKS, getTaskTrack } from '@/Lib/parallelTracks'
 
 const ALL_STATUSES = [
   { id: 'TODO', label: 'To do', color: 'bg-stone-100 text-stone-700 border-stone-200' },
@@ -64,10 +65,33 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
   const [showTagInput, setShowTagInput] = useState(false)
 
   const [showAssigneePicker, setShowAssigneePicker] = useState(false)
+  const [taskTrack, setTaskTrack] = useState(() => getTaskTrack(task).id)
+  const [isParallel, setIsParallel] = useState(task?.is_parallel !== undefined ? Boolean(task.is_parallel) : true)
   const [timing, setTiming] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleTrackChange = async (trkId) => {
+    setTaskTrack(trkId)
+    const trkObj = PARALLEL_TRACKS.find(t => t.id === trkId)
+    await onUpdateTask?.({
+      task_id: taskId,
+      track_id: trkId,
+      track: trkObj?.shortName
+    })
+    toast.success(`Track updated to ${trkObj?.name || 'Parallel Track'}`)
+  }
+
+  const handleParallelToggle = async () => {
+    const nextVal = !isParallel
+    setIsParallel(nextVal)
+    await onUpdateTask?.({
+      task_id: taskId,
+      is_parallel: nextVal ? 1 : 0
+    })
+    toast.success(nextVal ? 'Task enabled for parallel execution' : 'Task marked as sequential dependent')
+  }
 
   // ── Real subtask state ────────────────────────────────────────
   const [subtasks, setSubtasks] = useState([])
@@ -452,7 +476,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
               onClick={onClose}
               className="p-1.5 rounded-xl text-stone-400 hover:text-stone-900 hover:bg-stone-100 transition-colors cursor-pointer"
             >
-              ✕
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -960,6 +984,57 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                   </div>
                 )}
 
+                {/* 5b. Parallel Track & Concurrency */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400">
+                      Parallel Track
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleParallelToggle}
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                        isParallel
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          : 'bg-stone-100 text-stone-600 border-stone-200'
+                      }`}
+                      title="Click to toggle parallel vs sequential execution"
+                    >
+                      {isParallel ? (
+                        <span className="inline-flex items-center gap-1">
+                          <Zap size={11} className="text-emerald-700 fill-emerald-600" />
+                          <span>Parallel Unblocked</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          <Lock size={11} className="text-stone-500" />
+                          <span>Sequential</span>
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {PARALLEL_TRACKS.map((trk) => {
+                      const isSelected = taskTrack === trk.id
+                      return (
+                        <button
+                          key={trk.id}
+                          type="button"
+                          onClick={() => handleTrackChange(trk.id)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-left text-xs font-semibold transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#111318] text-white border-stone-900 shadow-xs'
+                              : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200/80'
+                          }`}
+                        >
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: trk.color }} />
+                          <span className="truncate text-[11px]">{trk.shortName}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 {/* 6. Tags */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -969,9 +1044,10 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                     <button
                       type="button"
                       onClick={() => setShowTagInput(!showTagInput)}
-                      className="text-[10px] font-bold text-stone-500 hover:text-stone-900 cursor-pointer"
+                      className="text-[10px] font-bold text-stone-500 hover:text-stone-900 cursor-pointer inline-flex items-center gap-1"
                     >
-                      + Add Tag
+                      <PlusIcon size={10} />
+                      <span>Add Tag</span>
                     </button>
                   </div>
 
@@ -987,7 +1063,7 @@ export default function TaskDetailDrawer({ task, open, onClose, onUpdateTask, on
                           onClick={() => removeTag(t)}
                           className="hover:text-rose-600 transition-colors ml-0.5 cursor-pointer"
                         >
-                          ✕
+                          <X size={11} />
                         </button>
                       </span>
                     ))}

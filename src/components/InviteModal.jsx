@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { PlusIcon, UsersIcon, CheckIcon } from './Icons'
+import { X } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import StripedLoader from './StripedLoader'
 import { useOrg } from '@/context/OrgContext'
@@ -120,9 +121,9 @@ export default function InviteModal({ open, onClose, onInvite }) {
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors"
+            className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition-colors cursor-pointer"
           >
-            ✕
+            <X size={16} />
           </button>
         </div>
 

@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef } from 'react'
 import {
   WorkflowIcon, SearchIcon, PlusIcon, FilterIcon, CalendarIcon,
   CheckIcon, CheckDoubleIcon, ArrowUpRightIcon, SparklesIcon,
-  LayersIcon, ClockIcon, ZapIcon, GridIcon
+  LayersIcon, ClockIcon, ZapIcon, GridIcon, AlertTriangleIcon
 } from '@/components/Icons'
 import {
   Activity, SlidersHorizontal, Scale, ChevronUp, ChevronDown,
@@ -12,7 +12,7 @@ import {
   CheckCircle2, ChevronRight,
   Maximize2, RotateCcw, Box, Cpu, Network, Terminal,
   Workflow, ArrowUpRight, ArrowDownRight,
-  Globe, Server, User, AlertTriangle, CheckCircle, Flag
+  Globe, Server, User, CheckCircle, Flag, X
 } from 'lucide-react'
 import { PASTEL } from '@/Lib/meridianTheme'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -61,6 +61,9 @@ export default function SprintWorkflowCanvas({
   // Filter tasks based on active category
   const filteredTasksByStage = useMemo(() => {
     const filterFn = (task) => {
+      if (activeCategory === 'parallel') {
+        return Boolean(task.isParallel || task.is_parallel)
+      }
       if (activeCategory === 'priority') {
         const p = (task.priority || '').toUpperCase()
         return p === 'CRITICAL' || p === 'HIGH'
@@ -155,10 +158,21 @@ export default function SprintWorkflowCanvas({
       >
         {/* Top meta row */}
         <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[11px] font-mono font-bold text-stone-500 bg-stone-100 px-2 py-0.5 rounded-md">
               {task.taskId || `TSK-${task.task_id || task.id}`}
             </span>
+            {task.track && (
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${task.track.bg || 'bg-stone-100'} ${task.track.text || 'text-stone-700'} ${task.track.border || 'border-stone-200'} font-mono`}>
+                {task.track.code}
+              </span>
+            )}
+            {(task.isParallel || task.is_parallel) && (
+              <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded-full bg-amber-50 text-amber-800 border border-amber-200 inline-flex items-center gap-1">
+                <ZapIcon size={10} className="text-amber-600 fill-amber-600" />
+                <span>Parallel</span>
+              </span>
+            )}
             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold font-mono border ${pTheme.bg} ${pTheme.text} ${pTheme.border}`}>
               <span className={`w-1.5 h-1.5 rounded-full ${pTheme.dot}`} />
               {priority}
@@ -294,7 +308,7 @@ export default function SprintWorkflowCanvas({
                 title="Return to Board View"
                 className="w-10 h-10 rounded-full bg-white border border-stone-200/80 shadow-xs flex items-center justify-center text-stone-600 hover:text-stone-900 hover:bg-stone-50 transition-all cursor-pointer active:scale-95 shrink-0"
               >
-                <span className="text-base font-semibold leading-none">✕</span>
+                <X size={16} />
               </button>
             )}
 
@@ -316,7 +330,8 @@ export default function SprintWorkflowCanvas({
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 scrollbar-none">
             {[
               { id: 'all', label: `All Tasks (${allTasks.length})`, icon: <Layers size={13} /> },
-              { id: 'priority', label: `Priority (${telemetry.criticalOrHigh})`, icon: <AlertTriangle size={13} /> },
+              { id: 'parallel', label: `Parallel Streams (${allTasks.filter(t => t.isParallel || t.is_parallel).length})`, icon: <ZapIcon size={12} className="text-amber-500 fill-amber-500" /> },
+              { id: 'priority', label: `Priority (${telemetry.criticalOrHigh})`, icon: <AlertTriangleIcon size={13} /> },
               { id: 'my-tasks', label: 'My Tasks', icon: <User size={13} /> },
               { id: 'in-flight', label: `In Flight (${telemetry.inProgressCount + telemetry.readyCount})`, icon: <Cpu size={13} /> },
               { id: 'completed', label: `Shipped (${telemetry.doneCount})`, icon: <CheckCircle2 size={13} /> },
@@ -1050,8 +1065,9 @@ export default function SprintWorkflowCanvas({
                             <span className="text-[11px] font-bold text-stone-700 font-urbanist">
                               Completed Deliverables
                             </span>
-                            <span className="text-[10px] font-mono text-emerald-700 font-bold">
-                              ✓ {tasks.length} Shipped
+                            <span className="text-[10px] font-mono text-emerald-700 font-bold inline-flex items-center gap-1">
+                              <CheckCircle2 size={11} className="text-emerald-600" />
+                              <span>{tasks.length} Shipped</span>
                             </span>
                           </div>
                           <p className="text-[11px] text-stone-500 font-medium mb-3">

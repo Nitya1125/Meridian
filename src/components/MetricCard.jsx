@@ -78,7 +78,8 @@ const THEMES = {
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function MetricCard({
-  icon: Icon,
+  icon: iconProp,
+  Icon: uppercaseIcon,
   badge,
   value,
   label,
@@ -87,6 +88,7 @@ export default function MetricCard({
   onClick,
   className = ''
 }) {
+  const Icon = iconProp || uppercaseIcon
   const t = THEMES[theme] || THEMES.purple
   const cardRef = useRef(null)
 

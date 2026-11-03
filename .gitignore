@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.vscode/
 
 # debug
 npm-debug.log*
@@ -40,3 +41,19 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local tools & plugins
+figma-plugin/
+
+# secrets & credentials
+*.key
+*.cert
+*.crt
+*.pfx
+credentials*.json
+secrets*.json
+
+# local tests & AI review configs (kept local per project policy)
+.coderabbit.yaml
+vitest.config.mjs
+src/tests/

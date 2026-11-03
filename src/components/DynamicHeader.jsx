@@ -10,6 +10,7 @@ import {
 import { toast } from 'react-hot-toast'
 import { useOrg } from '@/context/OrgContext'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useTasks } from '@/context/TaskContext'
 import { acceptJoinRequest, rejectJoinRequest, handleOrganizationUsers } from '@/Service/organization'
 import DeleteOrgModal from './DeleteOrgModal'
 import InviteModal from './InviteModal'
@@ -156,34 +157,56 @@ export default function DynamicHeader({
     }
   ] : [])
 
-  // Live Sprint Assurance Calculations (The #1 Thing in Project Management)
-  const totalTasks = allTasks ? allTasks.length : 0
+  // Live Sprint Assurance Calculations from Shared TaskContext or Props
+  const { sprintMetrics, tasks: liveTasks = [] } = useTasks() || {}
+
+  const taskList = (allTasks && allTasks.length > 0)
+    ? allTasks
+    : (liveTasks && liveTasks.length > 0)
+    ? liveTasks
+    : []
+
+  const doneCountFromList = taskList.filter(t => t.status === 'DONE' || t.status === 'READY' || t.status === 'COMPLETED').length
+  const inProgressCountFromList = taskList.filter(t => t.status === 'IN_PROGRESS' || t.status === 'INPROGRESS').length
+  const reviewCountFromList = taskList.filter(t => t.status === 'REVIEW' || t.status === 'UNDER_REVIEW').length
+  const todoCountFromList = taskList.filter(t => t.status === 'TODO' || t.status === 'BACKLOG' || !t.status).length
+
   const doneTasks = columns
     ? (columns.find(c => {
         const id = String(c.id).toUpperCase()
         return id === 'READY' || id === 'DONE'
-      })?.tasks?.length ?? 0)
-    : 0
+      })?.tasks?.length ?? doneCountFromList)
+    : doneCountFromList
+
   const inProgressTasks = columns
     ? (columns.find(c => {
         const id = String(c.id).toUpperCase()
         return id === 'INPROGRESS' || id === 'IN_PROGRESS'
-      })?.tasks?.length ?? 0)
-    : 0
+      })?.tasks?.length ?? inProgressCountFromList)
+    : inProgressCountFromList
+
   const reviewTasks = columns
     ? (columns.find(c => {
         const id = String(c.id).toUpperCase()
         return id === 'REVIEW' || id === 'UNDER_REVIEW'
-      })?.tasks?.length ?? 0)
-    : 0
+      })?.tasks?.length ?? reviewCountFromList)
+    : reviewCountFromList
+
   const todoTasks = columns
     ? (columns.find(c => {
         const id = String(c.id).toUpperCase()
         return id === 'TODO'
-      })?.tasks?.length ?? 0)
-    : 0
+      })?.tasks?.length ?? todoCountFromList)
+    : todoCountFromList
 
-  const completionPct = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0
+  const computedTotal = (doneTasks + inProgressTasks + reviewTasks + todoTasks) || taskList.length
+  const totalTasks = computedTotal > 0 ? computedTotal : (sprintMetrics?.totalTasks || (allTasks ? allTasks.length : 0))
+  const effectiveDone = computedTotal > 0 ? doneTasks : (sprintMetrics?.doneTasks || doneTasks)
+  const effectiveInProgress = computedTotal > 0 ? inProgressTasks : (sprintMetrics?.inProgressTasks || inProgressTasks)
+  const effectiveReview = computedTotal > 0 ? reviewTasks : (sprintMetrics?.reviewTasks || reviewTasks)
+  const effectiveTodo = computedTotal > 0 ? todoTasks : (sprintMetrics?.todoTasks || todoTasks)
+
+  const completionPct = totalTasks > 0 ? Math.round((effectiveDone / totalTasks) * 100) : 0
   const confidenceScore = totalTasks > 0 ? Math.min(99, Math.max(50, completionPct + 16)) : 100
 
   // Notification handlers
@@ -234,15 +257,32 @@ export default function DynamicHeader({
   const currentOrgName = activeOrg?.name || "Select Workspace"
   const currentOrgRole = activeOrg?.role || (activeOrg?.created_by === user?.id ? "Owner" : "Workspace")
 
+  const isAnyOpen = Boolean(orgDropdownOpen || assuranceOpen || membersOpen || notifOpen)
+
   return (
-    <header className="w-full mb-7 relative z-30">
+    <>
+      {/* Soft Backdrop Scrim when any Dynamic Island popover is active */}
+      {isAnyOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-stone-950/20 backdrop-blur-[2px] transition-opacity duration-200 animate-in fade-in"
+          onClick={() => {
+            setOrgDropdownOpen(false)
+            setAssuranceOpen(false)
+            setMembersOpen(false)
+            setNotifOpen(false)
+          }}
+          aria-hidden="true"
+        />
+      )}
+
+      <header className={`relative ${isAnyOpen ? 'z-50' : 'z-30'} w-full mb-6`}>
       {/* Top Dynamic Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 sm:gap-4 w-full">
 
         {/* ════════════════════════════════════════════════════════════════ */}
-        {/* DYNAMIC ISLAND COMMAND CAPSULE                                   */}
+        {/* DYNAMIC ISLAND COMMAND CAPSULE (LEFT ALIGNED)                    */}
         {/* ════════════════════════════════════════════════════════════════ */}
-        <div className="flex items-center gap-2 sm:gap-3 px-3.5 py-1.5 bg-[#111318] text-white rounded-2xl sm:rounded-full shadow-sm border border-stone-800/90 transition-all duration-200 overflow-x-auto sm:overflow-visible">
+        <div className="flex items-center flex-nowrap gap-1.5 sm:gap-2 px-3 py-1.5 bg-[#111318] text-white rounded-full shadow-xl shadow-black/15 border border-white/12 hover:border-white/20 transition-all duration-300 backdrop-blur-xl max-w-full overflow-visible self-start lg:self-auto">
           
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 1. INTERACTIVE WORKSPACE SELECTOR SEGMENT                    */}
@@ -255,19 +295,19 @@ export default function DynamicHeader({
                 setAssuranceOpen(false)
                 setMembersOpen(false)
               }}
-              className="flex items-center gap-2 px-2.5 py-1 -ml-1 rounded-full hover:bg-white/10 transition-all cursor-pointer group select-none text-left"
+              className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-white/10 transition-all cursor-pointer group select-none text-left"
               title="Click to switch organization or workspace"
             >
-              <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-lime-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-lime-500" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-lime-500" />
               </span>
 
               <div className="flex items-center gap-1.5 text-xs font-semibold tracking-wide">
                 <span className="text-lime-400 uppercase text-[9px] font-sans font-bold bg-lime-950/90 px-2 py-0.5 rounded-full border border-lime-500/30 shrink-0">
                   {currentOrgRole}
                 </span>
-                <span className="text-stone-100 text-xs font-bold truncate max-w-[110px] sm:max-w-[160px] md:max-w-[200px] group-hover:text-white transition-colors">
+                <span className="text-stone-100 text-xs font-bold truncate max-w-[120px] sm:max-w-[160px] group-hover:text-white transition-colors">
                   {currentOrgName}
                 </span>
                 <ChevronDownIcon
@@ -395,6 +435,9 @@ export default function DynamicHeader({
             )}
           </div>
 
+          {/* Divider between Workspace and Sprint */}
+          <span className="h-3.5 w-px bg-white/15 shrink-0 hidden md:block" />
+
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 2. SPRINT STATUS SEGMENT                                     */}
           {/* ──────────────────────────────────────────────────────────── */}
@@ -409,9 +452,8 @@ export default function DynamicHeader({
               className="flex items-center gap-2 px-2.5 py-1 rounded-full hover:bg-white/10 transition-all cursor-pointer group text-xs select-none"
               title="View sprint deliverables details"
             >
-              <span className="h-3 w-px bg-white/15" />
               <div className="flex items-center gap-1.5">
-                <IconlyCalendar size={14} primaryColor="#a3e635" />
+                <IconlyCalendar size={13} primaryColor="#a3e635" />
                 <span className="text-white font-semibold text-xs">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</span>
               </div>
               <span className="text-stone-400 text-[11px]">{totalTasks > 0 ? `${totalTasks} tasks` : '0 tasks'}</span>
@@ -439,7 +481,7 @@ export default function DynamicHeader({
                     </div>
                     <div>
                       <div className="text-xs font-bold text-white">{activeOrg?.name ? `${activeOrg.name} Sprint` : "Active Sprint"}</div>
-                      <div className="text-[11px] text-stone-400">{doneTasks} of {totalTasks} deliverables done</div>
+                      <div className="text-[11px] text-stone-400">{effectiveDone} of {totalTasks} deliverables done</div>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold">
@@ -452,7 +494,7 @@ export default function DynamicHeader({
                 <div className="py-3 border-b border-white/10 space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-medium">
                     <span className="text-stone-300">Sprint Progress</span>
-                    <span className="text-white font-bold">{completionPct}% ({doneTasks}/{totalTasks} tasks)</span>
+                    <span className="text-white font-bold">{completionPct}% ({effectiveDone}/{totalTasks} tasks)</span>
                   </div>
                   <div className="h-2 w-full bg-white/10 rounded-full overflow-hidden">
                     <div
@@ -469,7 +511,7 @@ export default function DynamicHeader({
                       <IconlyCheck size={16} primaryColor="#a3e635" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{doneTasks} Done</div>
+                      <div className="text-xs font-bold text-white truncate">{effectiveDone} Done</div>
                       <div className="text-[10px] text-stone-400 truncate">Completed</div>
                     </div>
                   </div>
@@ -479,7 +521,7 @@ export default function DynamicHeader({
                       <IconlyActivity size={16} primaryColor="#fbbf24" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{inProgressTasks} Active</div>
+                      <div className="text-xs font-bold text-white truncate">{effectiveInProgress} Active</div>
                       <div className="text-[10px] text-stone-400 truncate">In progress</div>
                     </div>
                   </div>
@@ -489,7 +531,7 @@ export default function DynamicHeader({
                       <IconlyTasks size={16} primaryColor="#38bdf8" />
                     </div>
                     <div className="min-w-0">
-                      <div className="text-xs font-bold text-white truncate">{todoTasks} To Do</div>
+                      <div className="text-xs font-bold text-white truncate">{effectiveTodo} Backlog</div>
                       <div className="text-[10px] text-stone-400 truncate">Backlog</div>
                     </div>
                   </div>
@@ -524,10 +566,13 @@ export default function DynamicHeader({
             )}
           </div>
 
+          {/* Divider between Sprint and Members */}
+          <span className="h-3.5 w-px bg-white/15 shrink-0 hidden sm:block" />
+
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 3. REAL ACTIVE MEMBERS & PRESENCE SEGMENT                    */}
           {/* ──────────────────────────────────────────────────────────── */}
-          <div className="relative" ref={membersRef}>
+          <div className="relative hidden sm:block" ref={membersRef}>
             <button
               type="button"
               onClick={() => {
@@ -632,21 +677,24 @@ export default function DynamicHeader({
             )}
           </div>
 
+          {/* Divider between Members and User */}
+          <span className="h-3.5 w-px bg-white/15 shrink-0 hidden lg:block" />
+
           {/* ──────────────────────────────────────────────────────────── */}
           {/* 4. CURRENT USER & STATUS SEGMENT                             */}
           {/* ──────────────────────────────────────────────────────────── */}
-          <div className="flex items-center gap-2.5 sm:gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-violet-600 text-[10px] font-bold flex items-center justify-center text-white ring-2 ring-[#111318]">
+          <div className="hidden lg:flex items-center gap-2 px-2 py-0.5">
+            <div className="flex items-center gap-1.5">
+              <div className="w-5 h-5 rounded-full bg-violet-600 text-[9px] font-bold flex items-center justify-center text-white ring-1.5 ring-[#111318]">
                 {initials || 'U'}
               </div>
-              <span className="text-[11px] font-medium text-stone-300 hidden xl:inline truncate max-w-[100px]">
+              <span className="text-[11px] font-medium text-stone-300 hidden xl:inline truncate max-w-[90px]">
                 {fullName || user?.email?.split('@')[0] || 'User'}
               </span>
             </div>
 
             {/* Sync Badge */}
-            <div className="flex items-center gap-1.5 text-[11px] text-stone-300 font-sans bg-white/10 px-2.5 py-0.5 rounded-full border border-white/5 shrink-0">
+            <div className="flex items-center gap-1.5 text-[10px] text-stone-300 font-sans bg-white/10 px-2 py-0.5 rounded-full border border-white/5 shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-lime-400 inline-block animate-pulse" />
               <span>Online</span>
             </div>
@@ -851,5 +899,6 @@ export default function DynamicHeader({
         }}
       />
     </header>
+    </>
   )
 }

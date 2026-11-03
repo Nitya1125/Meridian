@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginApi, googleLogin, githubLogin } from '../Service/authService';
 import { toast } from 'react-hot-toast';
-import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, SparklesIcon } from '@/components/Icons';
+import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, SparklesIcon, AlertTriangleIcon } from '@/components/Icons';
 import StripedLoader from '@/components/StripedLoader';
 
 /* ── Tiny Icons ── */
@@ -58,7 +58,7 @@ function Field({ label, type = 'text', value, onChange, placeholder, error, icon
             }`}
         />
       </div>
-      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold">⚠ {error}</div>}
+      {error && <div className="text-[11px] text-rose-500 mt-1 font-semibold flex items-center gap-1"><AlertTriangleIcon size={12} /><span>{error}</span></div>}
     </div>
   );
 }
@@ -139,21 +139,26 @@ function LeftPanel() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login,isAuthenticated ,loading: authLoading } = useAuth();
+  const { login, demoLogin, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailErr, setEmailErr] = useState('');
   const [pwErr, setPwErr] = useState('');
 
-  useEffect(()=> {
-    if(!authLoading && isAuthenticated){
-      router.replace('/dashboard')
-    }
-  },[isAuthenticated,authLoading,router])
+  const handleDemoSignIn = () => {
+    toast.success('Signed in with Demo Account!');
+    demoLogin();
+  };
 
-  if(authLoading){
-    return(
+  useEffect(() => {
+    if (!authLoading && isAuthenticated) {
+      router.replace('/dashboard');
+    }
+  }, [isAuthenticated, authLoading, router]);
+
+  if (authLoading) {
+    return (
       <div className="min-h-screen flex items-center justify-center bg-[#FAF8F5]">
         <StripedLoader
           variant="page"
@@ -294,6 +299,21 @@ export default function LoginPage() {
               {loading ? 'Authenticating...' : 'Sign in to Workspace'}
               {!loading && <span>→</span>}
             </button>
+
+            {/* Quick Demo Sign In for Instant Testing */}
+            <div className="mt-3 pt-3 border-t border-stone-100">
+              <button
+                type="button"
+                onClick={handleDemoSignIn}
+                className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-violet-50 via-purple-50 to-amber-50 hover:from-violet-100 hover:to-amber-100 border border-violet-200/90 text-violet-950 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-98 group"
+              >
+                <SparklesIcon size={14} className="text-violet-600 group-hover:rotate-12 transition-transform" />
+                <span>One-Click Demo Sign In</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-200/70 text-violet-800 uppercase font-extrabold tracking-wide">
+                  Testing
+                </span>
+              </button>
+            </div>
           </form>
 
           {/* Footer Note */}

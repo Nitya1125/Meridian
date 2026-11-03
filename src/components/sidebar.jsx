@@ -49,7 +49,7 @@ const navItems = [
 const spaces = [
   { id: 'pub', name: 'Publications', color: '#f43f5e', expanded: false, sub: ['Dribbble Shots', 'Behance Case Study', 'Articles'] },
   { id: 'comm', name: 'Commercial', color: '#8b5cf6', expanded: false, sub: ['Client Portals', 'Pitch Decks'] },
-  { id: 'int', name: 'Design Internal', color: '#10b981', expanded: false, sub: ['Design System 2.0', 'Brand Assets'] },
+  { id: 'int', name: 'Design Internal', color: '#10b981', expanded: true, sub: ['Design System 2.0', 'Brand Assets'] },
 ]
 
 export default function Sidebar() {

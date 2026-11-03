@@ -241,7 +241,7 @@ export function RadialRepeatCard({
                         }`}
                     >
                       <span>{item.label}</span>
-                      {activePeriod === key && <span className="text-[10px]">✓</span>}
+                      {activePeriod === key && <CheckIcon size={12} className="text-[#FF4400]" />}
                     </button>
                   ))}
                 </div>

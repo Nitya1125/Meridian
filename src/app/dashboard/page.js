@@ -348,7 +348,7 @@ export default function Dashboard() {
 
     toast.success(
       nextTab === 'done'
-        ? 'Task moved to Done 🎯'
+        ? 'Task moved to Done'
         : 'Task restored to Active'
     )
 
@@ -799,7 +799,7 @@ export default function Dashboard() {
 
                           {task.subtasksTotal > 0 && (
                             <div className="hidden sm:flex items-center gap-1 text-[11px] font-semibold text-stone-500 bg-white px-2 py-0.5 rounded-md border border-stone-200/60">
-                              <span>✓</span>
+                              <CheckIcon size={11} className="text-stone-400" />
                               <span className="stat-number">
                                 {task.subtasksCompleted}/{task.subtasksTotal}
                               </span>

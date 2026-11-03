@@ -17,6 +17,20 @@ export function AuthProvider({ children }) {
 
     const checkUser = async () => {
       try {
+        // Check for local demo token first
+        try {
+          const localToken = localStorage.getItem('meridian_token')
+          const localUserStr = localStorage.getItem('meridian_user')
+          if (localToken && localToken.startsWith('demo_') && localUserStr) {
+            if (isMounted) {
+              setUser(JSON.parse(localUserStr))
+              setToken(localToken)
+              setLoading(false)
+            }
+            return
+          }
+        } catch {}
+
         const result = await getCurrentUser()
         if (!isMounted) return
 
