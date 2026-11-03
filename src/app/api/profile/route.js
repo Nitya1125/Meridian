@@ -104,3 +104,59 @@ export async function GET() {
         );
     }
 }
+
+
+export async function PATCH(request){
+    try{
+
+        const cookieStore = await  cookies()
+        const token = cookieStore.get('token')?.value
+
+        if(!token){
+            return NextResponse.json({
+                message: "Unauthorized Access",
+                success: false
+            }, {status: 401})
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+        const [user] = await db.query(`SELECT id from users WHERE id = ?`, [decoded.id])
+
+        if(user.length === 0){
+            return NextResponse.json({
+                message: "User not found",
+                success: false
+            }, {status: 404})
+        }
+
+        const body = await request.json()
+
+        const {first_name,last_name, job_title, location, bio, skills} = body
+
+        if(!first_name || !last_name){
+            return NextResponse.json({
+                message: "First name and last name are required",
+                success: false
+            }, {status: 400})
+        }
+
+        const [updateUser] = await db.query(`UPDATE users SET first_name = ?, last_name =? Where id = ?`, [first_name,last_name,decoded.id])
+
+        const [updateProfile] = await db.query(`INSERT INTO user_profile (user_id,job_title,location,bio,skills) VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE job_title = VALUES(job_title), location = VALUES(location), bio = VALUES(bio), skills = VALUES(skills)`, [decoded.id, job_title,location,bio,JSON.stringify(skills || [])])
+
+        return NextResponse.json({
+            message: 'Profile Update Successfully',
+            success : true
+        },{status: 200})
+        
+
+    }catch(error){
+        console.log(error)
+
+        return NextResponse.json({
+            message: "Profile update failed",
+            success: false
+        },{status: 500})
+    }
+}
