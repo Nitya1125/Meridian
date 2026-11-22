@@ -17,17 +17,12 @@ export function AuthProvider({ children }) {
 
     const checkUser = async () => {
       try {
-        // Check for local demo token first
+        // Clear any legacy demo token
         try {
           const localToken = localStorage.getItem('meridian_token')
-          const localUserStr = localStorage.getItem('meridian_user')
-          if (localToken && localToken.startsWith('demo_') && localUserStr) {
-            if (isMounted) {
-              setUser(JSON.parse(localUserStr))
-              setToken(localToken)
-              setLoading(false)
-            }
-            return
+          if (localToken && localToken.startsWith('demo_')) {
+            localStorage.removeItem('meridian_token')
+            localStorage.removeItem('meridian_user')
           }
         } catch {}
 
@@ -78,21 +73,6 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const demoLogin = () => {
-    const demoUser = {
-      id: 'usr_demo_01',
-      name: 'Alex Johnson',
-      email: 'alex.johnson@meridian.io',
-      role: 'Product Lead',
-      avatar: '#8b5cf6',
-      initials: 'AJ',
-      workspace: 'Meridian Core Workspace'
-    }
-    const demoToken = 'demo_jwt_token_meridian_prod'
-    login(demoUser, demoToken)
-    router.push('/dashboard')
-  }
-
   const logout = async () => {
     try {
       await apiLogout()
@@ -121,7 +101,6 @@ export function AuthProvider({ children }) {
         loading,
         isAuthenticated,
         login,
-        demoLogin,
         logout,
       }}
     >

@@ -43,7 +43,20 @@ export async function POST(request){
             } ,{status:400})
         }
 
-        const isValid = await bcrypt.compare(otp,rows[0].otp_hash);
+        if(!rows[0].otp_hash){
+            return NextResponse.json({
+                success: false,
+                message: "Invalid OTP"
+            } ,{status:400})
+        }
+
+        let isValid = false;
+        try {
+            isValid = await bcrypt.compare(String(otp).trim(), rows[0].otp_hash);
+        } catch (bcryptErr) {
+            console.error("bcrypt compare error:", bcryptErr);
+            isValid = false;
+        }
         
         if(!isValid){
             return NextResponse.json({

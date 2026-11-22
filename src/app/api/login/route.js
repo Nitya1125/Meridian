@@ -26,7 +26,8 @@ export async function POST(request){
             },{status:400})
         }
 
-        const [user] = await db.query(`Select id, first_name,last_name,email,password from users where email = ?`,[email]);
+        const normalizedEmail = String(email).trim().toLowerCase();
+        const [user] = await db.query(`Select id, first_name,last_name,email,password from users where LOWER(email) = ?`,[normalizedEmail]);
 
 
         if(user.length === 0){
@@ -36,7 +37,20 @@ export async function POST(request){
             },{status:400})
         }
 
-        const passwordMatch = await bcrypt.compare(password,user[0].password);
+        if(!user[0].password){
+            return NextResponse.json({
+                success:false,
+                message:"Invalid credentials"
+            },{status:400})
+        }
+
+        let passwordMatch = false;
+        try {
+            passwordMatch = await bcrypt.compare(String(password), user[0].password);
+        } catch (bcryptErr) {
+            console.error("bcrypt compare error:", bcryptErr);
+            passwordMatch = false;
+        }
 
         if(!passwordMatch){
             return NextResponse.json({
@@ -51,8 +65,11 @@ export async function POST(request){
             success:true,
             message:"Login successful",
             user:{
+                id: user[0].id,
                 firstName:user[0].first_name,
                 lastName:user[0].last_name,
+                first_name:user[0].first_name,
+                last_name:user[0].last_name,
                 email:user[0].email,
             },
             token

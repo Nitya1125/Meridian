@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { login as loginApi, googleLogin, githubLogin } from '../Service/authService';
 import { toast } from 'react-hot-toast';
-import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, SparklesIcon, AlertTriangleIcon } from '@/components/Icons';
+import { ZapIcon, ArrowRightIcon, CheckIcon, ShieldIcon, AlertTriangleIcon } from '@/components/Icons';
 import StripedLoader from '@/components/StripedLoader';
 
 /* ── Tiny Icons ── */
@@ -139,17 +139,12 @@ function LeftPanel() {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, demoLogin, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, isAuthenticated, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailErr, setEmailErr] = useState('');
   const [pwErr, setPwErr] = useState('');
-
-  const handleDemoSignIn = () => {
-    toast.success('Signed in with Demo Account!');
-    demoLogin();
-  };
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) {
@@ -299,21 +294,6 @@ export default function LoginPage() {
               {loading ? 'Authenticating...' : 'Sign in to Workspace'}
               {!loading && <span>→</span>}
             </button>
-
-            {/* Quick Demo Sign In for Instant Testing */}
-            <div className="mt-3 pt-3 border-t border-stone-100">
-              <button
-                type="button"
-                onClick={handleDemoSignIn}
-                className="w-full py-2.5 px-3 rounded-2xl bg-gradient-to-r from-violet-50 via-purple-50 to-amber-50 hover:from-violet-100 hover:to-amber-100 border border-violet-200/90 text-violet-950 font-bold text-xs flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-98 group"
-              >
-                <SparklesIcon size={14} className="text-violet-600 group-hover:rotate-12 transition-transform" />
-                <span>One-Click Demo Sign In</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-200/70 text-violet-800 uppercase font-extrabold tracking-wide">
-                  Testing
-                </span>
-              </button>
-            </div>
           </form>
 
           {/* Footer Note */}
