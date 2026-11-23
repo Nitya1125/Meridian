@@ -11,11 +11,13 @@ import { toast } from 'react-hot-toast'
 // Frontend Service Layer
 import {
   getOrganizationMembers,
-  getOrganizationGroups,
   getMessages,
-  createGroup as apiCreateGroup,
   sendMessage as apiSendMessage
 } from '@/Service/messageService'
+import {
+  getConversations,
+  createGroup as apiCreateGroup
+} from '@/Service/chatService'
 
 // Modular Message Components
 import MessagesSidebar from '@/components/messages/MessagesSidebar'
@@ -33,6 +35,8 @@ export default function MessagesPage() {
   const [members, setMembers] = useState([])
   const [groups, setGroups] = useState([])
   const [loadingMembers, setLoadingMembers] = useState(false)
+  const [loadingGroups, setLoadingGroups] = useState(false)
+  const [groupsError, setGroupsError] = useState(null)
 
   // Active conversation state
   const [activeConversation, setActiveConversation] = useState(null)
@@ -43,7 +47,58 @@ export default function MessagesPage() {
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
-  // 1. Fetch organization members & groups whenever activeOrgId changes
+  // 1. Fetch conversations from API and extract group channels
+  const loadConversations = useCallback(async (currentOrgId) => {
+    try {
+      setLoadingGroups(true)
+      setGroupsError(null)
+
+      const res = await getConversations()
+      if (res && res.success && Array.isArray(res.data)) {
+        // Filter conversations for the active organization if currentOrgId is present
+        const orgConversations = currentOrgId
+          ? res.data.filter(c => String(c.organization_id) === String(currentOrgId))
+          : res.data
+
+        const formattedGroups = orgConversations
+          .filter(c => c.type === 'group')
+          .map(c => ({
+            id: String(c.conversation_id),
+            conversationId: c.conversation_id,
+            name: c.name || 'Unnamed Group',
+            type: 'group',
+            organization_id: c.organization_id,
+            created_by: c.created_by,
+            user_role: c.user_role,
+            last_message_id: c.last_message_id,
+            last_message_at: c.last_message_at,
+            lastTime: c.last_message_at
+              ? new Date(c.last_message_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              : '',
+            lastMsg: c.last_message_id ? 'Latest message' : 'No messages yet',
+            unreadCount: 0
+          }))
+
+        setGroups(formattedGroups)
+        return formattedGroups
+      } else {
+        setGroups([])
+        return []
+      }
+    } catch (err) {
+      console.error('Failed to load conversations:', err)
+      setGroups([])
+      // Gracefully ignore missing organization error during initial account load
+      if (!err.message?.includes('No organization Found')) {
+        setGroupsError(err.message || 'Failed to load conversations')
+      }
+      return []
+    } finally {
+      setLoadingGroups(false)
+    }
+  }, [])
+
+  // 2. Fetch organization members & conversations whenever activeOrgId changes
   const fetchOrgData = useCallback(async (orgId) => {
     if (!orgId) {
       setMembers([])
@@ -59,33 +114,34 @@ export default function MessagesPage() {
       setActiveConversation(null)
       setMessages([])
 
-      const [membersRes, groupsRes] = await Promise.all([
-        getOrganizationMembers(orgId),
-        getOrganizationGroups(orgId)
+      // Load organization members and conversations in parallel
+      await Promise.all([
+        (async () => {
+          const membersRes = await getOrganizationMembers(orgId)
+          if (membersRes && membersRes.success) {
+            setMembers(membersRes.members || [])
+          } else {
+            setMembers([])
+          }
+        })(),
+        loadConversations(orgId)
       ])
-
-      if (membersRes.success) {
-        setMembers(membersRes.members)
-      } else {
-        setMembers([])
-      }
-
-      if (groupsRes.success) {
-        setGroups(groupsRes.groups)
-      } else {
-        setGroups([])
-      }
     } catch (err) {
       console.error('Failed to load organization messaging data:', err)
-      toast.error('Failed to load organization members')
+      toast.error('Failed to load organization data')
     } finally {
       setLoadingMembers(false)
     }
-  }, [])
+  }, [loadConversations])
 
   useEffect(() => {
-    fetchOrgData(activeOrgId)
-  }, [activeOrgId, fetchOrgData])
+    if (activeOrgId) {
+      fetchOrgData(activeOrgId)
+    } else {
+      // Fetch conversations when component loads even if activeOrgId is resolving
+      loadConversations(null)
+    }
+  }, [activeOrgId, fetchOrgData, loadConversations])
 
   // 2. Fetch messages whenever active conversation changes
   const activeConversationId = activeConversation?.id
@@ -158,17 +214,35 @@ export default function MessagesPage() {
   const handleCreateGroup = async (groupData) => {
     if (!activeOrgId) {
       toast.error('No active organization selected')
-      return
+      throw new Error('No active organization selected')
     }
 
-    const res = await apiCreateGroup(activeOrgId, groupData)
-    if (res.success && res.group) {
-      setGroups(prev => [res.group, ...prev])
-      // Switch to the newly created group conversation
-      setActiveConversation({ ...res.group, type: 'group' })
-      setMessages([])
+    const res = await apiCreateGroup(activeOrgId, groupData.name, groupData.memberIds)
+    if (res && res.success) {
+      // Refresh conversations list from the API
+      const updatedGroups = await loadConversations(activeOrgId)
+
+      // Auto-select the newly created group conversation
+      const newConvId = res.data?.conversationId
+      if (newConvId) {
+        const foundGroup = updatedGroups?.find(g => String(g.id) === String(newConvId))
+        setActiveConversation(foundGroup || {
+          id: String(newConvId),
+          conversationId: newConvId,
+          name: groupData.name.trim(),
+          type: 'group',
+          organization_id: activeOrgId,
+          user_role: 'owner',
+          memberCount: (groupData.memberIds?.length || 0) + 1,
+          lastMsg: 'Group created',
+          lastTime: 'Just now',
+          unreadCount: 0
+        })
+        setMessages([])
+      }
+      return res
     } else {
-      throw new Error(res.message || 'Failed to create group')
+      throw new Error(res?.message || 'Failed to create group')
     }
   }
 
@@ -205,7 +279,9 @@ export default function MessagesPage() {
                     activeConversation={activeConversation}
                     onSelectConversation={setActiveConversation}
                     onCreateGroupClick={() => setIsCreateGroupOpen(true)}
-                    loading={loadingMembers || orgsLoading}
+                    loading={loadingMembers || loadingGroups || orgsLoading}
+                    groupsError={groupsError}
+                    onRetryGroups={() => loadConversations(activeOrgId)}
                     currentUser={{ id: user?.id, fullName, name: fullName, initials }}
                     orgName={activeOrg?.name}
                     isMobileOpen={isMobileSidebarOpen}

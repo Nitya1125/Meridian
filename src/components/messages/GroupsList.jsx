@@ -9,7 +9,9 @@ export default function GroupsList({
   onSelectGroup,
   onCreateGroupClick,
   searchQuery = '',
-  loading = false
+  loading = false,
+  error = null,
+  onRetry = null
 }) {
   const filtered = groups.filter(g => {
     if (!searchQuery.trim()) return true
@@ -45,6 +47,20 @@ export default function GroupsList({
               </div>
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="py-4 px-3 text-center bg-rose-50/60 rounded-xl border border-rose-200/70">
+          <p className="text-xs font-semibold text-rose-700">Failed to load groups</p>
+          <p className="text-[10px] text-rose-500 mt-0.5 mb-2 leading-relaxed">{error}</p>
+          {onRetry && (
+            <button
+              onClick={onRetry}
+              type="button"
+              className="text-[11px] font-bold text-rose-700 hover:text-rose-900 bg-white hover:bg-rose-100 px-2.5 py-1 rounded-lg border border-rose-200 shadow-2xs transition-all cursor-pointer"
+            >
+              Retry
+            </button>
+          )}
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-5 px-3 text-center bg-stone-50/50 rounded-xl border border-dashed border-stone-200/80">

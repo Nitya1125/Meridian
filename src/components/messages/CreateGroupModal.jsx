@@ -57,6 +57,10 @@ export default function CreateGroupModal({
       toast.error('Please enter a group name')
       return
     }
+    if (selectedMemberIds.length === 0) {
+      toast.error('Please select at least one member for the group')
+      return
+    }
 
     try {
       setIsSubmitting(true)
@@ -160,7 +164,7 @@ export default function CreateGroupModal({
             ) : (
               <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1.5 rounded-xl bg-stone-50 border border-stone-200">
                 {selectedMemberIds.map(id => {
-                  const m = members.find(mem => String(mem.id) === id)
+                  const m = members.find(mem => String(mem.id) === id || String(mem.userId) === id)
                   return (
                     <span
                       key={id}
@@ -257,7 +261,7 @@ export default function CreateGroupModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !groupName.trim()}
+              disabled={isSubmitting || !groupName.trim() || selectedMemberIds.length === 0}
               className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-stone-900 hover:bg-black disabled:opacity-50 transition-all shadow-xs cursor-pointer active:scale-98"
             >
               {isSubmitting ? 'Creating...' : 'Create Group'}

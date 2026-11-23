@@ -14,6 +14,8 @@ export default function MessagesSidebar({
   onSelectConversation,
   onCreateGroupClick,
   loading = false,
+  groupsError = null,
+  onRetryGroups = null,
   currentUser = null,
   orgName = '',
   isMobileOpen = false,
@@ -140,6 +142,8 @@ export default function MessagesSidebar({
               onCreateGroupClick={onCreateGroupClick}
               searchQuery={searchQuery}
               loading={loading}
+              error={groupsError}
+              onRetry={onRetryGroups}
             />
           )}
 
