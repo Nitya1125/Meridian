@@ -10,13 +10,13 @@ import { toast } from 'react-hot-toast'
 
 // Frontend Service Layer
 import {
-  getOrganizationMembers,
-  getMessages,
-  sendMessage as apiSendMessage
+  getOrganizationMembers
 } from '@/Service/messageService'
 import {
   getConversations,
-  createGroup as apiCreateGroup
+  createGroup as apiCreateGroup,
+  getMessages,
+  sendMessage as apiSendMessage
 } from '@/Service/chatService'
 
 // Modular Message Components
@@ -143,8 +143,32 @@ export default function MessagesPage() {
     }
   }, [activeOrgId, fetchOrgData, loadConversations])
 
+  // Helper to normalize message entity from backend
+  const formatMessage = useCallback((m) => {
+    if (!m) return null
+    const d = m.created_at ? new Date(m.created_at) : new Date()
+    const isToday = d.toDateString() === new Date().toDateString()
+    const date = isToday ? 'Today' : d.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    const timestamp = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    const senderId = m.sender_id || m.senderId
+    const isSelf = user?.id ? String(senderId) === String(user.id) : Boolean(m.isSelf)
+
+    return {
+      id: m.id,
+      conversationId: m.conversation_id || m.conversationId,
+      senderId,
+      senderName: m.sender_name || m.senderName || 'Member',
+      text: m.content || m.text || '',
+      content: m.content || m.text || '',
+      created_at: m.created_at,
+      timestamp,
+      date,
+      isSelf
+    }
+  }, [user?.id])
+
   // 2. Fetch messages whenever active conversation changes
-  const activeConversationId = activeConversation?.id
+  const activeConversationId = activeConversation?.conversationId || activeConversation?.id
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([])
@@ -156,11 +180,13 @@ export default function MessagesPage() {
       try {
         setLoadingMessages(true)
         const res = await getMessages(activeConversationId)
-        if (isMounted && res.success) {
-          setMessages(res.messages || [])
+        if (isMounted && res && res.success) {
+          const rawList = res.data || res.date || []
+          setMessages(rawList.map(formatMessage))
         }
       } catch (err) {
         console.error('Error loading conversation messages:', err)
+        if (isMounted) setMessages([])
       } finally {
         if (isMounted) setLoadingMessages(false)
       }
@@ -170,28 +196,24 @@ export default function MessagesPage() {
     return () => {
       isMounted = false
     }
-  }, [activeConversationId])
+  }, [activeConversationId, formatMessage])
 
   // 3. Handle Send Message
   const handleSendMessage = async (text) => {
-    if (!activeConversation || !text?.trim()) return
+    const convId = activeConversation?.conversationId || activeConversation?.id
+    if (!convId || !text?.trim()) return
 
-    const senderPayload = {
-      text,
-      senderId: user?.id || 'me',
-      senderName: fullName || 'You',
-      senderInitials: initials || 'ME',
-      conversationType: activeConversation.type
-    }
+    const trimmed = text.trim()
+    const tempId = `temp_${Date.now()}`
 
     // Optimistic UI update
     const optimisticMsg = {
-      id: `msg_${Date.now()}`,
-      conversationId: activeConversation.id,
-      senderId: user?.id || 'me',
+      id: tempId,
+      conversationId: convId,
+      senderId: user?.id,
       senderName: fullName || 'You',
-      senderInitials: initials || 'ME',
-      text: text.trim(),
+      text: trimmed,
+      content: trimmed,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       date: 'Today',
       isSelf: true
@@ -199,14 +221,16 @@ export default function MessagesPage() {
     setMessages(prev => [...prev, optimisticMsg])
 
     try {
-      const res = await apiSendMessage(activeConversation.id, senderPayload)
-      if (res.success && res.message) {
-        // Update with server returned message if different
-        setMessages(prev => prev.map(m => m.id === optimisticMsg.id ? res.message : m))
+      const res = await apiSendMessage(convId, trimmed)
+      if (res && res.success && res.data) {
+        const savedMsg = formatMessage(res.data)
+        setMessages(prev => prev.map(m => m.id === tempId ? { ...savedMsg, isSelf: true } : m))
       }
     } catch (err) {
       console.error('Send message failed:', err)
-      toast.error('Failed to send message')
+      toast.error(err.message || 'Failed to send message')
+      // Roll back optimistic message on failure
+      setMessages(prev => prev.filter(m => m.id !== tempId))
     }
   }
 

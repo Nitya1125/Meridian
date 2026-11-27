@@ -128,26 +128,27 @@ export async function getGroupConversations(organizationId) {
 
 /**
  * Fetch message history for a specific conversation (Direct or Group).
+ * Uses backend endpoint: GET /api/message/list?conversationId=:id
  * 
  * @param {string|number} conversationId
- * @param {object} options - { page, limit }
- * @returns {Promise<{ success: boolean, messages: Array }>}
- * 
- * BACKEND INTEGRATION POINT:
- * Connect to: GET /api/messages?conversation_id=:id
+ * @returns {Promise<{ success: boolean, data: Array, message?: string }>}
  */
-export async function getMessages(conversationId, options = {}) {
-  if (!conversationId) return { success: false, messages: [] };
+export async function getMessages(conversationId) {
+  if (!conversationId) return { success: false, data: [] };
 
   try {
-    // BACKEND INTEGRATION TODO:
-    // const query = new URLSearchParams({ conversation_id: conversationId, ...options });
-    // const res = await fetch(`/api/messages?${query.toString()}`);
-    // return await res.json();
-    return { success: true, messages: [] };
+    const res = await fetch(`/api/message/list?conversationId=${encodeURIComponent(conversationId)}`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    const result = await res.json();
+    if (!res.ok) {
+      throw new Error(result.message || 'Failed to fetch messages');
+    }
+    return result;
   } catch (error) {
     console.error('getMessages error:', error);
-    return { success: false, messages: [], error: error.message };
+    return { success: false, data: [], error: error.message };
   }
 }
 
@@ -157,9 +158,6 @@ export async function getMessages(conversationId, options = {}) {
  * @param {string|number} organizationId
  * @param {{ name: string, memberIds: Array<string|number>, description?: string }} groupData
  * @returns {Promise<{ success: boolean, group: object }>}
- * 
- * BACKEND INTEGRATION POINT:
- * Connect to: POST /api/messages/groups
  */
 export async function createGroup(organizationId, groupData) {
   if (!organizationId || !groupData?.name) {
@@ -167,15 +165,6 @@ export async function createGroup(organizationId, groupData) {
   }
 
   try {
-    // BACKEND INTEGRATION TODO:
-    // const res = await fetch('/api/messages/groups', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ organization_id: organizationId, ...groupData })
-    // });
-    // return await res.json();
-
-    // Client optimistic return for immediate UI reactivity
     const newGroup = {
       id: `grp_${Date.now()}`,
       organization_id: organizationId,
@@ -197,41 +186,35 @@ export async function createGroup(organizationId, groupData) {
 
 /**
  * Send a message within a conversation (Direct or Group).
+ * Uses backend endpoint: POST /api/message/send
  * 
  * @param {string|number} conversationId
- * @param {{ text: string, senderId: string|number, conversationType: 'dm'|'group' }} messageData
- * @returns {Promise<{ success: boolean, message: object }>}
- * 
- * BACKEND INTEGRATION POINT:
- * Connect to: POST /api/messages/send (or Socket.IO emit 'send_message')
+ * @param {string} content
+ * @returns {Promise<{ success: boolean, data?: object, message?: string }>}
  */
-export async function sendMessage(conversationId, messageData) {
-  if (!conversationId || !messageData?.text?.trim()) {
-    return { success: false, message: 'Message text is required' };
+export async function sendMessage(conversationId, content) {
+  if (!conversationId || !(typeof content === 'string' ? content.trim() : content?.text?.trim())) {
+    return { success: false, message: 'Message content is required' };
   }
 
-  try {
-    // BACKEND INTEGRATION TODO:
-    // const res = await fetch('/api/messages/send', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ conversation_id: conversationId, ...messageData })
-    // });
-    // return await res.json();
+  const messageText = typeof content === 'string' ? content.trim() : content.text.trim();
 
-    const newMsg = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      conversationId,
-      senderId: messageData.senderId,
-      senderName: messageData.senderName || 'You',
-      senderInitials: messageData.senderInitials || 'ME',
-      text: messageData.text.trim(),
-      createdAt: new Date().toISOString(),
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: 'Today',
-      isSelf: true
-    };
-    return { success: true, message: newMsg };
+  try {
+    const res = await fetch('/api/message/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        conversationId,
+        content: messageText
+      })
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      throw new Error(result.message || 'Failed to send message');
+    }
+    return result;
   } catch (error) {
     console.error('sendMessage error:', error);
     return { success: false, message: error.message };

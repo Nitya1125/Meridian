@@ -73,7 +73,7 @@ export default function MessageList({
                       : 'bg-white text-stone-800 border border-stone-200/80 rounded-bl-xs'
                   }`}
                 >
-                  <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                  <p className="whitespace-pre-wrap break-words">{msg.text || msg.content}</p>
                 </div>
 
                 {/* Timestamp */}
