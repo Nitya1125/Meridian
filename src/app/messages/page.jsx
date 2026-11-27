@@ -168,7 +168,7 @@ export default function MessagesPage() {
   }, [user?.id])
 
   // 2. Fetch messages whenever active conversation changes
-  const activeConversationId = activeConversation?.conversationId || activeConversation?.id
+  const activeConversationId = activeConversation?.conversationId || (activeConversation?.type === 'group' ? activeConversation?.id : null)
   useEffect(() => {
     if (!activeConversationId) {
       setMessages([])
@@ -183,10 +183,17 @@ export default function MessagesPage() {
         if (isMounted && res && res.success) {
           const rawList = res.data || res.date || []
           setMessages(rawList.map(formatMessage))
+        } else if (isMounted) {
+          setMessages([])
         }
       } catch (err) {
-        console.error('Error loading conversation messages:', err)
-        if (isMounted) setMessages([])
+        // If conversation is not found in database, gracefully show empty conversation
+        if (err.message?.includes('Conversation Not found') || err.message?.includes('not found')) {
+          if (isMounted) setMessages([])
+        } else {
+          console.error('Error loading conversation messages:', err)
+          if (isMounted) setMessages([])
+        }
       } finally {
         if (isMounted) setLoadingMessages(false)
       }
@@ -200,8 +207,13 @@ export default function MessagesPage() {
 
   // 3. Handle Send Message
   const handleSendMessage = async (text) => {
-    const convId = activeConversation?.conversationId || activeConversation?.id
-    if (!convId || !text?.trim()) return
+    const convId = activeConversation?.conversationId || (activeConversation?.type === 'group' ? activeConversation?.id : null)
+    if (!convId || !text?.trim()) {
+      if (!convId && activeConversation?.type === 'dm') {
+        toast.error('Direct messaging channel has not been created on the backend yet. Please select a group channel.')
+      }
+      return
+    }
 
     const trimmed = text.trim()
     const tempId = `temp_${Date.now()}`
